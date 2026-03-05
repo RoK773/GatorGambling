@@ -1,0 +1,24 @@
+{
+  "name": "gatorgambling",
+  "version": "1.0.0",
+  "description": "Repository for the GatorGambling CEN3031 Group Project",
+  "main": "mongo_test.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RoK773/GatorGambling.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/RoK773/GatorGambling/issues"
+  },
+  "homepage": "https://github.com/RoK773/GatorGambling#readme",
+  "dependencies": {
+    "mongodb": "^7.1.0"
+  }
+}
