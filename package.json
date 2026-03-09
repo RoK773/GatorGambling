@@ -2,6 +2,7 @@
   "name": "gatorgambling",
   "version": "1.0.0",
   "description": "Repository for the GatorGambling CEN3031 Group Project",
+  "main": "mongo_test.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "next dev",
@@ -25,7 +26,6 @@
     "next": "14.2.3",
     "react": "^18",
     "react-dom": "^18",
-    "react-native": "^0.73.0",
     "react-native-web": "^0.19.10",
     "lucide-react": "^0.383.0",
     "lucide-react-native": "^0.383.0"

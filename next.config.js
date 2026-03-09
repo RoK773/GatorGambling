@@ -3,7 +3,6 @@
 const nextConfig = {
     reactStrictMode: true,
     transpilePackages:[
-        'react-native',
         'react-native-web',
         'lucide-react-native'
     ],
