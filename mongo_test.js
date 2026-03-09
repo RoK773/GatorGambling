@@ -1,5 +1,7 @@
 
 const { MongoClient, ServerApiVersion } = require('mongodb');
+const dns = require('dns');
+dns.setServers(['8.8.8.8', '8.8.4.4']);
 const uri = "mongodb+srv://admin:admin1Password@cluster0.9uypigw.mongodb.net/?appName=Cluster0";
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version

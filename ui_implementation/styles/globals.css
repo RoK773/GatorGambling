@@ -1,0 +1,95 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Sora:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+*, *::before, *::after{
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root{
+    --bg-primary: #080A0F;
+    --bg-secondary: #0F1219;
+    --bg-card: #141820;
+    --bg-card-hover: #1C2230;
+    --border: #1F2535;
+    --border-bright: #2D3548;
+    --accent: #71BD90;
+    --accent-dim: #5FB080;
+    --accent-glow: rgba(130, 250, 70, 0.15);
+    --accent-glow-strong: rgba(130, 250, 70, 0.3);
+    --text-primary: #F0F2F7;
+    --text-secondary: #7A8299;
+    --text-muted: #424B62;
+    --danger: #D92F2F;
+    --success: #3D9660;
+    --header-height: 64px;
+    --tab-height: 50px;
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-body: 'Sora', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+}
+
+html, body{
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+}
+
+button{
+    font-family: var(--font-body);
+    cursor: pointer;
+    border: none;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+input{
+    font-family: var(--font-body);
+    outline: none;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+::-webkit-scrollbar{
+    width: 4px;
+    height: 4px;
+}
+
+::-webkit-scrollbar-track{
+    background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb{
+    background: var(--border-bright);
+    border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover{
+    background: var(--text-muted);
+}
+
+@keyframes fadeIn{
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp{
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-glow{
+    0%, 100% {box-shadow: 0 0 12px var(--accent-glow); }
+    50% {box-shadow: 0 0 24px var(--accent-glow-strong); }
+}
+
+@keyframes live-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
