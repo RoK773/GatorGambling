@@ -99,7 +99,7 @@ function Logo({ onClick, style = {} }) {
 
 // header
 
-function Header({ screen, onLogoClikc, onAvatarClick, username}) {
+function Header({ screen, onLogoClick, onAvatarClick, username}) {
     if (screen === SCREENS.LANDING || screen === SCREENS.LOGIN || screen === SCREENS.SIGNUP) {
         return null;
     }
@@ -132,7 +132,7 @@ function Header({ screen, onLogoClikc, onAvatarClick, username}) {
             onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent)'}
             onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-bright)'}
             >
-                <Avatar size={34} initialis={username ? username[0].toUpperCase() : 'U'}/>
+                <Avatar size={34} initials={username ? username[0].toUpperCase() : 'U'}/>
             </button>
             </div>
         </header>
@@ -228,7 +228,7 @@ function LandingScreen({ onSignUp, onLogin }) {
                         maxWidth: 280, margin: '0 auto',
                     }}>Chomp at the Bet!</p>
                 </div>
-                <div styles={{
+                <div style={{
                     display: 'flex', gap: 12, marginBottom: 40,
                 }}>
                     {[
@@ -288,7 +288,7 @@ function LoginScreen({ onLogin, onBack }){
 
                 <InputField label="Username" value={username} onChange={e => setUsername(e.target.value)} placeholder="Username" />
                 <InputField label="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" />
-                <div stye={{
+                <div style={{
                     marginTop: 8, marginBottom: 24,
                 }}>
                     <AuthButton label="SIGN IN" primary onClick={() => onLogin(username || 'Player')} />
@@ -317,7 +317,7 @@ function SignUpScreen({ onSignUp, onBack }) {
             alignItems: 'center', justifyContent: 'center', padding: 24,
         }}>
             <div style={{
-                maxWidth: 400, wodth: '100%', animation: 'slideUp 0.4s ease both',
+                maxWidth: 400, width: '100%', animation: 'slideUp 0.4s ease both',
             }}>
                 <Logo onClick={onBack} style={{
                     marginBottom: 40,
@@ -410,7 +410,7 @@ function BetCard({ title, subtitle, meta, stake, onBet }) {
                 <BarChart2 size={20} color="var(--text-muted)"/>
             </div>
             <button onClick={handleBet} style={{
-                background: betPlaced ? 'var(--succeess)' : 'var(--accent)',
+                background: betPlaced ? 'var(--success)' : 'var(--accent)',
                 color: '#080A0F', fontWeight: 700, fontSize: 13, letterSpacing: '0.08em', 
                 padding: '11px', borderRadius: 8, border: 'none', cursor: 'pointer',
                 transition: 'all 0.2s', transform: hover && !betPlaced ? 'none' : 'none',
@@ -432,7 +432,7 @@ function YourPicksTab(){
                 width: 80, height: 80, borderRadius: 20, background: 'var(--bg-card)',
                 border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-                <Star size={32} color="car(--accent)"/>
+                <Star size={32} color="var(--accent)"/>
             </div>
             <h3 style={{
                 fontFamily: 'var(--font-display', fontSize: 28, letterSpacing: '0.06em',
@@ -460,7 +460,7 @@ function PlayersTab(){
         }}>
             {MOCK_PLAYERS.map((p, i) => (
                 <div key={p.id} style={{
-                    animationDelay: `$i * 0.05}s` }}>
+                    animationDelay: `${i * 0.05}s` }}>
                         <BetCard title={p.name} subtitle={`#${p.number}`} meta={p.pos} stake={p.stake}/>
                 </div>
                 ))}
@@ -470,10 +470,10 @@ function PlayersTab(){
 
 function TeamsTab(){
     return(
-        <div styles={{
+        <div style={{
             display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16,
         }}>
-            {MOCK_PLAYERS.map((t, i) =>(
+            {MOCK_TEAMS.map((t, i) =>(
                 <div key={t.id} style={{
                     animationDelay: `${i * 0.05}s`}}>
                         <BetCard title={t.name} subtitle={`#${t.record}`} stake={t.stake}/>
@@ -550,7 +550,7 @@ function GamesTab(){
             display: 'flex', flexDirection: 'column', gap: 14,
         }}>
             {MOCK_GAMES.map((g, i) => (
-                <GameRow key={g.id} g={g} i={i}/>
+                <GamesRow key={g.id} g={g} i={i}/>
         ))}
         </div>
     );
@@ -607,7 +607,7 @@ function GlobalChat(){
                 }}>1,204 online</span>
             </div>
             <div style={{
-                flex: 1, overflowY: 'auto', padding: '12px 12px 8px', display: 'flex', fledDirection: 'column', gap: 10,
+                flex: 1, overflowY: 'auto', padding: '12px 12px 8px', display: 'flex', flexDirection: 'column', gap: 10,
             }}>
                 {messages.map(msg => (
                     <div key={msg.id} style={{
@@ -633,7 +633,7 @@ function GlobalChat(){
 
                 ))}
             </div>
-            <div styles={{
+            <div style={{
                 padding: '10px 12px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8,
                 alignItems: 'center', flexShrink: 0, background: 'var(--bg-secondary)',
             }}>
@@ -642,7 +642,7 @@ function GlobalChat(){
                     padding: '8px 10px', fontSize: 12, color: 'var(--text-primary)', outline: 'none',
                 }}
                 onFocus={e => { e.target.style.borderColor = 'var(--accent)';}}
-                onBlue={e => {e.target.style.borderColor = 'var(--border_';}}
+                onBlur={e => {e.target.style.borderColor = 'var(--border_';}}
                 />
                 <button onClick={handleSubmit} style={{
                     background: 'var(--accent)', color: '#080A0F', fontWeight: 700, fontSize: 11,
@@ -705,7 +705,7 @@ const TAB_CONFIG = [
     {key: TABS.PICKS, label: 'Your Picks', icon: <Star size={15} /> },
     {key: TABS.PLAYERS, label: 'Players', icon: <User size={15} /> },
     {key: TABS.TEAMS, label: 'Teams', icon: <Shield size={15} /> },
-    {key: TABS.Games, label: "Games", icon: <Trophy size={15} /> },
+    {key: TABS.GAMES, label: "Games", icon: <Trophy size={15} /> },
     {key: TABS.LIVE, label: "Live", icon: <Radio size={15} />, live:true},
 ];
 
@@ -768,9 +768,9 @@ function Dashboard({username}){
                     <h2 style={{
                         fontFamily: 'var(--font-display)', fontSize: 32, letterSpacing: '0.06em', color: 'var(--text-primary)',
                     }}>
-                        {TAB_CONFIG.findLast(t => t.key === activeTab)?.label.toUpperCase()}
+                        {TAB_CONFIG.find(t => t.key === activeTab)?.label.toUpperCase()}
                     </h2>
-                    {activeTab !== TABS.PICKS && activeTab !== TABS.LIve && (
+                    {activeTab !== TABS.PICKS && activeTab !== TABS.LIVE && (
                         <p style={{
                             fontSize: 13, color: 'var(--text-secondary)', marginTop: 4,
                         }}>Select an option and place your bet.
@@ -788,7 +788,7 @@ function SettingsButton({ icon, label}){
     return (
         <button onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} style={{
             width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
-            background: hover ? 'var(--bg-card-hover)' : 'fontVariant(--bg-card)',
+            background: hover ? 'var(--bg-card-hover)' : 'var(--bg-card)',
             border: '1px solid var(--border)', borderRadius: 12, padding: '14px 18px',
             color: 'var(--text-primary)', fontSize: 14, fontWeight: 500, 
             transition: 'all 0.2s', cursor: 'default',
@@ -896,7 +896,7 @@ function ProfilePage({ username, onLogout}){
                     }}
                     onMouseLeave={ e=> {
                         e.currentTarget.style.background = 'rgba(255, 71, 87, 0.08)';
-                        e.currentTarget.style.background = 'rgba(255, 71, 87, 0.25)';
+                        e.currentTarget.style.borderColor = 'rgba(255, 71, 87, 0.25)';
                     }}>
                         <LogOut size={16} />
                         LOG OUT
