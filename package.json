@@ -2,7 +2,6 @@
   "name": "gatorgambling",
   "version": "1.0.0",
   "description": "Repository for the GatorGambling CEN3031 Group Project",
-  "main": "mongo_test.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "next dev",
@@ -17,7 +16,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "bugs": {
     "url": "https://github.com/RoK773/GatorGambling/issues"
   },

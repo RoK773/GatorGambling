@@ -717,7 +717,7 @@ function Dashboard({username}){
             case TABS.PLAYERS: return <PlayersTab />;
             case TABS.TEAMS: return <TeamsTab />;
             case TABS.GAMES: return <GamesTab />;
-            case TABS>LIVE: return <LiveTab />;
+            case TABS.LIVE: return <LiveTab />;
             default: return null;
         }
     };
@@ -845,7 +845,7 @@ function ProfilePage({ username, onLogout}){
                     </div>
                 </div>
                 <div style={{
-                    display: flex, gap: 10, marginBottom: 32,
+                    display: 'flex', gap: 10, marginBottom: 32,
                 }}>
                     {[
                         { label: 'Total Bets', value: '47'},
@@ -885,7 +885,7 @@ function ProfilePage({ username, onLogout}){
                     marginTop: 28,
                 }}>
                     <button onClick={onLogout} style={{
-                        width: '10%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                        width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
                         background: 'rgba(255, 71, 87, 0.08)', border: '1px solid rgba(255, 71, 87, 0.25)',
                         borderRadius: 12, padding: '14px', color: 'var(--danger)', fontSize: 14, fontWeight: 600, 
                         letterSpacing: '0.06em', transition: 'all 0.2s',
