@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import Head from 'next/head';
+import { LoginScreen, SignUpScreen } from './auth';
 import {
     LogOut, Settings, User, Mail, 
     CreditCard, Lock, ChevronRight, 
@@ -261,96 +262,6 @@ function LandingScreen({ onSignUp, onLogin }) {
                 }}>By continuing, you agree and consent to our Terms and Conditions & Privacy Policy</p>
         </div>
     </div>
-    );
-}
-
-function LoginScreen({ onLogin, onBack }){
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
-    return(
-        <div style={{
-            minHeight: '100vh', display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center', padding: 24,
-        }}>
-            <div style={{
-                maxWidth: 400, width: '100%', animation: 'slideUp 0.4s ease both',
-            }}>
-                <Logo onClick={onBack} style={{
-                    marginBottom: 40,
-                }}/>
-                <h2 style={{
-                    fontFamily: 'var(--font-display)', fontSize: 38,
-                    letterSpacing: '0.06em', marginBottom: 8,
-                }}>WELCOME BACK</h2>
-                <p style={{
-                    fontSize: 14, color: 'var(--text-secondary)', marginBottom: 32,
-                }}>Sign in to your account to continue</p>
-
-                <InputField label="Username" value={username} onChange={e => setUsername(e.target.value)} placeholder="Username" />
-                <InputField label="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" />
-                <div style={{
-                    marginTop: 8, marginBottom: 24,
-                }}>
-                    <AuthButton label="SIGN IN" primary onClick={() => onLogin(username || 'Player')} />
-                </div>
-
-                <p style={{
-                    textAlign: 'center', fontSize:  13, color: 'var(--text-secondary)',
-                }}> Don't have an account? {' '}
-                <button onClick={onBack} style={{
-                    background: 'none', color: 'var(--accent)',
-                    fontWeight: 600, fontSize: 13,
-                }}>Sign Up</button>
-                </p>
-            </div>
-        </div>
-    );
-}
-
-function SignUpScreen({ onSignUp, onBack }) {
-    const [form, setForm] = useState({username: '', password: '', email: '', dob: '', location: ''});
-    const set = (key) => (e) => setForm(f => ({...f, [key]: e.target.value}));
-
-    return(
-        <div style={{
-            minHeight: '100vh', display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center', padding: 24,
-        }}>
-            <div style={{
-                maxWidth: 400, width: '100%', animation: 'slideUp 0.4s ease both',
-            }}>
-                <Logo onClick={onBack} style={{
-                    marginBottom: 40,
-                }}/>
-                <h2 style={{
-                    fontFamily: 'var(--font-display)', fontSize: 38,
-                    letterSpacing: '0.06em', marginBottom: 0,
-                }}>JOIN THE ACTION</h2>
-                <p style={{
-                    fontSize: 14, color: 'var(--text-secondary)', marginBottom: 32,
-                    }}>
-                        Create your account and join the bask!
-                    </p>
-                    
-                    <InputField label="Username" value={form.username} onChange={set('username')} placeholder="Username"/>
-                    <InputField label="Password" value={form.password} onChange={set('password')} placeholder="Password"/>
-                    <InputField label="Email" value={form.email} onChange={set('email')} placeholder="your@email.com"/>
-                    <InputField label="Date of Birth" type="date" value={form.dob} onChange={set('dob')}/>
-                    <InputField label="Location" value={form.location} onChange={set('location')} placeholder="Province, Country" />
-                    <div style={{
-                        marginTop: 8,
-                    }}>
-                        <AuthButton label="CREATE ACCOUNT" primary onClick={() => onSignUp(form.username || 'Player')}/>
-                    </div>
-                    <p style={{
-                        textAlign: 'center', fontSize: 13, color: 'var(--text-secondary)', marginTop: 20}}>
-                            Already have an account?{' '}
-                            <button onClick={onBack} style={{
-                                background: 'none', color: 'var(--accent)', fontWeight: 600, fontSize: 13,
-                            }}>Sign In</button>
-                    </p>
-                </div>
-            </div>
     );
 }
 
@@ -912,15 +823,76 @@ export default function App(){
     const [screen, setScreen] = useState(SCREENS.LANDING);
     const [username, setUsername] = useState('');
     const [activeTab, setActiveTab] = useState(TABS.PICKS);
+    const [isLoggingIn, setIsLoggingIn] = useState(false);
+    const [loginError, setLoginError] = useState('');
+    const [isSigningUp, setIsSigningUp] = useState(false);
+    const [signupError, setSignupError] = useState('');
     
-    const handleLogin = useCallback((name) => {
-        setUsername(name);
-        setScreen(SCREENS.DASHBOARD);
+    const handleLogin = useCallback(async (loginData) => {
+        const payload = typeof loginData === 'string'
+            ? { username: loginData, password: '' }
+            : loginData;
+
+        setLoginError('');
+        setIsLoggingIn(true);
+
+        try {
+            const response = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    setLoginError('The username or password is incorrect');
+                    return;
+                }
+
+                const data = await response.json().catch(() => ({}));
+                setLoginError(data.error || 'Unable to sign in right now');
+                return;
+            }
+
+            const data = await response.json().catch(() => ({}));
+
+            setUsername(data.username || payload.username || 'Player');
+            setScreen(SCREENS.DASHBOARD);
+        } catch (error) {
+            setLoginError('Unable to sign in right now');
+        } finally {
+            setIsLoggingIn(false);
+        }
     }, []);
 
-    const handleSignUp = useCallback((name) => {
-        setUsername(name);
-        setScreen(SCREENS.DASHBOARD);
+    const handleSignUp = useCallback(async (signupData) => {
+        const payload = typeof signupData === 'string'
+            ? { username: signupData }
+            : signupData;
+
+        setSignupError('');
+        setIsSigningUp(true);
+
+        try {
+            const response = await fetch('/api/signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                setSignupError(data.error || 'Invalid account information.');
+                return;
+            }
+
+            setUsername(payload.username || 'Player');
+            setScreen(SCREENS.DASHBOARD);
+        } catch (error) {
+            setSignupError('Invalid account information.');
+        } finally {
+            setIsSigningUp(false);
+        }
     }, []);
 
     const handleLogout = useCallback(() => {
@@ -950,17 +922,29 @@ export default function App(){
 
         <Header screen={screen} onLogoClick={handleLogoClick} onAvatarClick={handleAvatarClick} username={username} />
         {screen === SCREENS.LANDING && (
-            <LandingScreen onSignUp={() => setScreen(SCREENS.SIGNUP)} onLogin={() => setScreen(SCREENS.LOGIN)}
+            <LandingScreen onSignUp={() => {
+                setSignupError('');
+                setScreen(SCREENS.SIGNUP);
+            }} onLogin={() => {
+                setLoginError('');
+                setScreen(SCREENS.LOGIN);
+            }}
             />
         )}
 
         {screen === SCREENS.LOGIN && (
-            <LoginScreen onLogin={handleLogin} onBack={() => setScreen(SCREENS.LANDING)}
+            <LoginScreen onLogin={handleLogin} onBack={() => {
+                setLoginError('');
+                setScreen(SCREENS.LANDING);
+            }} LogoComponent={Logo} isLoading={isLoggingIn} errorMessage={loginError}
             />
         )}
 
         {screen === SCREENS.SIGNUP && (
-            <SignUpScreen onSignUp={handleSignUp} onBack={() => setScreen(SCREENS.LANDING)}
+            <SignUpScreen onSignUp={handleSignUp} onBack={() => {
+                setSignupError('');
+                setScreen(SCREENS.LANDING);
+            }} LogoComponent={Logo} isLoading={isSigningUp} errorMessage={signupError}
                 />
         )}
 

@@ -1,10 +1,9 @@
-
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const dns = require('dns');
 dns.setServers(['8.8.8.8', '8.8.4.4']);
+
 const uri = "mongodb+srv://admin:admin1Password@cluster0.9uypigw.mongodb.net/?appName=Cluster0";
 
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -15,14 +14,34 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
+
     await client.connect();
-    // Send a ping to confirm a successful connection
+
+    console.log("Connected to MongoDB");
+
+    const db = client.db("User_Data");
+
+    const users = db.collection("Users");
+
+    const result = await users.insertOne({
+      username: "testuser",
+      age: 30,
+      
+      email: "test@example.com",
+      passwordHash: "123456",
+      createdAt: new Date()
+    });
+
+    console.log("User inserted with id:", result.insertedId);
+
     await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    console.log("Ping successful");
+
   } finally {
-    // Ensures that the client will close when you finish/error
+
     await client.close();
+
   }
 }
+
 run().catch(console.dir);
