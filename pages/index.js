@@ -256,6 +256,12 @@ function LandingScreen({ onSignUp, onLogin }) {
                     <AuthButton label="CREATE ACCOUNT" primary onClick={onSignUp} />
                     <AuthButton label="SIGN IN" onClick={onLogin} />
                 </div>
+                <div style={{ textAlign: 'center', marginTop: 16 }}>
+                    <button onClick={() => window.location.href = '/test_simulation'} style={{
+                        background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', fontSize: 12, fontWeight: 600,
+                        textDecoration: 'underline', textUnderlineOffset: 3,
+                    }}> TRY MATCH SIMULATION</button>
+                </div>
                 <p style={{ 
                     textAilgn: 'center', fontSize: 11, color: 'var(--text-muted)',
                     marginTop: 28,
