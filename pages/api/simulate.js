@@ -99,6 +99,7 @@ export default async function handler(req, res) {
         if (!result) return res.status(404).json({error: 'Teams not found'});
         res.status(200).json({result});
     } catch (error) {
-        res.status(500).json({error: 'Simulation fail'});
+        console.log('ERROR:', error.message);
+        res.status(500).json({error: error.message});
     }
 }
