@@ -1,4 +1,5 @@
 const API_KEY = process.env.API_KEY || '0c67853afd04b72d81402f2e02e477e4';
+const OLLAMA_URL = process.env.OLLAMA_URL || 'https://lakia-semifuturistic-unbecomingly.ngrok-free.dev'; //ngrok url for the ollama server, since we can't call it directly from the frontend
 const LEAGUE_ID = 1; // this is what the API uses for the World Cup
 const SEASON = 2022; // most recent data of world cup
 
@@ -27,9 +28,12 @@ async function getData(teamName){
 
 //then prompt omalla 
 async function promptOmalla(prompt){
-    const response = await fetch('http://localhost:11434/api/generate', {
+    const response = await fetch(`${OLLAMA_URL}/api/generate`, {
         method: 'POST',
-        headers: {'Content-Type' : 'application/json'},
+        headers: {
+            'Content-Type' : 'application/json',
+            'ngrok-skip-browser-warning': 'true' // this is needed to bypass ngrok's browser warning, since we're calling this from the frontend
+        },
         body: JSON.stringify({
             model: 'llama3.2', prompt, stream: false //stream can be changed if we want?
         })
@@ -66,7 +70,7 @@ async function simulate(team1, team2){
     ${formatTeam(team1, team1Data)}
     ${formatTeam(team2, team2Data)}
     Generate *ONLY* the following, no intro, no explanation, nothing additional: 
-    - a final score: ${team1} X - ${team2} X
+    - Final score: ${team1} X - ${team2} X
     - Red cards: ${team1} (X) - ${team2} (X)
     - Yellow cards: ${team1} (X) - ${team2} (X)
     - Fouls: ${team1} (X) - ${team2} (X)
