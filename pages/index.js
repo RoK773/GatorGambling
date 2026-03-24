@@ -9,9 +9,9 @@ import {
     Activity} from 'lucide-react';
 
 // constants here
-import ConfirmModal from './components/confirmModal';
-import proposalForm from './components/proposalForm';
-import modDash from './components/modDash';
+import ConfirmModal from '../components/confirmModal';
+import proposalForm from '../components/proposalForm';
+import modDash from '../components/modDash';
 
 const SCREENS = {
     LANDING: 'landing',
