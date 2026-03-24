@@ -4,8 +4,8 @@ function InputField({ label, type = 'text', value, onChange, placeholder}){
     return (
         <div style={{ marginBottom: 18}}>
             <label style={{
-                display: 'block', fontSize: 11, fontWeight: 60,
-                color: 'var(--text-secondary', marginBottom: 8,
+                display: 'block', fontSize: 11, fontWeight: 600,
+                color: 'var(--text-secondary)', marginBottom: 8,
                 letterSpacing: '0.1em', textTransform: 'uppercase',
             }}>{label}</label>
             <input type={type} value={value} onChange={onChange} placeholder={placeholder} style={{
@@ -16,7 +16,7 @@ function InputField({ label, type = 'text', value, onChange, placeholder}){
                 transition: 'border-color 0.2s, box-shadow 0.2s',
             }}
             onFocus={e => {
-                e.target.style.borderColor = 'var(--acent)';
+                e.target.style.borderColor = 'var(--accent)';
                 e.target.style.boxShadow = '0 0 0 3px var(--accent-glow)';
             }}
             onBlur={e => {

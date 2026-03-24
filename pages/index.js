@@ -466,7 +466,7 @@ function TeamBetCard({ title, subtitle, stake, animDelay}) {
                 }}>
                     <ConditionSelect value={result} onChange={e => setResult(e.target.value)} options={TEAM_RESULTS} minWidth={80} />
                     <ConditionSelect value={marginType} onChange={e => setMargin(e.target.value)} options={MARGIN_TYPES} minWidth={118} disabled={isDraw} />
-                    <ConditonNumber value={isDraw ? '' : condVal} onChange={e => setCondVal(e.target.value)} disabled={isDraw} placeholder="pts" />
+                    <ConditionNumber value={isDraw ? '' : condVal} onChange={e => setCondVal(e.target.value)} disabled={isDraw} placeholder="pts" />
                 </div>
                 {conditionText && ( <div style={{
                     fontSize: 10, color: 'var(--accent)', fontFamily: 'var(--font-mono)', fontWeight: 700, letterSpacing: '0.06em', paddingTop: 2,
@@ -573,8 +573,8 @@ function GamesRow({g, i}) {
     const conditionText = hasScore ? `${outcomeLabel} - ${g.home} ${homeScore} : ${awayScore} ${g.away}` :  `${outcomeLabel} wins`;
 
     const handleBet = () => {
-        setBet(true);
-        setTimeout(() => setBet(false), 2000);
+        setBetPlaced(true);
+        setTimeout(() => setBetPlaced(false), 2000);
     }
 
     return(

@@ -6,7 +6,7 @@ const TEAM_RESULTS = ['Wins', 'Losses', 'Draws'];
 const MARGIN_TYPES = ['By More Than', 'By Less Than', 'By Exactly'];
 
 // tiny selection 
-function pillSelect({value, onChange, options, minWidth = 100, disabled = false}) {
+function PillSelect({value, onChange, options, minWidth = 100, disabled = false}) {
     return (
         <div style ={{
             position: 'relative', display: 'inline-flex', alignItems: 'center',
@@ -32,10 +32,10 @@ function pillSelect({value, onChange, options, minWidth = 100, disabled = false}
     );
 }
 
-function pillNumber({value, onChange, disabled = false, placeholder = '0'}) {
+function PillNumber({value, onChange, disabled = false, placeholder = '0'}) {
     return (
         <input type="number" value={value} onChange={onChange} disabled={disabled} min={0} max={999} placeholder={placeholder} style={{
-            width: 62, background: disabled ? 'var(00bg-secondary)' : 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 7,
+            width: 62, background: disabled ? 'var(--bg-secondary)' : 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 7,
             padding: '7px 8px', fontSize: 12, fontWeight: 700, color: disabled ? 'var(--text-muted)' : 'var(--text-primary)',
             fontFamily: 'var(--font-mono)', textAlign: 'center', outline: 'none', opacity: disabled ? 0.5 : 1,
         }} onFocus={e => {
@@ -45,7 +45,7 @@ function pillNumber({value, onChange, disabled = false, placeholder = '0'}) {
 }
 
 // player / team / game condition builders
-function playerConditionBuilder({ value, onChange}) {
+function PlayerConditionBuilder({ value, onChange}) {
     const stat = value.statType || PLAYER_STATS[0];
     const comparator = value.comparator || COMPARATORS[0];
     const condVal = value.condVal || '';
@@ -64,9 +64,9 @@ function playerConditionBuilder({ value, onChange}) {
                     <div style={{
                         display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center',
                     }}>
-                        <pillSelect value={stat} onChange={e => update({statType: e.target.value})} options={PLAYER_STATS} minWidth={118}/>
-                        <pillSelect value={comparator} onChange={e => update({comparator: e.target.value})} options={COMPARATORS} minWidth={82} />
-                        <pillSelect value={condVal} onChange={e => update({condVal: e.target.value})} placeholder="0" />
+                        <PillSelect value={stat} onChange={e => update({statType: e.target.value})} options={PLAYER_STATS} minWidth={118}/>
+                        <PillSelect value={comparator} onChange={e => update({comparator: e.target.value})} options={COMPARATORS} minWidth={82} />
+                        <PillNumber value={condVal} onChange={e => update({condVal: e.target.value})} placeholder="0" />
                     </div>
                     {preview && (
                         <div style={{
@@ -80,7 +80,7 @@ function playerConditionBuilder({ value, onChange}) {
     );
 }
 
-function teamConditionBuilder({ value, onChange}) {
+function TeamConditionBuilder({ value, onChange}) {
     const result = value.result || TEAM_RESULTS[0];
     const margin = value.marginType || MARGIN_TYPES[0];
     const condVal = value.condVal || '';
@@ -95,15 +95,15 @@ function teamConditionBuilder({ value, onChange}) {
                 fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8,
             }}>Bet Condition</div>
             <div style={{
-                background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px, 12px, 10px',
+                background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 12px 10px',
                 display: 'flex', flexDirection: 'column', gap: 8,
             }}>
                 <div style={{
                     display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center',
                 }}>
-                    <pillSelect value={result} onChange={e => update({result: e.target.value})} option={TEAM_RESULTS} minWidth={80} />
-                    <pillSelect value={margin} onChange={e => update({marginType: e.target.value})} options={MARGIN_TYPES} minWidth={110} disabled={isDraw}/>
-                    <pillNumber value={isDraw ? '' : condVal} onChange={e => update({condVal: e.target.value})} disabled={isDraw} placeholder="pts"/>
+                    <PillSelect value={result} onChange={e => update({result: e.target.value})} options={TEAM_RESULTS} minWidth={80} />
+                    <PillSelect value={margin} onChange={e => update({marginType: e.target.value})} options={MARGIN_TYPES} minWidth={110} disabled={isDraw}/>
+                    <PillNumber value={isDraw ? '' : condVal} onChange={e => update({condVal: e.target.value})} disabled={isDraw} placeholder="pts"/>
                 </div>
                 {preview && (<div style={{
                     fontSize: 10, color: 'var(--accent)', fontFamily: 'var(--font-mono)', fontWeight: 700, letterSpacing: '0.06em',
@@ -116,7 +116,7 @@ function teamConditionBuilder({ value, onChange}) {
     );
 }
 
-function gameConditionBuilder({value, onChange, homeTeam, awayTeam}) {
+function GameConditionBuilder({value, onChange, homeTeam, awayTeam}) {
     const outcome = value.outcome || 'Home Team Wins';
     const homeScore = value.homeScore || '';
     const awayScore = value.awayScore || '';
@@ -140,7 +140,7 @@ function gameConditionBuilder({value, onChange, homeTeam, awayTeam}) {
                     <span style={{
                         fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.1em',
                     }}>WINNER</span>
-                    <pillSelect value={outcome} onChange={e => update({outcome: e.target.value})} options={[
+                    <PillSelect value={outcome} onChange={e => update({outcome: e.target.value})} options={[
                         {value: 'Home Team Wins', label: `${homeTeam || 'Home'} wins`},
                         {value: 'Away Team Wins', label: `${awayTeam || 'Away'} wins`},
                         {value: 'Draw', label: `Draw`},
@@ -163,11 +163,11 @@ function gameConditionBuilder({value, onChange, homeTeam, awayTeam}) {
                         <span style={{
                             fontSize: 9, color: 'var(--text-muted)', fontWeight: 700,
                         }}>{homeTeam || 'HOME'}</span>
-                        <pillNumber value={homeScore} onChange={e => update({homeScore: e.target.value})}/>
+                        <PillNumber value={homeScore} onChange={e => update({homeScore: e.target.value})}/>
                         <span style={{
                             color: 'var(--text-muted)', fontWeight: 700,
                         }}>-</span>
-                        <pillNumber value={awayScore} onChange={e => update({awayScore: e.target.value})} />
+                        <PillNumber value={awayScore} onChange={e => update({awayScore: e.target.value})} />
                          <span style={{
                             fontSize: 9, color: 'var(--text-muted)', fontWeight: 700,
                         }}>{awayTeam || 'AWAY'}</span>
@@ -210,7 +210,7 @@ const FIELD_CONFIGS ={
 const CATEGORIES = ['Player', 'Team', 'Game'];
 
 // sub components 
-function modalField({label, value, onChange, placeholder, type='text'}) {
+function ModalField({label, value, onChange, placeholder, type='text'}) {
     return (
         <div style={{
             marginBottom: 14,
@@ -219,7 +219,7 @@ function modalField({label, value, onChange, placeholder, type='text'}) {
                 display: 'block', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6,
             }}>{label}</label>
             <input type={type} value={value} onChange={onChange} placeholder={placeholder} style={{
-                witdh: '100%', boxSizing: 'border-box', background: 'var(--bg-secondary', borderRadius: 9,
+                width: '100%', boxSizing: 'border-box', background: 'var(--bg-secondary)', borderRadius: 9,
                 padding: '11px 14px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', transition: 'border-color 0.2s, box-shadow: 0.2s',
             }} onFocus={e => {
                 e.target.style.borderColor = 'var(--accent)';
@@ -286,7 +286,7 @@ export default function ProposalForm({onSubmit}) {
             padding: '14px 24px', borderRadius: 50, border: 'none', cursor: 'pointer', boxShadow: '0 8px 32px var(--accent-glow-strong)', transition: 'all 0.2s',
         }} onMouseEnter={e => {
             e.currentTarget.style.transform = 'translateY(-3px) scale(1.03)';
-            e.currentTarget.style.boxShadow = '0 14pz 44px var(--accent-glow-strong)';
+            e.currentTarget.style.boxShadow = '0 14px 44px var(--accent-glow-strong)';
         }} onMouseLeave={e => {
             e.currentTarget.style.transform = 'none';
             e.currentTarget.style.boxShadow = '0 8px 32px var(--accent-glow-strong)';
@@ -311,7 +311,7 @@ export default function ProposalForm({onSubmit}) {
                         fontFamily: 'var(--font-display)', fontSize: 24, letterSpacing: '0.06em', color: 'var(--text-primary)',
                     }}>PROPOSE A BET</h2>
                     <button onClick={resetAndClose} style={{
-                        background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4, borderRadius: 6, trasnition: 'color 0.2s',
+                        background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4, borderRadius: 6, transition: 'color 0.2s',
                     }} 
                     onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
                     onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
@@ -347,17 +347,17 @@ export default function ProposalForm({onSubmit}) {
                     background: 'var(--bg-secondary)', borderRadius: 12, padding: '18px 16px', marginBottom: 14, border: '1px solid var(--border)',
                 }}>
                     {FIELD_CONFIGS[category].map(f => (
-                        <modalField key={f.key} label={f.label} value={fields[f.key] || ''} onChange={e => setField(f.key, e.target.value)} placeholder={f.placeholder} type={f.type}/>
+                        <ModalField key={f.key} label={f.label} value={fields[f.key] || ''} onChange={e => setField(f.key, e.target.value)} placeholder={f.placeholder} type={f.type}/>
                     ))}
                 </div>
                 {category === 'Player' && (
-                    <playerConditionBuilder value={condition} onChange={setCondition}/>
+                    <PlayerConditionBuilder value={condition} onChange={setCondition}/>
                 )}
                 {category === 'Team' && (
-                    <teamConditionBuilder value={condition} onChange={setCondition}/>
+                    <TeamConditionBuilder value={condition} onChange={setCondition}/>
                 )}
                 {category === 'Game' && (
-                    <gameConditionBuilder value={condition} onChange={setCondition} homeTeam={fields.homeTeam || ''} awayTeam={fields.awayTeam || ''} />
+                    <GameConditionBuilder value={condition} onChange={setCondition} homeTeam={fields.homeTeam || ''} awayTeam={fields.awayTeam || ''} />
                 )}
                 {error && (
                     <p style={{

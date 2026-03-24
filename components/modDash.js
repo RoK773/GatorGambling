@@ -166,7 +166,7 @@ function ProposalCard({ proposal, index, onApprove, onDecline}) {
                     display: 'flex', alignItems: 'center', gap: 10,
                 }}>
                     <div style={{
-                        background: 'rgba(198, 241, 53, 0.1)', border: '1px solid rgba(198, 241, 53, 0.25',
+                        background: 'rgba(198, 241, 53, 0.1)', border: '1px solid rgba(198, 241, 53, 0.25)',
                         color: 'var(--accent)', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', 
                         padding: '3px 10px', borderRadius: 6,
                     }}>
@@ -323,7 +323,7 @@ function ModItemCard({title, subtitle, meta, stake, index, onCancel}) {
 }
 
 // live tab for mod **global chat
-function ModLiveTab({chatMessages, onDeleteMessages}) {
+function ModLiveTab({chatMessages, onDeleteMessage}) {
     const [inputText, setInputText] = useState('');
     const [messages, setMessages] = useState(chatMessages);
     
@@ -340,7 +340,7 @@ function ModLiveTab({chatMessages, onDeleteMessages}) {
     };
 
     const handleDelete = (id) => {
-        onDeleteMessages(id);
+        onDeleteMessage(id);
         setMessages(prev => prev.filter(m => m.id !== id));
     };
 
@@ -362,7 +362,7 @@ function ModLiveTab({chatMessages, onDeleteMessages}) {
                     fontFamily: 'var(--font-display)', fontSize: 24, letterSpacing: '0.06em', color: 'var(--text-primary)',
                 }}>MODERATION VIEW</h3>
                 <p style={{
-                    fontSize: 14, color: 'var(--text-secondary)', textAlign: 'center;, maxWidth: 30,'
+                    fontSize: 14, color: 'var(--text-secondary)', textAlign: 'center', maxWidth: 300,
                 }}>Monitor the global chat and remove and inappropriate messages.</p>
             </div>
             <div style={{
@@ -420,7 +420,7 @@ function ModLiveTab({chatMessages, onDeleteMessages}) {
                     ))}
                 </div>
                 <div style={{
-                    padding: '10px, 12px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, alignItems: 'center',
+                    padding: '10px 12px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, alignItems: 'center',
                     flexShrink: 0, background: 'var(--bg-secondary)',
                 }}>
                     <input type="text" value={inputText} onChange={e => setInputText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSend()} placeholder="Moderator messgae..." style={{
@@ -443,7 +443,7 @@ export default function ModDash({
     username, proposals, onApprove, onDecline, chatMessages, onDeleteMessage, players, teams, games, onCancelStake,
 }) {
     const [activeTab, setActiveTab] = useState(MOD_TABS.PROPOSALS);
-    const {confirm, modal} = useConfirm;
+    const {confirm, modal} = useConfirm();
 
     const handleApprove = async (id) => {
         const proposal = proposals.find(p => p.id === id);
@@ -457,7 +457,7 @@ export default function ModDash({
 
     const handleDecline = async (id) => {
         const ok = await confirm({
-            title: 'DECLINE PROPOSAL', message: 'Decline and permanently delete this proposal? This cannot be undone.', confirmLabel: 'DECLINE', confrimDanger: true,
+            title: 'DECLINE PROPOSAL', message: 'Decline and permanently delete this proposal? This cannot be undone.', confirmLabel: 'DECLINE', confirmDanger: true,
         });
         if (ok) {
             onDecline(id);
@@ -475,7 +475,7 @@ export default function ModDash({
 
     const handleDeleteMessage = async (msgId) => {
         const ok = await confirm({
-            title: 'DELETE MESSAGE', message: 'Permanently delete this chat message? This action cannot be undone.', confirmLabel: 'DELETE', confirmDanger: 'true',
+            title: 'DELETE MESSAGE', message: 'Permanently delete this chat message? This action cannot be undone.', confirmLabel: 'DELETE', confirmDanger: true,
         });
         if (ok) {
             onDeleteMessage(msgId);
@@ -486,7 +486,7 @@ export default function ModDash({
         switch(activeTab) {
             case MOD_TABS.PROPOSALS:
                 return (
-                    <ProposalsTab proposals={proposals} onapprove={handleApprove} onDecline={handleDecline} />
+                    <ProposalsTab proposals={proposals} onApprove={handleApprove} onDecline={handleDecline} />
                 );
             case MOD_TABS.PLAYERS: 
                 return(
