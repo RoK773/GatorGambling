@@ -5,21 +5,21 @@ function InputField({ label, type = 'text', value, onChange, placeholder}){
         <div style={{ marginBottom: 18}}>
             <label style={{
                 display: 'block', fontSize: 11, fontWeight: 60,
-                color: 'var(--text-secondary', marignBottom: 8,
+                color: 'var(--text-secondary', marginBottom: 8,
                 letterSpacing: '0.1em', textTransform: 'uppercase',
             }}>{label}</label>
             <input type={type} value={value} onChange={onChange} placeholder={placeholder} style={{
                 width: '100%', background: 'var(--bg-secondary)',
                 border: '1px solid var(--border)',
                 borderRadius: 10, padding: '13px 16px',
-                fontsize: 14, color: 'var(--text-primary)',
+                fontSize: 14, color: 'var(--text-primary)',
                 transition: 'border-color 0.2s, box-shadow 0.2s',
             }}
             onFocus={e => {
                 e.target.style.borderColor = 'var(--acent)';
                 e.target.style.boxShadow = '0 0 0 3px var(--accent-glow)';
             }}
-            onblur={e => {
+            onBlur={e => {
                 e.target.style.borderColor = 'var(--border)';
                 e.target.style.boxShadow = 'none';
             }}

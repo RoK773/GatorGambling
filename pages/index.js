@@ -10,8 +10,8 @@ import {
 
 // constants here
 import ConfirmModal from '../components/confirmModal';
-import proposalForm from '../components/proposalForm';
-import modDash from '../components/modDash';
+import ProposalForm from '../components/proposalForm';
+import ModDash from '../components/modDash';
 
 const SCREENS = {
     LANDING: 'landing',
@@ -73,7 +73,7 @@ function Avatar({ size = 36, initials = 'U', style = {} } ) {
             width: size, height: size, borderRadius: '50%',
             background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: 'var(--font-display)', fontSize: size * 0.38, color: '#080A0F', letterSpacingL: '0.02em',
+            fontFamily: 'var(--font-display)', fontSize: size * 0.38, color: '#080A0F', letterSpacing: '0.02em',
             flexShrink: 0, userSelect: 'none', ...style,
         }}>
             {initials}
@@ -113,7 +113,7 @@ function Header({ screen, onLogoClick, onAvatarClick, username, isModerator = fa
     return (
         <header style={{
             position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, height: 'var(--header-height)',
-            background: 'rgba(8, 10, 15, 0, 0.92)', backdropFilter: 'blur(20px)', borderBottom: '1px solid var(--border)', 
+            background: 'rgba(8, 10, 15, 0.92)', backdropFilter: 'blur(20px)', borderBottom: '1px solid var(--border)', 
             display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px',
         }}>
             <Logo onClick={onLogoClick} />
@@ -218,7 +218,7 @@ function LandingScreen({ onSignUp, onLogin }) {
                         width: 72, height: 72, borderRadius: 20,
                         background: 'var(--accent)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        margin: '0 auto 20px', boxShadow: '0 0 40px, var(--accent-glow-strong)',
+                        margin: '0 auto 20px', boxShadow: '0 0 40px var(--accent-glow-strong)',
                         animation: 'pulse-glow 3s ease-in-out infinite',
                     }}>
                         <Trophy size={36} color="#080A0F" strokeWidth={2.5} />
@@ -243,7 +243,7 @@ function LandingScreen({ onSignUp, onLogin }) {
                         <div key={i} style={{
                             flex: 1, background: 'var(--bg-card)',
                             border: '1px solid var(--border)', borderRadius: 10,
-                            padding: '10px, 8px', display: 'flex', flexDirection: 'column',
+                            padding: '10px 8px', display: 'flex', flexDirection: 'column',
                             alignItems: 'center', gap: 6, color: 'var(--accent)',
                         }}>
                             {item.icon}
@@ -266,7 +266,7 @@ function LandingScreen({ onSignUp, onLogin }) {
                     }}> TRY MATCH SIMULATION</button>
                 </div>
                 <p style={{ 
-                    textAilgn: 'center', fontSize: 11, color: 'var(--text-muted)',
+                    textAlign: 'center', fontSize: 11, color: 'var(--text-muted)',
                     marginTop: 28,
                 }}>By continuing, you agree and consent to our Terms and Conditions & Privacy Policy</p>
         </div>
@@ -355,8 +355,8 @@ function PlayerBetCard({ title, subtitle, meta, stake, animDelay }) {
         if (!condVal || Number(condVal) < 0){
             return;
         }
-        setBet(true);
-        setTimeout(() => setBet(false), 2000);
+        setBetPlaced(true);
+        setTimeout(() => setBetPlaced(false), 2000);
     };
 
     return(
@@ -466,7 +466,7 @@ function TeamBetCard({ title, subtitle, stake, animDelay}) {
                 }}>
                     <ConditionSelect value={result} onChange={e => setResult(e.target.value)} options={TEAM_RESULTS} minWidth={80} />
                     <ConditionSelect value={marginType} onChange={e => setMargin(e.target.value)} options={MARGIN_TYPES} minWidth={118} disabled={isDraw} />
-                    <CondiitonNumber value={isDraw ? '' : condVal} onChange={e => setCondVal(e.target.value)} disabled={isDraw} placeholder="pts" />
+                    <ConditonNumber value={isDraw ? '' : condVal} onChange={e => setCondVal(e.target.value)} disabled={isDraw} placeholder="pts" />
                 </div>
                 {conditionText && ( <div style={{
                     fontSize: 10, color: 'var(--accent)', fontFamily: 'var(--font-mono)', fontWeight: 700, letterSpacing: '0.06em', paddingTop: 2,
@@ -516,7 +516,7 @@ function YourPicksTab(){
                 <Star size={32} color="var(--accent)"/>
             </div>
             <h3 style={{
-                fontFamily: 'var(--font-display', fontSize: 28, letterSpacing: '0.06em',
+                fontFamily: 'var(--font-display)', fontSize: 28, letterSpacing: '0.06em',
             }}>YOUR PICKS</h3>
             <p style={{
                 fontSize: 14, color: 'var(--text-secondary)', textAlign: 'center', maxWidth: 280, lineHeight: 1.7,
@@ -580,14 +580,14 @@ function GamesRow({g, i}) {
     return(
         <div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} style={{
             background: hover ? 'var(--bg-card-hover)' : 'var(--bg-card)', border: `1px solid ${hover ? 'var(--border-bright)' : 'var(--border)'}`,
-            borderRadius: 14, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 14, transaction: 'all 0.2s', animation: 'fadeIn 0.4s ease both', animationDelay: `${i * 0.07}s`,
+            borderRadius: 14, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 14, transition: 'all 0.2s', animation: 'fadeIn 0.4s ease both', animationDelay: `${i * 0.07}s`,
         }}>
             <div style={{
                 display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
             }}>
                 <div style={{
                     background: 'rgba(198, 241, 53, 0.1)', color: 'var(--accent)', fontSize: 11, fontWeight: 700, padding: '4px 10px', 
-                    borderRadius: 6, border: '1px solid rgba(198, 241, 53, 0.2', fontFamily: 'var(--font-mono)', flexShrink: 0,
+                    borderRadius: 6, border: '1px solid rgba(198, 241, 53, 0.2)', fontFamily: 'var(--font-mono)', flexShrink: 0,
                 }}>{g.spread}</div>
                 <div style={{
                     flex: 1, minWidth: 200,
@@ -635,7 +635,7 @@ function GamesRow({g, i}) {
                 }}>
                     <button onClick={() => setShowScore(s => !s)} style={{
                         display: 'flex', alignItems: 'center', gap: 5, background: showScore ? 'rgba(198, 241, 53, 0.1)' : 'transparent',
-                        border: showScore ? '1 px solid rgba(198, 241, 53, 0.3)' : '1px solid var(--border)', borderRadius: 6,
+                        border: showScore ? '1px solid rgba(198, 241, 53, 0.3)' : '1px solid var(--border)', borderRadius: 6,
                         padding: '5px 10px', cursor: 'pointer', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', 
                         color: showScore ? 'var(--accent)' : 'var(--text-muted)', transition: 'all 0.2s',
                     }}>
@@ -668,7 +668,7 @@ function GamesRow({g, i}) {
     );
 }
 
-function GamesTab(){
+function GamesTab({games}){
     return(
         <div style={{
             display: 'flex', flexDirection: 'column', gap: 16,
@@ -692,6 +692,12 @@ function GlobalChat({messages, onNewMessage, username}){
             id: Date.now(), user: username || 'You', initials: (username || 'YO').slice(0, 2).toUpperCase(), color: 'var(--accent)', text: trimmed,
         });
         setInputText('');
+    };
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter'){
+            handleSubmit();
+        }
     };
 
     return(
@@ -750,7 +756,7 @@ function GlobalChat({messages, onNewMessage, username}){
                     padding: '8px 10px', fontSize: 12, color: 'var(--text-primary)', outline: 'none',
                 }}
                 onFocus={e => { e.target.style.borderColor = 'var(--accent)';}}
-                onBlur={e => {e.target.style.borderColor = 'var(--border_';}}
+                onBlur={e => {e.target.style.borderColor = 'var(--border)';}}
                 />
                 <button onClick={handleSubmit} style={{
                     background: 'var(--accent)', color: '#080A0F', fontWeight: 700, fontSize: 11,
@@ -803,7 +809,7 @@ function LiveTab({chatMessages, onNewMessage, username}){
                     }}>LIVE FEED LOADING...</span>
                 </div>
             </div>
-            <GlobalChat message={chatMessages} onNewMessage={onNewMessage} username={username}/>
+            <GlobalChat messages={chatMessages} onNewMessage={onNewMessage} username={username}/>
         </div>
     );
 }
@@ -1059,7 +1065,7 @@ export default function App(){
 
         setLoginError('');
 
-        if( playload.username === MODERATOR_CREDENTIALS.username && payload.password === MODERATOR_CREDENTIALS.password){
+        if( payload.username === MODERATOR_CREDENTIALS.username && payload.password === MODERATOR_CREDENTIALS.password){
             setUsername(payload.username);
             setUserRole('moderator');
             setScreen(SCREENS.DASHBOARD);
@@ -1208,11 +1214,11 @@ export default function App(){
         )}
 
         {screen === SCREENS.DASHBOARD && ( isModerator ? (
-            <modDash username={username} proposals={proposals} onApprove={handleApproveProposal} onDecline={handleDeclineProposal} chatMessage={chatMessages} onDeleteMessage={handleDeleteMessage} players={players} teams={teams} games={games} onCancelStake={handleCancelStake} />
+            <ModDash username={username} proposals={proposals} onApprove={handleApproveProposal} onDecline={handleDeclineProposal} chatMessage={chatMessages} onDeleteMessage={handleDeleteMessage} players={players} teams={teams} games={games} onCancelStake={handleCancelStake} />
         ) : (
             <>
             <Dashboard username={username} players={players} teams={teams} games={games} chatMessages={chatMessages} onNewMessage={handleNewMessage} />
-            <proposalForm onSubmit={handleAddProposal} />
+            <ProposalForm onSubmit={handleAddProposal} />
             </>
         )
             

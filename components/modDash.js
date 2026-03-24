@@ -439,7 +439,7 @@ function ModLiveTab({chatMessages, onDeleteMessages}) {
 }
 
 // main export / make the mod dashboard a thing
-export default function modDash({
+export default function ModDash({
     username, proposals, onApprove, onDecline, chatMessages, onDeleteMessage, players, teams, games, onCancelStake,
 }) {
     const [activeTab, setActiveTab] = useState(MOD_TABS.PROPOSALS);

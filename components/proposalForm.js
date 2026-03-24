@@ -233,7 +233,7 @@ function modalField({label, value, onChange, placeholder, type='text'}) {
 }
 
 // yippie main export (make it a thing)
-export default function proposalForm({onSubmit}) {
+export default function ProposalForm({onSubmit}) {
     const [open, setOpen] = useState(false);
     const [category, setCategory] = useState('Player');
     const [fields, setFields] = useState({});

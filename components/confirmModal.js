@@ -10,7 +10,7 @@ export default function ConfirmModal({
     return(
         // backdrop setup
         <div onClick={onCancel} style={{
-            position: 'fixed', inset: 0, zInded: 1000, background: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(6px)',
+            position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(6px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.15s ease',
         }}>
             <div onClick={e => e.stopPropagation()} style={{
