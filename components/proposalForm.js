@@ -220,7 +220,7 @@ function ModalField({label, value, onChange, placeholder, type='text'}) {
             }}>{label}</label>
             <input type={type} value={value} onChange={onChange} placeholder={placeholder} style={{
                 width: '100%', boxSizing: 'border-box', background: 'var(--bg-secondary)', borderRadius: 9,
-                padding: '11px 14px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', transition: 'border-color 0.2s, box-shadow: 0.2s',
+                padding: '11px 14px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', transition: 'border-color 0.2s, box-shadow 0.2s',
             }} onFocus={e => {
                 e.target.style.borderColor = 'var(--accent)';
                 e.target.style.boxShadow = '0 0 0 3px var(--accent-glow)';

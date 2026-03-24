@@ -349,7 +349,7 @@ function PlayerBetCard({ title, subtitle, meta, stake, animDelay }) {
     const [comparator, setComp] = useState(COMPARATORS[0]);
     const [condVal, setCondVal] = useState('');
 
-    const condition = condVal ? `${statType} - ${comparator} ${condVal}` : null;
+    const conditionText = condVal ? `${statType} - ${comparator} ${condVal}` : null;
 
     const handleBet = () => {
         if (!condVal || Number(condVal) < 0){
@@ -369,7 +369,7 @@ function PlayerBetCard({ title, subtitle, meta, stake, animDelay }) {
         }}>
             {meta && (
                 <div style={{
-                    display: 'inline-flex', alignSelf: 'flex-start', background: 'rgba(198, 241, 53, 0.1)', color: 'car(--accent)',
+                    display: 'inline-flex', alignSelf: 'flex-start', background: 'rgba(198, 241, 53, 0.1)', color: 'var(--accent)',
                     fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', padding: '3px 8px',
                     borderRadius: 6, marginBottom: 12, border: '1px solid rgba(198, 241, 52, 0.2)',
                 }}>{meta}</div>
@@ -388,7 +388,7 @@ function PlayerBetCard({ title, subtitle, meta, stake, animDelay }) {
                         display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
                     }}>
                         <ConditionSelect value={statType} onChange={e => setStat(e.target.value)} options={PLAYER_STATS} minWidth={118} />
-                        <ConditionSelect value={comparator} onChange={e => setComp(e.target.value)} options={COMPARATORS} winWidth={82} />
+                        <ConditionSelect value={comparator} onChange={e => setComp(e.target.value)} options={COMPARATORS} minWidth={82} />
                         <ConditionNumber value={condVal} onChange={e => setCondVal(e.target.value)} placeholder="0" />
                     </div>
                     {conditionText && ( <div style={{
@@ -955,7 +955,7 @@ function ProfilePage({ username, onLogout, isModerator = false}){
                         <span style={{
                             fontSize: 13, color: 'var(--accent)', fontWeight: 700, letterSpacing: '0.08em', fontFamily: 'var(--font-mono)',
                         }}>
-                            MDOERATOR ACCOUNT
+                            MODERATOR ACCOUNT
                         </span>
                         </div>
                     ) : (
@@ -1155,8 +1155,20 @@ export default function App(){
     }, []);
 
     const handleApproveProposal = useCallback((id) => {
+        const proposal = proposals.find(p => p.id === id);
+        if (!proposal){
+            return;
+        }
+        if (proposal.category === 'Player'){
+            setPlayers(prev => [...prev, {id: proposal.id, name: proposal.playerName, number: proposal.number, stake: proposal.stake, pos: proposal.nationality }]);
+        } else if (proposal.category === 'Team'){
+            setTeams(prev => [...prev, {id: proposal.id, name: proposal.teamName, record: proposal.record, stake: proposal.stake }]);
+        } else if (proposal.category === 'Game'){
+            setGames(prev => [...prev, {id: proposal.id, home: proposal.homeTeam, away: proposal.awayTeam, time: proposal.gameTime, spread: proposal.spread, stake: proposal.stake}]);
+        }
+        
         setProposals(prev => prev.filter(p => p.id !== id));
-    }, []);
+    }, [proposals]);
 
     const handleDeclineProposal = useCallback((id) => {
         setProposals(prev => prev.filter(p => p.id !== id));
@@ -1214,7 +1226,7 @@ export default function App(){
         )}
 
         {screen === SCREENS.DASHBOARD && ( isModerator ? (
-            <ModDash username={username} proposals={proposals} onApprove={handleApproveProposal} onDecline={handleDeclineProposal} chatMessage={chatMessages} onDeleteMessage={handleDeleteMessage} players={players} teams={teams} games={games} onCancelStake={handleCancelStake} />
+            <ModDash username={username} proposals={proposals} onApprove={handleApproveProposal} onDecline={handleDeclineProposal} chatMessages={chatMessages} onDeleteMessage={handleDeleteMessage} players={players} teams={teams} games={games} onCancelStake={handleCancelStake} />
         ) : (
             <>
             <Dashboard username={username} players={players} teams={teams} games={games} chatMessages={chatMessages} onNewMessage={handleNewMessage} />

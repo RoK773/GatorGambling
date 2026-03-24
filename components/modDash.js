@@ -273,6 +273,65 @@ function ModGamesTab({games, onCancelStake}) {
     );
 }
 
+function ModGameRow({g, i, onCancel}) {
+    const [hover, setHover] = useState(false);
+    return (
+        <div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} style={{
+            background: hover ? 'var(--bg-card-hover)' : 'var(--bg-card)', 
+            border: `1px solid ${hover ? 'var(--border-bright)' : 'var(--border)'}`,
+            borderRadius: 14, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            transition: 'all 0.2s', animation: 'fadeIn 0.4s ease both', animationDelay: `${i * 0.05}s`, flexWrap: 'wrap', gap: 16,
+        }}>
+            <div style={{
+                display: 'flex', gap: 16, alignItems: 'center',
+            }}>
+                <div style={{
+                    background: 'rgba(198, 241, 53, 0.1)', color: 'var(--accent)', fontSize: 11, fontWeight: 700,
+                    padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(198, 241, 53, 0.2)', fontFamily: 'var(--font-mono)',
+                }}>
+                    {g.spread}
+                </div>
+                <div>
+                    <div style={{
+                        fontFamily: 'var(--font-display)', fontSize: 16, color: 'var(--text-primary)',
+                    }}>
+                        {g.away} <span style={{
+                            color: 'var(--text-muted)',
+                        }}>@</span>{g.home}
+                    </div>
+                    <div style={{
+                        fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', marginTop: 4,
+                    }}>{g.time}</div>
+                </div>
+            </div>
+            <div style={{
+                display: 'flex', alignItems: 'center', gap: 24,
+            }}>
+                <div style={{
+                    textAlign: 'right',
+                }}>
+                    <div style={{
+                        fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em',
+                    }}>STAKE</div>
+                    <div style={{
+                        fontFamily: 'var(--font-mono)', fontSize: 16, color: 'var(--accent)', fontWeight: 500,
+                    }}>{g.stake}</div>
+                </div>
+                <button onClick={onCancel} style={{
+                    display: 'flex', alignItems: 'center', gap: 6, padding: '10px 14px', borderRadius: 8,
+                    border: '1px solid rgba(255, 71, 87, 0.3)', color: 'var(--danger)', fontSize: 12, fontWeight: 700,
+                    letterSpacing: '0.06em', cursor: 'pointer', transition: 'all 0.2s', background: 'transparent',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255, 71, 87, 0.18)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                    <Icon.Ban /> CANCEL STAKE
+                </button>
+            </div>
+        </div>
+    );
+}
+
 function ModItemCard({title, subtitle, meta, stake, index, onCancel}) {
     const [hover, setHover] = useState(false);
     return (
