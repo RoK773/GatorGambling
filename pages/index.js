@@ -9,6 +9,9 @@ import {
     Activity} from 'lucide-react';
 
 // constants here
+import ConfirmModal from './components/confirmModal';
+import proposalForm from './components/proposalForm';
+import modDash from './components/modDash';
 
 const SCREENS = {
     LANDING: 'landing',
@@ -26,7 +29,12 @@ const TABS = {
     LIVE: 'live',
 };
 
-const MOCK_PLAYERS = [
+const MODERATOR_CREDENTIALS ={
+    username: 'moderator01',
+    password: 'moderator01Auth',
+}
+
+const INITIAL_PLAYERS = [
     { id: 1, name: 'Matthew Savoie', number: '22', stake: '$400', pos: 'CAN' },
     { id: 2, name: 'Ryan McDonagh', number: '27', stake: '$400', pos: 'AME'},
     { id: 3, name: 'Sam Bennett', number: '19', stake: '$1', pos: 'CAN' },
@@ -34,19 +42,28 @@ const MOCK_PLAYERS = [
     { id: 5, name: 'Auston Matthews', number: '34', stake: '$15', pos: 'MEX' },
 ];
 
-const MOCK_TEAMS = [
+const INITIAL_TEAMS = [
     { id: 1, name: 'Canada', record: '4-6', stake: '$50'},
     { id: 2, name: 'United States of America', record: '3-7', stake: '$40'},
     { id: 3, name: 'Sweden', record: '5-5', stake: '$50'},
-    { id: 4, name: 'Mexico', record: '6-4', sake: '$50'},
+    { id: 4, name: 'Mexico', record: '6-4', stake: '$50'},
     { id: 5, name: 'England', record: '3-7', stake: '$20'},
 ];
 
-const MOCK_GAMES = [
+const INITIAL_GAMES = [
     { id: 1, home: 'Canada', away: 'United States of America', time: '6:00 PM', winner: 'Canada', stake: '$120', spread: '-3.5' },
     { id: 2, home: 'United States of America', away: 'England', time: '4:00 PM', winner: 'United States of America', stake: '$70', spread: '-2.1' },
     { id: 3, home: 'England', away: 'Sweden', time: '5:00 PM', winner: 'Sweden', stake: '$200', spread: '3.0'},
     { id: 4, home: 'Sweden', away: 'Mexico', time: '4:30 PM', winner: 'Mexico', stake: '$250', spread: '-1.6'},
+];
+
+// seed messages so App can own chatMessages state and pass it down for mod deletion
+// static messages for global chat
+const SEED_MESSAGES = [
+    { id: 1, user: 'GamabaGuoba01', initials: 'GG', color: '#C6F135', text: 'Have they tried scoring?'},
+    { id: 2, user: 'SwedishGuy', initials: 'SG', color: '#38BDF8', text: 'dw we got this trust'},
+    { id: 3, user: 'GambaGuoba01', initials: 'GG', color: '#C6F135', text: 'Mexico sweep :muscle:'},
+    { id: 4, user: 'ImJustKen', initials: 'IJ', color: '#FB923C', text: 'Amerika ya :3'},
 ];
 
 // avatar placeholder
@@ -56,13 +73,8 @@ function Avatar({ size = 36, initials = 'U', style = {} } ) {
             width: size, height: size, borderRadius: '50%',
             background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: 'var(--font-display)',
-            fontSize: size * 0.38,
-            color: '#080A0F',
-            letterSpacingL: '0.02em',
-            flexShrink: 0,
-            userSelect: 'none',
-            ...style,
+            fontFamily: 'var(--font-display)', fontSize: size * 0.38, color: '#080A0F', letterSpacingL: '0.02em',
+            flexShrink: 0, userSelect: 'none', ...style,
         }}>
             {initials}
 
@@ -74,14 +86,11 @@ function Avatar({ size = 36, initials = 'U', style = {} } ) {
 function Logo({ onClick, style = {} }) {
     return(
         <button onClick={onClick} style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: 10,
-            padding: '4px 0',
-            ...style,
+            background: 'none', border: 'none', cursor: 'pointer', display: 'flex', 
+            alignItems: 'center', gap: 10, padding: '4px 0', ...style,
         }}>
             <div style={{
-                width: 36, height: 36, borderRadius: 10,
-                background: 'var(--accent)',
+                width: 36, height: 36, borderRadius: 10, background: 'var(--accent)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 boxShadow: '0 0 16px var(--accent-glow)',
             }}>
@@ -89,10 +98,7 @@ function Logo({ onClick, style = {} }) {
                 <Trophy size={20} color="#050A0F" strokeWidth={2.5} />
             </div>
             <span style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 22,
-                color: 'var(--text-primary)',
-                letterSpacing: '0.06em',
+                fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--text-primary)', letterSpacing: '0.06em',
             }}>GATORGAMBLING</span>
         </button>
     );
@@ -100,38 +106,36 @@ function Logo({ onClick, style = {} }) {
 
 // header
 
-function Header({ screen, onLogoClick, onAvatarClick, username}) {
+function Header({ screen, onLogoClick, onAvatarClick, username, isModerator = false}) {
     if (screen === SCREENS.LANDING || screen === SCREENS.LOGIN || screen === SCREENS.SIGNUP) {
         return null;
     }
     return (
         <header style={{
-            position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-            height: 'var(--header-height)',
-            background: 'rgba(8, 10, 15, 0, 0.92)',
-            backdropFilter: 'blur(20px)',
-            borderBottom: '1px solid var(--border)',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '0 24px',
+            position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, height: 'var(--header-height)',
+            background: 'rgba(8, 10, 15, 0, 0.92)', backdropFilter: 'blur(20px)', borderBottom: '1px solid var(--border)', 
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px',
         }}>
             <Logo onClick={onLogoClick} />
             <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: 12,
+                display: 'flex', alignItems: 'center', gap: 12,
             }}>
-            <span style={{
-                fontSize: 13, color: 'var(--text-secondary)',
-                fontWeight: 500,  display: 'none',
-            }}>{username}</span>
+                {isModerator && ( <div style={{
+                    display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(198, 241, 53, 0.08)',
+                    border: '1px solid rgba(198, 241, 53, 0.25)', borderRadius: 8, padding: '4px 10px', fontSize: 10, 
+                    fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)',
+                }}>
+                    <Shield size={11} />
+                    MODERATOR
+                    </div>
+                )}
             <button onClick={onAvatarClick} style={{
-                background: 'none', border: '2px solid var(--border-bright)',
-                borderRadius: '50%', cursor: 'pointer', padding: 2,
-                transition: 'border-color 0.2s',
+                background: 'none', border: `2px solid ${isModerator ? 'rgba(198,241,53,0.4)' : 'var(--border-bright)'}`,
+                borderRadius: '50%', cursor: 'pointer', padding: 2, transition: 'border-color 0.2s',
             }}
 
             onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent)'}
-            onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-bright)'}
+            onMouseLeave={e => e.currentTarget.style.borderColor = isModerator ? 'rgba(198, 241, 53, 0.4)' : 'var(--border-bright)'}
             >
                 <Avatar size={34} initials={username ? username[0].toUpperCase() : 'U'}/>
             </button>
@@ -147,22 +151,19 @@ function InputField({ label, type = 'text', value, onChange, placeholder}){
     return (
         <div style={{ marginBottom: 18}}>
             <label style={{
-                display: 'block', fontSize: 11, fontWeight: 60,
-                color: 'var(--text-secondary', marignBottom: 8,
+                display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8,
                 letterSpacing: '0.1em', textTransform: 'uppercase',
             }}>{label}</label>
             <input type={type} value={value} onChange={onChange} placeholder={placeholder} style={{
-                width: '100%', background: 'var(--bg-secondary)',
-                border: '1px solid var(--border)',
-                borderRadius: 10, padding: '13px 16px',
-                fontsize: 14, color: 'var(--text-primary)',
-                transition: 'border-color 0.2s, box-shadow 0.2s',
+                width: '100%', background: 'var(--bg-secondary)', border: '1px solid var(--border)',
+                borderRadius: 10, padding: '13px 16px', fontSize: 14, color: 'var(--text-primary)',
+                transition: 'border-color 0.2s, box-shadow 0.2s', boxSizing: 'border-box', outline: 'none',
             }}
             onFocus={e => {
-                e.target.style.borderColor = 'var(--acent)';
+                e.target.style.borderColor = 'var(--accent)';
                 e.target.style.boxShadow = '0 0 0 3px var(--accent-glow)';
             }}
-            onblur={e => {
+            onBlur={e => {
                 e.target.style.borderColor = 'var(--border)';
                 e.target.style.boxShadow = 'none';
             }}
@@ -171,10 +172,10 @@ function InputField({ label, type = 'text', value, onChange, placeholder}){
     );
 }
 
-function AuthButton({ label, primary = false, onClick}){
+function AuthButton({ label, primary = false, onClick, disabled = false}){
     const [hover, setHover] = useState(false);
     return (
-        <button onClick={onClick} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} style={{
+        <button onClick={onClick} disabled={disabled} onMouseEnter={() => !disabled && setHover(true)} onMouseLeave={() => setHover(false)} style={{
             width: '100%', padding: '14px',
             borderRadius: 10, fontWeight: 600, fontSize: 15,
             letterSpacing: '0.04em', 
@@ -185,6 +186,8 @@ function AuthButton({ label, primary = false, onClick}){
             border: primary? 'none' : '1px solid var(--border-bright)',
             transform: hover ? 'translateY(-1px)' : 'none',
             boxShadow: primary && hover ? '0 8px 24px var(--accent-glow-strong)' : 'none',
+            cursor: disabled ? 'not-allowed' : 'pointer',
+            opacity: disabled ? 0.7 : 1,
             transition: 'all 0.2s', 
         }}
         >{label}</button>
@@ -199,7 +202,7 @@ function LandingScreen({ onSignUp, onLogin }) {
             background: 'var(--bg-primary)', padding: 24,
         }}>
             <div style={{
-                position: 'fixed', top: '-20', left: '50%', transform: 'translateX(-50%)',
+                position: 'fixed', top: '-20px', left: '50%', transform: 'translateX(-50%)',
                 width: 600, height: 600, borderRadius: '50%',
                 background: 'radial-gradient(circle, rgba(198, 241, 53, 0.06) 0%, transparent 70%)',
                 pointerEvents: 'none',
@@ -265,15 +268,89 @@ function LandingScreen({ onSignUp, onLogin }) {
     );
 }
 
+function ConditionSelect({value, onChange, options, minWidth = 100}) {
+    return ( 
+        <div style={{
+            position: 'relative', display: 'inline-flex', alignItems: 'center',
+        }}>
+            <select value={value} onChange={onChange} style={{
+                appearance: 'none', WebkitAppearance: 'none', background: 'var(--bg-primary)', 
+                border: '1px solid var(--border)', borderRadius: 7, padding: '6px 26px 6px 10px', 
+                fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', color: 'var(--text-primary)',
+                cursor: 'pointer', outline: 'none', minWidth, transition: 'border-color 0.2s',
+            }}
+            onFocus={e => e.target.style.borderColor = 'var(--accent)'}
+            onBlur={e => e.target.style.borderColor = 'var(--border)'}
+            >
+                {options.map(o => (
+                    <option key={o.value ?? o} value={o.value ?? o}>{o.label ?? o}</option>
+                ))}
+
+            </select>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2.5" strokeLinecap="round" style={{
+                position: 'absolute', right: 8, pointerEvents: 'none',
+            }}>
+                <polyline points="6 9 12 15 18 9"/>
+            </svg>
+        </div>
+    );
+}
+
+function ConditionNumber({value, onChange, disabled = false, min = 0, max = 999, placeholder = '0'}) {
+    return (
+        <input type="number" value={value} onChange={onChange} disabled={disabled} min={min} max={max} placeholder={placeholder} style={{
+            width: 58, background: disabled ? 'var(--bg-secondary)' : 'var(--bg-primary)', border: '1px solid var(--border)',
+            borderRadius: 7, padding: '6px 8px', fontSize: 12, fontWeight: 700, color: disabled? 'var(--text-muted)' : 'var(--text-primary)',
+            fontFamily: 'var(--font-mono)', textAlign: 'center', outline: 'none', transition: 'border-color 0.2s',
+            opacity: disabled ? 0.45 : 1,
+        }}
+        onFocus={e => { if (!disabled) {
+            e.target.style.borderColor = 'var(--accent)';
+        }}}
+        onBlur={e => e.target.style.borderColor = 'var(--border)'}
+        />
+    );
+}
+
+function ConditionLabel({children}) {
+    return (
+        <span style={{
+            fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-muted)', textTransform: 'uppercase',
+        }}>{children}</span>
+    )
+}
+
+function ConditionZone({children}) {
+    return (
+        <div style={{
+            background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px',
+            marginBottom: 14, display: 'flex', flexDirection: 'column', gap: 8,
+        }}>
+            <ConditionLabel>BetCondition</ConditionLabel>
+            {children}
+        </div>
+    );
+}
+
+const PLAYER_STATS = ['Goals', 'Assists', 'Fouls', 'Shots on Target', 'Saves', 'Minutes Played'];
+const COMPARATORS = ['Over', 'Under', 'Exactly'];
+
 // bet card
-function BetCard({ title, subtitle, meta, stake, onBet }) {
+function PlayerBetCard({ title, subtitle, meta, stake, animDelay }) {
     const [hover, setHover] = useState(false);
-    const [betPlaced, setBetPlaced] = useState(false);
+    const [betPlaced, setBet] = useState(false);
+    const [statType, setStat] = useState(PLAYER_STATS[0]);
+    const [comparator, setComp] = useState(COMPARATORS[0]);
+    const [condVal, setCondVal] = useState('');
+
+    const condition = condVal ? `${statType} - ${comparator} ${condVal}` : null;
 
     const handleBet = () => {
-        setBetPlaced(true);
-        onBet && onBet();
-        setTimeout(() => setBetPlaced(false), 2000);
+        if (!condVal || Number(condVal) < 0){
+            return;
+        }
+        setBet(true);
+        setTimeout(() => setBet(false), 2000);
     };
 
     return(
@@ -282,7 +359,7 @@ function BetCard({ title, subtitle, meta, stake, onBet }) {
             border: `1px solid ${hover ? 'var(--border-bright)' : 'var(--border)'}`,
             borderRadius: 14, padding: 20, display: 'flex', flexDirection: 'column',
             transition: 'all 0.2s', transform: hover ? 'translateY(-2px)' : 'none',
-            boxShadow: hover ? 'o 8px 24px rgba(0, 0, 0, 0.3)' : 'none', animation: 'fadeIn 0.4s ease both',
+            boxShadow: hover ? 'o 8px 24px rgba(0, 0, 0, 0.3)' : 'none', animation: 'fadeIn 0.4s ease both', animationDelay: animDelay,
         }}>
             {meta && (
                 <div style={{
@@ -291,24 +368,36 @@ function BetCard({ title, subtitle, meta, stake, onBet }) {
                     borderRadius: 6, marginBottom: 12, border: '1px solid rgba(198, 241, 52, 0.2)',
                 }}>{meta}</div>
             )}
-            <div style={{
-                flex: 1,
-            }}>
                 <div style={{
-                    fontFamily: 'var(--font-display)', fontSize: 12, letterSpacing: '0.04em',
-                    color: 'var(--text-primary)', lineHeight: 1.2, marginBottom: 6,
+                    fontFamily: 'var(--font-display)', fontSize: 14, letterSpacing: '0.04em',
+                    color: 'var(--text-primary)', lineHeight: 1.2, marginBottom: 4,
                 }}>{title}</div>
                 <div style={{
                     fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)',
-                    fontWeight: 500, marginBottom: 16,
+                    fontWeight: 500, marginBottom: 12,
                 }}>{subtitle}</div>
-            </div>
+
+                <ConditionZone>
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
+                    }}>
+                        <ConditionSelect value={statType} onChange={e => setStat(e.target.value)} options={PLAYER_STATS} minWidth={118} />
+                        <ConditionSelect value={comparator} onChange={e => setComp(e.target.value)} options={COMPARATORS} winWidth={82} />
+                        <ConditionNumber value={condVal} onChange={e => setCondVal(e.target.value)} placeholder="0" />
+                    </div>
+                    {conditionText && ( <div style={{
+                        fontSize: 10, color: 'var(--accent)', fontFamily: 'var(--font-mono)', fontWeight: 700, letterSpacing: '0.06em', paddingTop: 2,
+                    }}>
+                        {conditionText}
+                    </div>
+                )}
+                </ConditionZone>
             <div style={{
                 height: 1, background: 'var(--border)', marginBottom: 16,
             }}/>
 
             <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12,
             }}>
                 <div>
                     <div style={{
@@ -320,13 +409,88 @@ function BetCard({ title, subtitle, meta, stake, onBet }) {
                 </div>
                 <BarChart2 size={20} color="var(--text-muted)"/>
             </div>
-            <button onClick={handleBet} style={{
+            <button onClick={handleBet} disabled={!condVal || betPlaced} title={!condVal ? 'Set a condition for your bet' : ''} style={{
                 background: betPlaced ? 'var(--success)' : 'var(--accent)',
                 color: '#080A0F', fontWeight: 700, fontSize: 13, letterSpacing: '0.08em', 
-                padding: '11px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                transition: 'all 0.2s', transform: hover && !betPlaced ? 'none' : 'none',
+                padding: '11px', borderRadius: 8, border: !condVal ? '1px solid var(--border)' : 'none', cursor: !condVal ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s', opacity: !condVal ? 0.6 : 1,
             }}>
-                {betPlaced? '✓ BET PLACED' : 'PLACE BET'}
+                {betPlaced ? '✓ BET PLACED' : !condVal ? 'SET CONDITION FIRST' : 'PLACE BET'}
+            </button>
+        </div>
+    );
+}
+
+const TEAM_RESULTS = ['Wins', 'Loses', 'Draws'];
+const MARGIN_TYPES = ['By More Than', 'By Less Than', 'By Exactly'];
+
+function TeamBetCard({ title, subtitle, stake, animDelay}) {
+    const [hover, setHover] = useState(false);
+    const [betPlaced, setBet] = useState(false);
+    const [result, setResult] = useState(TEAM_RESULTS[0]);
+    const [marginType, setMargin] = useState(MARGIN_TYPES[0]);
+    const [condVal, setCondVal] = useState('');
+
+    const isDraw = result === 'Draws';
+    const hasCondition = isDraw || (condVal && Number(condVal) >= 0);
+    const conditionText = isDraw ? 'Draws' : condVal ? `${result} - ${marginType} ${condVal}` : null;
+    const handleBet = () => {
+        if (!hasCondition) {
+            return;
+        }
+        setBet(true);
+        setTimeout(() => setBet(false), 2000);
+    };
+
+    return(
+        <div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} style={{
+            background: hover ? 'var(--bg-card-hover)' : 'var(--bg-card)', border: `1px solid ${hover ? 'var(--border-bright)' : 'var(--border)'}`,
+            borderRadius: 14, padding: 18, display: 'flex', flexDirection: 'column', transition: 'all 0.2s', transform: hover ? 'translateY(-2px)' : 'none',
+            boxShadow: hover ? '0 8px 24px rgba(0,0,0,0.3)' : 'none', animation: 'fadeIn 0.4s ease both', animationDelay: animDelay,
+        }}>
+            <div style={{
+                fontFamily: 'var(--font-display)', fontSize: 14, letterSpacing: '0.04em', color: 'var(--text-primary)', lineHeight: 1.2, marginBottom: 4,
+            }}>{title}</div>
+            <div style={{
+                fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontWeight: 500, marginBottom: 12,
+            }}>{subtitle}</div>
+            <ConditionZone>
+                <div style={{
+                    display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
+                }}>
+                    <ConditionSelect value={result} onChange={e => setResult(e.target.value)} options={TEAM_RESULTS} minWidth={80} />
+                    <ConditionSelect value={marginType} onChange={e => setMargin(e.target.value)} options={MARGIN_TYPES} minWidth={118} disabled={isDraw} />
+                    <CondiitonNumber value={isDraw ? '' : condVal} onChange={e => setCondVal(e.target.value)} disabled={isDraw} placeholder="pts" />
+                </div>
+                {conditionText && ( <div style={{
+                    fontSize: 10, color: 'var(--accent)', fontFamily: 'var(--font-mono)', fontWeight: 700, letterSpacing: '0.06em', paddingTop: 2,
+                }}>
+                    {conditionText}
+                </div>
+            )}
+            </ConditionZone>
+            <div style={{
+                height: 1, background: 'var(--border)', marginBottom: 12,
+            }}/>
+            <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12,
+            }}>
+                <div>
+                    <div style={{
+                        fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3,
+                    }}>STAKE</div>
+                    <div style={{fontFamily: 'var(--font-mono)', fontSize: 18, fontWeight: 500, color: 'var(--accent)',          
+                    }}>{stake}</div>
+                </div>
+                <BarChart2 size={20} color="var(--text-muted)" />
+            </div>
+            <button onClick={handleBet} disabled={!hasCondition || betPlaced} title={!hasCondition ? 'Set a condition to place your bet' : ''} style={{
+                background: betPlaced ? 'var(--success)' : !hasCondition ? 'var(--bg-secondary)' : 'var(--accent)', 
+                color: !hasCondition ? 'var(--text-muted)' : '#080A0F', fontWeight: 700, fontSize: 13, letterSpacing: '0.08em',
+                padding: '11px', borderRadius: 8, border: !hasCondition ? '1px solid var(--border)' : 'none', cursor: !hasCondition ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s', opacity: !hasCondition ? 0.6 : 1,
+            }}>
+                {betPlaced ? '✓ BET PLACED' : !condVal ? 'SET CONDITION FIRST' : 'PLACE BET'}
             </button>
         </div>
     );
@@ -364,77 +528,80 @@ function YourPicksTab(){
     );
 }
 
-function PlayersTab(){
+function PlayersTab({players}){
     return(
         <div style={{
             display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16,
         }}>
-            {MOCK_PLAYERS.map((p, i) => (
-                <div key={p.id} style={{
-                    animationDelay: `${i * 0.05}s` }}>
-                        <BetCard title={p.name} subtitle={`#${p.number}`} meta={p.pos} stake={p.stake}/>
-                </div>
+            {players.map((p, i) => (
+                <PlayerBetCard key={p.id} title={p.name} subtitle={`#${p.number}`} meta={p.pos} stake={p.stake} animDelay={`${i*0.05}s`} />
+ 
                 ))}
         </div>
     );
 }
 
-function TeamsTab(){
+function TeamsTab({teams}){
     return(
         <div style={{
             display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16,
         }}>
-            {MOCK_TEAMS.map((t, i) =>(
-                <div key={t.id} style={{
-                    animationDelay: `${i * 0.05}s`}}>
-                        <BetCard title={t.name} subtitle={`#${t.record}`} stake={t.stake}/>
-                </div>
+            {teams.map((t, i) =>(
+                    <TeamBetCard key={t.id} title={t.name} subtitle={t.record} stake={t.stake} animDelay={`${i * 0.05}s`}/>
             ))}
         </div>
     );
 }
 
+const GAME_OUTCOMES = ['Home Team Wins', 'Away Team Wins', 'Draw'];
+
 function GamesRow({g, i}) {
     const [hover, setHover] = useState(false);
     const [betPlaced, setBetPlaced] = useState(false);
+    const [outcome, setOutcome] = useState(GAME_OUTCOMES[0]);
+    const [homeScore, setHomeScore] = useState('');
+    const [awayScore, setAwayScore] = useState('');
+    const [showScore, setShowScore] = useState(false);
+    const hasScore = showScore && homeScore !== '' && awayScore !== '';
+    const outcomeLabel = outcome === 'Home Team Wins' ? g.home : outcome === 'Away Team Wins' ? g.away : 'Draw';
+    const conditionText = hasScore ? `${outcomeLabel} - ${g.home} ${homeScore} : ${awayScore} ${g.away}` :  `${outcomeLabel} wins`;
+
+    const handleBet = () => {
+        setBet(true);
+        setTimeout(() => setBet(false), 2000);
+    }
 
     return(
-        <div key={g.id} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} style={{
-            background: hover ? 'var(--bg-card-hover)' : 'var(--bg-card)', 
-            border: `1px solid ${hover ? 'var(--border-bright)' : 'var(--border)'}`,
-            borderRadius: 14, padding: '18px 20px', display: 'flex', alignItems: 'center',
-            gap: 20, transition: 'all 0.2s', animation: 'fadeIn 0.4s ease both', 
-            animationDelay: `${i * 0.07}s`, flexWrap: 'wrap',
+        <div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} style={{
+            background: hover ? 'var(--bg-card-hover)' : 'var(--bg-card)', border: `1px solid ${hover ? 'var(--border-bright)' : 'var(--border)'}`,
+            borderRadius: 14, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 14, transaction: 'all 0.2s', animation: 'fadeIn 0.4s ease both', animationDelay: `${i * 0.07}s`,
         }}>
             <div style={{
-                background: 'rgba(198, 241, 53, 0.1)', color: 'var(--accent)', fontSize: 11,
-                fontWeight: 700, padding: '4px 10px', borderRadius: 6, 
-                border: '1px solid rgba(198, 241, 53, 0.2)', fontFamily: 'var(--font-mono)', flexShrink: 0,
-            }}>{g.spread}</div>
-            <div style={{
-                flex: 1, minWidth: 200,
+                display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
             }}>
                 <div style={{
-                    fontFamily: 'var(--font-display)', fontSize: 16, letterSpacing: '0.04em', color: 'var(--text-primary)',
+                    background: 'rgba(198, 241, 53, 0.1)', color: 'var(--accent)', fontSize: 11, fontWeight: 700, padding: '4px 10px', 
+                    borderRadius: 6, border: '1px solid rgba(198, 241, 53, 0.2', fontFamily: 'var(--font-mono)', flexShrink: 0,
+                }}>{g.spread}</div>
+                <div style={{
+                    flex: 1, minWidth: 200,
                 }}>
-                    {g.away} 
-                    <span style={{
-                        color: 'var(--text-muted)'
-                    }}>@</span> {g.home}
+                    <div style={{
+                        fontFamily: 'var(--font-display)', fontSize: 16, letterSpacing: '0.04em', color: 'var(--text-primary)',
+                    }}>
+                        {g.away}
+                        <span style={{
+                            color: 'var(--text-muted)',
+                        }}>@</span> {g.home}
+                    </div>
+                    <div style={{
+                        fontSize: 12, color: 'var(--text-secondary)', marginTop: 3, fontFamily: 'var(--font-mono)',
+                    }}>
+                        {g.time}
+                    </div>
                 </div>
                 <div style={{
-                    fontSize: 12, color: 'var(--text-secondary)', marginTop: 4, fontFamily: 'var(--font-mono)',
-                }}>
-                    {g.time} - Winner: <span style={{
-                        color: 'var(--accent)',
-                    }}>{g.winner}</span>
-                </div>
-            </div>
-            <div style={{
-                display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0,
-            }}>
-                <div style={{
-                    textAlign: 'right',
+                    textAlign: 'right', flexShrink: 0,
                 }}>
                     <div style={{
                         fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em',
@@ -443,14 +610,54 @@ function GamesRow({g, i}) {
                         fontFamily: 'var(--font-mono)', fontSize: 16, color: 'var(--accent)', fontWeight: 500,
                     }}>{g.stake}</div>
                 </div>
-                <button onClick={() => { setBetPlaced(true); setTimeout(() => setBetPlaced(false), 2000);}} style={{
-                    background: betPlaced ? 'var(--success)' : 'var(--accent)', color: '#080A0F',
-                    letterSpacing: '0.08em', padding: '10px 18px', borderRadius: 8, border: 'none',
-                    cursor: 'pointer', transition: 'all 0.2s', flexShrink: 0,
-                }}>
-                    {betPlaced ? '✓ PLACED' : 'PLACE BET'}
-                </button>
             </div>
+            <ConditionZone>
+                <div style={{
+                    display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+                }}>
+                    <ConditionLabel>Winner</ConditionLabel>
+                    <ConditionSelect value={outcome} onChange={e => setOutcome(e.target.value)} options={[
+                        {value: 'Home Team Wins', label: `${g.home} wins`},
+                        {value: 'Away Team Wins', label: `${g.away} wins`},
+                        {value: 'Draw', label: 'Draw'},
+                    ]}
+                    minWidth={160}
+                    />
+                </div>
+                <div style={{
+                    display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+                }}>
+                    <button onClick={() => setShowScore(s => !s)} style={{
+                        display: 'flex', alignItems: 'center', gap: 5, background: showScore ? 'rgba(198, 241, 53, 0.1)' : 'transparent',
+                        border: showScore ? '1 px solid rgba(198, 241, 53, 0.3)' : '1px solid var(--border)', borderRadius: 6,
+                        padding: '5px 10px', cursor: 'pointer', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', 
+                        color: showScore ? 'var(--accent)' : 'var(--text-muted)', transition: 'all 0.2s',
+                    }}>
+                        {showScore ? 'SCORE' : '+ PREDICT SCORE'}
+                    </button>
+                    {showScore && ( <div style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                    }}>
+                        <ConditionLabel>{g.home}</ConditionLabel>
+                        <ConditionNumber value={homeScore} onChange={e => setHomeScore(e.target.value)} placeholder="0" min={0} />
+                            <span style={{
+                                color: 'var(--text-muted)', fontWeight: 700,
+                            }}>-</span>
+                            <ConditionNumber value={awayScore} onChange={e => setAwayScore(e.target.value)} placeholder="0" min={0} />
+                            <ConditionLabel>{g.away}</ConditionLabel>
+                        </div>
+                        )}
+                </div>
+                <div style={{
+                    fontSize: 10, color: 'var(--accent)', fontFamily: 'var(--font-mono)', fontWeight: 700, letterSpacing: '0.06em', paddingTop: 2,
+                }}>
+                    {conditionText}
+                </div>
+            </ConditionZone>
+            <button onClick={handleBet} style={{
+                background: betPlaced ? 'var(--success)' : 'var(--accent)', color: '#080A0F', letterSpacing: '0.08em', padding: '11px 20px',
+                borderRadius: 8, border: 'none', cursor: 'pointer', transition: 'all 0.2s', fontWeight: 700, fontSize: 13, alignSelf: 'flex-end',
+            }}>{betPlaced ? '✓ BET PLACED' : 'PLACE BET'}</button>
         </div>
     );
 }
@@ -458,43 +665,27 @@ function GamesRow({g, i}) {
 function GamesTab(){
     return(
         <div style={{
-            display: 'flex', flexDirection: 'column', gap: 14,
+            display: 'flex', flexDirection: 'column', gap: 16,
         }}>
-            {MOCK_GAMES.map((g, i) => (
+            {games.map((g, i) => (
                 <GamesRow key={g.id} g={g} i={i}/>
         ))}
         </div>
     );
 }
 
-// static messages for global chat
-const SEED_MESSAGES = [
-    { id: 1, user: 'GamabaGuoba01', initials: 'GG', color: '#C6F135', text: 'Have they tried scoring?'},
-    { id: 2, user: 'SwedishGuy', initials: 'SG', color: '#38BDF8', text: 'dw we got this trust'},
-    { id: 3, user: 'GambaGuoba01', initials: 'GG', color: '#C6F135', text: 'Mexico sweep :muscle:'},
-    { id: 4, user: 'ImJustKen', initials: 'IJ', color: '#FB923C', text: 'Amerika ya :3'},
-];
-
-function GlobalChat(){
+function GlobalChat({messages, onNewMessage, username}){
     const [inputText, setInputText] = useState('');
-    const [messages, setMessages] = useState(SEED_MESSAGES);
 
     const handleSubmit = () => {
         const trimmed = inputText.trim();
         if (!trimmed){
             return;
         }
-        setMessages(prev => [
-            ...prev,
-            {id: Date.now(), user: 'You', initials: 'YO', color: 'var(--accent)', text: trimmed},
-        ]);
+        onNewMessage({
+            id: Date.now(), user: username || 'You', initials: (username || 'YO').slice(0, 2).toUpperCase(), color: 'var(--accent)', text: trimmed,
+        });
         setInputText('');
-    };
-
-    const handleKeyDown = (e) => {
-        if (e.key === 'Enter'){
-            handleSubmit();
-        }
     };
 
     return(
@@ -568,7 +759,7 @@ function GlobalChat(){
     );
 }
 
-function LiveTab(){
+function LiveTab({chatMessages, onNewMessage, username}){
     return(
         <div style={{
             display: 'flex', flexDirection: 'row', gap: 16, alignItems: 'flex-start', animation: 'fadeIn 0.4s ease',
@@ -606,7 +797,7 @@ function LiveTab(){
                     }}>LIVE FEED LOADING...</span>
                 </div>
             </div>
-            <GlobalChat />
+            <GlobalChat message={chatMessages} onNewMessage={onNewMessage} username={username}/>
         </div>
     );
 }
@@ -620,15 +811,15 @@ const TAB_CONFIG = [
     {key: TABS.LIVE, label: "Live", icon: <Radio size={15} />, live:true},
 ];
 
-function Dashboard({username}){
+function Dashboard({username, players, teams, games, chatMessages, onNewMessage}){
     const [activeTab, setActiveTab] = useState(TABS.PICKS);
     const renderTabContent = () => {
         switch (activeTab){
             case TABS.PICKS: return <YourPicksTab/>;
-            case TABS.PLAYERS: return <PlayersTab />;
-            case TABS.TEAMS: return <TeamsTab />;
-            case TABS.GAMES: return <GamesTab />;
-            case TABS.LIVE: return <LiveTab />;
+            case TABS.PLAYERS: return <PlayersTab players={players}/>;
+            case TABS.TEAMS: return <TeamsTab teams={teams}/>;
+            case TABS.GAMES: return <GamesTab games={games}/>;
+            case TABS.LIVE: return <LiveTab chatMessages={chatMessages} onNewMessage={onNewMessage} username={username}/>;
             default: return null;
         }
     };
@@ -651,7 +842,7 @@ function Dashboard({username}){
                                 display: 'flex', alignItems: 'center', gap: 7, padding: '0 16px', height: 'var(--tab-height)',
                                 background: 'none', color: isActive ? 'var(--accent)' : 'var(--text-muted)',
                                 letterSpacing: '0.04em', borderBottom: isActive ? '2px solid var(--accent)' : '2px solid transparent',
-                                transition: 'all 0.2s', flexShrink: 0,
+                                transition: 'all 0.2s', flexShrink: 0, cursor: 'pointer',
                             }}
                             onMouseEnter={e => {if (!isActive) e.currentTarget.style.color = 'var(--text-secondary)';}}
                             onMouseLeave={e => {if (!isActive) e.currentTarget.style.color = 'var(--text-muted)';}}
@@ -717,7 +908,7 @@ function SettingsButton({ icon, label}){
     );
 }
 
-function ProfilePage({ username, onLogout}){
+function ProfilePage({ username, onLogout, isModerator = false}){
     return (
         <div style={{
             paddingTop: 'var(--header-height)',
@@ -743,18 +934,34 @@ function ProfilePage({ username, onLogout}){
                     <p style={{
                         fontSize: 14, color: 'var(--text-secondary)', marginBottom: 4,
                     }}>user@email.com</p>
+                    {isModerator ? (
                     <div style={{
                         display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(198, 241, 53, 0.08)',
-                        border: '1px solid rgba(198, 241, 53, 0.2)', borderRadius: 10, padding: '8px 18px', marginTop: 16,
+                        border: '1px solid rgba(198, 241, 53, 0.25)', borderRadius: 10, padding: '8px 18px', marginTop: 16,
                     }}>
+                        <Shield size={14} color="var(--accent)" />
                         <span style={{
-                            fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600,
-                        }}>BALANCE</span>
-                        <span style={{
-                            fontFamily: 'var(--font-mono)', fontSize: 20, color: 'var(--accent)', fontWeight: 500,
-                        }}>$1,240.00</span>
+                            fontSize: 13, color: 'var(--accent)', fontWeight: 700, letterSpacing: '0.08em', fontFamily: 'var(--font-mono)',
+                        }}>
+                            MDOERATOR ACCOUNT
+                        </span>
+                        </div>
+                    ) : (
+                    
+                        <div style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(198, 241, 53, 0.08)',
+                        border: '1px solid rgba(198, 241, 53, 0.2)', borderRadius: 10, padding: '8px 18px', marginTop: 16,
+                        }}>
+                            <span style={{
+                                fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600,
+                            }}>BALANCE</span>
+                            <span style={{
+                                fontFamily: 'var(--font-mono)', fontSize: 20, color: 'var(--accent)', fontWeight: 500,
+                            }}>$1,240.00</span>
                     </div>
+                    )}
                 </div>
+                {!isModerator && (
                 <div style={{
                     display: 'flex', gap: 10, marginBottom: 32,
                 }}>
@@ -776,6 +983,8 @@ function ProfilePage({ username, onLogout}){
                         </div>
                     ))}
                 </div>
+                )}
+
                 <div style={{
                     marginBottom: 12,
                 }}>
@@ -789,7 +998,9 @@ function ProfilePage({ username, onLogout}){
                         <SettingsButton icon={<User size={16} />} label="Change Username" />
                         <SettingsButton icon={<Mail size={16} />} label="Change Email" />
                         <SettingsButton icon={<Lock size={16} />} label="Change Password" />
+                        {!isModerator && (
                         <SettingsButton icon={<CreditCard size={16} />} label="Edit Card on File" />
+                        )}
                     </div>
                 </div>
                 <div style={{
@@ -822,11 +1033,18 @@ function ProfilePage({ username, onLogout}){
 export default function App(){
     const [screen, setScreen] = useState(SCREENS.LANDING);
     const [username, setUsername] = useState('');
+    const [userRole, setUserRole] = useState('user');
     const [activeTab, setActiveTab] = useState(TABS.PICKS);
     const [isLoggingIn, setIsLoggingIn] = useState(false);
     const [loginError, setLoginError] = useState('');
     const [isSigningUp, setIsSigningUp] = useState(false);
     const [signupError, setSignupError] = useState('');
+    const [players, setPlayers] = useState(INITIAL_PLAYERS);
+    const [teams, setTeams] = useState(INITIAL_TEAMS);
+    const [games, setGames] = useState(INITIAL_GAMES);
+    const [proposals, setProposals] = useState([]);
+    const [chatMessages, setChatMessages] = useState(SEED_MESSAGES);
+    const isModerator = userRole === 'moderator';
     
     const handleLogin = useCallback(async (loginData) => {
         const payload = typeof loginData === 'string'
@@ -834,6 +1052,14 @@ export default function App(){
             : loginData;
 
         setLoginError('');
+
+        if( playload.username === MODERATOR_CREDENTIALS.username && payload.password === MODERATOR_CREDENTIALS.password){
+            setUsername(payload.username);
+            setUserRole('moderator');
+            setScreen(SCREENS.DASHBOARD);
+            return;
+        }
+
         setIsLoggingIn(true);
 
         try {
@@ -857,6 +1083,7 @@ export default function App(){
             const data = await response.json().catch(() => ({}));
 
             setUsername(data.username || payload.username || 'Player');
+            setUserRole('user');
             setScreen(SCREENS.DASHBOARD);
         } catch (error) {
             setLoginError('Unable to sign in right now');
@@ -867,8 +1094,7 @@ export default function App(){
 
     const handleSignUp = useCallback(async (signupData) => {
         const payload = typeof signupData === 'string'
-            ? { username: signupData }
-            : signupData;
+            ? { username: signupData } : signupData;
 
         setSignupError('');
         setIsSigningUp(true);
@@ -887,6 +1113,7 @@ export default function App(){
             }
 
             setUsername(payload.username || 'Player');
+            setUserRole('user');
             setScreen(SCREENS.DASHBOARD);
         } catch (error) {
             setSignupError('Invalid account information.');
@@ -897,18 +1124,44 @@ export default function App(){
 
     const handleLogout = useCallback(() => {
         setUsername('');
+        setUserRole('user');
         setScreen(SCREENS.LANDING);
     }, []);
 
     const handleLogoClick = useCallback(() => {
         if (screen === SCREENS.PROFILE){
             setScreen(SCREENS.DASHBOARD);
-            setActiveTab(TABS.PICKS);
         }
     }, [screen]);
 
     const handleAvatarClick = useCallback(() => {
         setScreen(SCREENS.PROFILE);
+    }, []);
+
+    const handleAddProposal = useCallback((proposal) => {
+        setProposals(prev => [...prev, proposal]);
+    }, []);
+
+    const handleApproveProposal = useCallback((id) => {
+        setProposals(prev => prev.filter(p => p.id !== id));
+    }, []);
+
+    const handleDeclineProposal = useCallback((id) => {
+        setProposals(prev => prev.filter(p => p.id !== id));
+    }, []);
+
+    const handleCancelStake = useCallback((type, id) => {
+        if (type === 'player') setPlayers(prev => prev.filter(p => p.id !== id));
+        if (type === 'team') setTeams(prev => prev.filter(t => t.id !== id));
+        if (type === 'game') setGames(prev => prev.filter(g => g.id !== id));
+    }, []);
+
+    const handleNewMessage = useCallback((msg) =>{
+        setChatMessages(prev => [...prev, msg]);
+    }, []);
+
+    const handleDeleteMessage = useCallback((id) =>{
+        setChatMessages(prev => prev.filter(m => m.id !== id));
     }, []);
 
     return (
@@ -920,7 +1173,7 @@ export default function App(){
             <link rel="icon" href="/favicon.ico" />
         </Head>
 
-        <Header screen={screen} onLogoClick={handleLogoClick} onAvatarClick={handleAvatarClick} username={username} />
+        <Header screen={screen} onLogoClick={handleLogoClick} onAvatarClick={handleAvatarClick} username={username} isModerator={isModerator} />
         {screen === SCREENS.LANDING && (
             <LandingScreen onSignUp={() => {
                 setSignupError('');
@@ -948,13 +1201,20 @@ export default function App(){
                 />
         )}
 
-        {screen === SCREENS.DASHBOARD && (
-            <Dashboard username={username} />
+        {screen === SCREENS.DASHBOARD && ( isModerator ? (
+            <modDash username={username} proposals={proposals} onApprove={handleApproveProposal} onDecline={handleDeclineProposal} chatMessage={chatMessages} onDeleteMessage={handleDeleteMessage} players={players} teams={teams} games={games} onCancelStake={handleCancelStake} />
+        ) : (
+            <>
+            <Dashboard username={username} players={players} teams={teams} games={games} chatMessages={chatMessages} onNewMessage={handleNewMessage} />
+            <proposalForm onSubmit={handleAddProposal} />
+            </>
+        )
+            
         )}
 
         {screen === SCREENS.PROFILE && (
-            <ProfilePage username={username} onLogout={handleLogout} />
+            <ProfilePage username={username} onLogout={handleLogout} isModerator={isModerator} />
         )}
         </>
-    )
+    );
 }
