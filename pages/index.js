@@ -897,15 +897,15 @@ function Dashboard({username, players, teams, games, chatMessages, onNewMessage}
     );
 }
 
-function SettingsButton({ icon, label}){
+function SettingsButton({ icon, label, onClick, disabled = false}){
     const [hover, setHover] = useState(false);
     return (
-        <button onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} style={{
+        <button onClick={onClick} disabled={disabled} onMouseEnter={() => !disabled && setHover(true)} onMouseLeave={() => setHover(false)} style={{
             width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
             background: hover ? 'var(--bg-card-hover)' : 'var(--bg-card)',
             border: '1px solid var(--border)', borderRadius: 12, padding: '14px 18px',
             color: 'var(--text-primary)', fontSize: 14, fontWeight: 500, 
-            transition: 'all 0.2s', cursor: 'default',
+            transition: 'all 0.2s', cursor: disabled ? 'not-allowed' : (onClick ? 'pointer' : 'default'), opacity: disabled ? 0.65 : 1,
         }}>
             <div style={{
                 display: 'flex', alignItems: 'center', gap: 12, color: 'var(--text-secondary)',
@@ -915,12 +915,67 @@ function SettingsButton({ icon, label}){
                     color: 'var(--text-primary)',
                 }}>{label}</span>
             </div>
-            <ChevronRight size={16} color="var(--text-muted)"/>
+            <ChevronRight size={16} color={disabled ? 'var(--border-bright)' : 'var(--text-muted)'}/>
         </button>
     );
 }
 
-function ProfilePage({ username, onLogout, isModerator = false}){
+function ProfilePage({ username, onLogout, isModerator = false, credits = 0, onUpdateCard, notice = ''}){
+    const formattedCredits = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+    }).format(Number.isFinite(Number(credits)) ? Number(credits) : 0);
+    const [showCardModal, setShowCardModal] = useState(false);
+    const [cardNumberInput, setCardNumberInput] = useState('');
+    const [cvvInput, setCvvInput] = useState('');
+    const [cardError, setCardError] = useState('');
+    const [isSavingCard, setIsSavingCard] = useState(false);
+
+    const openCardModal = () => {
+        setCardError('');
+        setCardNumberInput('');
+        setCvvInput('');
+        setShowCardModal(true);
+    };
+
+    const closeCardModal = () => {
+        if (isSavingCard) {
+            return;
+        }
+        setShowCardModal(false);
+    };
+
+    const handleSaveCard = async () => {
+        const normalizedCard = cardNumberInput.replace(/\D/g, '');
+        const normalizedCvv = cvvInput.replace(/\D/g, '');
+
+        if (!/^\d{16}$/.test(normalizedCard)) {
+            setCardError('Card number must be exactly 16 digits.');
+            return;
+        }
+
+        if (!/^\d{3}$/.test(normalizedCvv)) {
+            setCardError('CVV must be exactly 3 digits.');
+            return;
+        }
+
+        setIsSavingCard(true);
+        setCardError('');
+
+        try {
+            if (!onUpdateCard) {
+                throw new Error('Card update is unavailable right now.');
+            }
+
+            await onUpdateCard(normalizedCard, normalizedCvv);
+            setShowCardModal(false);
+        } catch (error) {
+            setCardError(error?.message || 'Unable to save card right now.');
+        } finally {
+            setIsSavingCard(false);
+        }
+    };
+
     return (
         <div style={{
             paddingTop: 'var(--header-height)',
@@ -966,10 +1021,10 @@ function ProfilePage({ username, onLogout, isModerator = false}){
                         }}>
                             <span style={{
                                 fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600,
-                            }}>BALANCE</span>
+                            }}>CREDITS</span>
                             <span style={{
                                 fontFamily: 'var(--font-mono)', fontSize: 20, color: 'var(--accent)', fontWeight: 500,
-                            }}>$1,240.00</span>
+                            }}>{formattedCredits}</span>
                     </div>
                     )}
                 </div>
@@ -1004,6 +1059,12 @@ function ProfilePage({ username, onLogout, isModerator = false}){
                         fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', 
                         letterSpacing: '0.12em', fontWeight: 600, marginBottom: 12,
                     }}>ACCOUNT SETTINGS</h3>
+                    {notice && (
+                        <div style={{
+                            marginBottom: 10, background: 'rgba(198, 241, 53, 0.08)', border: '1px solid rgba(198, 241, 53, 0.2)',
+                            borderRadius: 8, padding: '10px 12px', fontSize: 12, color: 'var(--accent)',
+                        }}>{notice}</div>
+                    )}
                     <div style={{
                         display: 'flex', flexDirection: 'column', gap: 8,
                     }}>
@@ -1011,7 +1072,7 @@ function ProfilePage({ username, onLogout, isModerator = false}){
                         <SettingsButton icon={<Mail size={16} />} label="Change Email" />
                         <SettingsButton icon={<Lock size={16} />} label="Change Password" />
                         {!isModerator && (
-                        <SettingsButton icon={<CreditCard size={16} />} label="Edit Card on File" />
+                        <SettingsButton icon={<CreditCard size={16} />} label="Edit Card on File" onClick={openCardModal} />
                         )}
                     </div>
                 </div>
@@ -1037,6 +1098,76 @@ function ProfilePage({ username, onLogout, isModerator = false}){
                     </button>
                 </div>
             </div>
+
+            {showCardModal && (
+                <div onClick={closeCardModal} style={{
+                    position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(6px)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+                }}>
+                    <div onClick={e => e.stopPropagation()} style={{
+                        width: '100%', maxWidth: 430, background: 'var(--bg-card)', border: '1px solid var(--border-bright)', borderRadius: 16,
+                        boxShadow: '0 24px 60px rgba(0, 0, 0, 0.55)', padding: '24px 20px',
+                    }}>
+                        <h3 style={{
+                            margin: 0, marginBottom: 6, fontFamily: 'var(--font-display)', letterSpacing: '0.06em', fontSize: 20,
+                        }}>UPDATE CARD</h3>
+                        <p style={{
+                            margin: 0, marginBottom: 18, fontSize: 12, color: 'var(--text-secondary)',
+                        }}>Enter a 16-digit card number and 3-digit CVV.</p>
+
+                        <div style={{ marginBottom: 12 }}>
+                            <label style={{
+                                display: 'block', fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 6,
+                            }}>CARD NUMBER</label>
+                            <input
+                                type="text"
+                                value={cardNumberInput}
+                                onChange={e => setCardNumberInput(e.target.value.replace(/\D/g, '').slice(0, 16))}
+                                placeholder="1234123412341234"
+                                style={{
+                                    width: '100%', boxSizing: 'border-box', background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+                                    border: '1px solid var(--border)', borderRadius: 10, padding: '11px 12px', fontSize: 14,
+                                    outline: 'none', fontFamily: 'var(--font-mono)', letterSpacing: '0.05em',
+                                }}
+                            />
+                        </div>
+
+                        <div style={{ marginBottom: 12 }}>
+                            <label style={{
+                                display: 'block', fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 6,
+                            }}>CVV</label>
+                            <input
+                                type="password"
+                                value={cvvInput}
+                                onChange={e => setCvvInput(e.target.value.replace(/\D/g, '').slice(0, 3))}
+                                placeholder="123"
+                                style={{
+                                    width: 120, boxSizing: 'border-box', background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+                                    border: '1px solid var(--border)', borderRadius: 10, padding: '11px 12px', fontSize: 14,
+                                    outline: 'none', fontFamily: 'var(--font-mono)', letterSpacing: '0.05em',
+                                }}
+                            />
+                        </div>
+
+                        {cardError && (
+                            <div style={{
+                                marginBottom: 14, color: 'var(--danger)', fontSize: 12,
+                            }}>{cardError}</div>
+                        )}
+
+                        <div style={{ display: 'flex', gap: 10 }}>
+                            <button onClick={closeCardModal} disabled={isSavingCard} style={{
+                                flex: 1, padding: '12px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg-secondary)',
+                                color: 'var(--text-secondary)', fontWeight: 600, cursor: isSavingCard ? 'not-allowed' : 'pointer', opacity: isSavingCard ? 0.6 : 1,
+                            }}>CANCEL</button>
+                            <button onClick={handleSaveCard} disabled={isSavingCard} style={{
+                                flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: 'var(--accent)',
+                                color: '#080A0F', fontWeight: 700, cursor: isSavingCard ? 'not-allowed' : 'pointer', opacity: isSavingCard ? 0.7 : 1,
+                            }}>{isSavingCard ? 'SAVING...' : 'SAVE CARD'}</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -1045,12 +1176,14 @@ function ProfilePage({ username, onLogout, isModerator = false}){
 export default function App(){
     const [screen, setScreen] = useState(SCREENS.LANDING);
     const [username, setUsername] = useState('');
+    const [userCredits, setUserCredits] = useState(0);
     const [userRole, setUserRole] = useState('user');
     const [activeTab, setActiveTab] = useState(TABS.PICKS);
     const [isLoggingIn, setIsLoggingIn] = useState(false);
     const [loginError, setLoginError] = useState('');
     const [isSigningUp, setIsSigningUp] = useState(false);
     const [signupError, setSignupError] = useState('');
+    const [profileNotice, setProfileNotice] = useState('');
     const [players, setPlayers] = useState(INITIAL_PLAYERS);
     const [teams, setTeams] = useState(INITIAL_TEAMS);
     const [games, setGames] = useState(INITIAL_GAMES);
@@ -1067,6 +1200,7 @@ export default function App(){
 
         if( payload.username === MODERATOR_CREDENTIALS.username && payload.password === MODERATOR_CREDENTIALS.password){
             setUsername(payload.username);
+            setUserCredits(0);
             setUserRole('moderator');
             setScreen(SCREENS.DASHBOARD);
             return;
@@ -1095,6 +1229,7 @@ export default function App(){
             const data = await response.json().catch(() => ({}));
 
             setUsername(data.username || payload.username || 'Player');
+            setUserCredits(Number.isFinite(Number(data.credits)) ? Number(data.credits) : 0);
             setUserRole('user');
             setScreen(SCREENS.DASHBOARD);
         } catch (error) {
@@ -1125,6 +1260,7 @@ export default function App(){
             }
 
             setUsername(payload.username || 'Player');
+            setUserCredits(Number.isFinite(Number(payload.credits)) ? Number(payload.credits) : 0);
             setUserRole('user');
             setScreen(SCREENS.DASHBOARD);
         } catch (error) {
@@ -1136,9 +1272,31 @@ export default function App(){
 
     const handleLogout = useCallback(() => {
         setUsername('');
+        setUserCredits(0);
+        setProfileNotice('');
         setUserRole('user');
         setScreen(SCREENS.LANDING);
     }, []);
+
+    const handleUpdateCard = useCallback(async (cardNumber, cvv) => {
+        if (!username) {
+            throw new Error('You must be logged in to update a card.');
+        }
+
+        const response = await fetch('/api/update-card', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, cardNumber, cvv }),
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Unable to update card right now.');
+        }
+
+        setProfileNotice(data.message || 'Card updated successfully.');
+    }, [username]);
 
     const handleLogoClick = useCallback(() => {
         if (screen === SCREENS.PROFILE){
@@ -1237,7 +1395,7 @@ export default function App(){
         )}
 
         {screen === SCREENS.PROFILE && (
-            <ProfilePage username={username} onLogout={handleLogout} isModerator={isModerator} />
+            <ProfilePage username={username} onLogout={handleLogout} isModerator={isModerator} credits={userCredits} onUpdateCard={handleUpdateCard} notice={profileNotice} />
         )}
         </>
     );

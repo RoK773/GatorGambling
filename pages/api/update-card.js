@@ -1,4 +1,3 @@
-// checks if username and password match an existing user in MongoDB and returns success or failure
 import dns from 'dns';
 import { MongoClient, ServerApiVersion } from 'mongodb';
 
@@ -31,32 +30,43 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const { username, password } = req.body || {};
+    const { username, cardNumber, cvv } = req.body || {};
 
-    if (!username || !password) {
-        return res.status(400).json({ error: 'username and password are required' });
+    const normalizedUsername = String(username || '').trim();
+    const normalizedCardNumber = String(cardNumber || '').replace(/\D/g, '');
+    const normalizedCvv = String(cvv || '').replace(/\D/g, '');
+
+    if (!normalizedUsername) {
+        return res.status(400).json({ error: 'username is required' });
+    }
+
+    if (!/^\d{16}$/.test(normalizedCardNumber)) {
+        return res.status(400).json({ error: 'Card number must be exactly 16 digits.' });
+    }
+
+    if (!/^\d{3}$/.test(normalizedCvv)) {
+        return res.status(400).json({ error: 'CVV must be exactly 3 digits.' });
     }
 
     try {
         const client = await clientPromise;
         const users = client.db(dbName).collection(collectionName);
 
-        const user = await users.findOne({
-            username,
-            $or: [{ password }, { passwordHash: password }],
-        });
+        const result = await users.updateOne(
+            { username: normalizedUsername },
+            { $set: { card: normalizedCardNumber } },
+        );
 
-        if (!user) {
-            return res.status(401).json({ error: 'Invalid username or password' });
+        if (result.matchedCount === 0) {
+            return res.status(404).json({ error: 'User not found.' });
         }
 
         return res.status(200).json({
-            message: 'Login successful',
-            username: user.username,
-            credits: Number.isFinite(Number(user.credits)) ? Number(user.credits) : 0,
+            message: 'Card updated successfully.',
+            card: normalizedCardNumber,
         });
     } catch (error) {
-        console.error('Login check failed:', error);
-        return res.status(500).json({ error: 'Failed to log in' });
+        console.error('Card update failed:', error);
+        return res.status(500).json({ error: 'Failed to update card.' });
     }
 }

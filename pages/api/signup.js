@@ -67,7 +67,7 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const { username, password, email, dob, location } = req.body || {};
+    const { username, password, email, dob, location, credits, card } = req.body || {};
     const normalizedUsername = String(username || '').trim();
     const normalizedPassword = String(password || '').trim();
     const normalizedEmail = String(email || '').trim();
@@ -123,6 +123,8 @@ export default async function handler(req, res) {
             password: normalizedPassword,
             dob: normalizedDob,
             location: normalizedLocation,
+            credits: 0,
+            card: null,
             createdAt: new Date(),
         });
 
