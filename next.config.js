@@ -3,8 +3,7 @@
 const nextConfig = {
     reactStrictMode: true,
     transpilePackages:[
-        'react-native-web',
-        'lucide-react-native'
+        'react-native-web'
     ],
     webpack: (config) => {
         config.resolve.alias = {

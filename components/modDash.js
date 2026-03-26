@@ -382,25 +382,31 @@ function ModItemCard({title, subtitle, meta, stake, index, onCancel}) {
 }
 
 // live tab for mod **global chat
-function ModLiveTab({chatMessages, onDeleteMessage}) {
+function ModLiveTab({chatMessages, onDeleteMessage, onNewMessage, username}) {
     const [inputText, setInputText] = useState('');
-    const [messages, setMessages] = useState(chatMessages);
+    const [userSearch, setUserSearch] = useState('');
+    const normalizedSearch = userSearch.trim().toLowerCase();
+    const filteredMessages = normalizedSearch
+        ? chatMessages.filter(msg => String(msg.user || '').toLowerCase().includes(normalizedSearch))
+        : chatMessages;
     
     // handle sending 
     const handleSend = () => {
         const trimmed = inputText.trim();
-        if (!trimmed){
+        if (!trimmed || typeof onNewMessage !== 'function'){
             return;
         }
-        setMessages(prev => [
-            ...prev, {id: Date.now(), user: 'MOD', initials: 'MD', color: 'var(--accent)', text: trimmed},
-        ]);
+        onNewMessage({
+            user: username || 'MOD',
+            initials: (username || 'MD').slice(0, 2).toUpperCase(),
+            color: 'var(--accent)',
+            text: trimmed,
+        });
         setInputText('');
     };
 
     const handleDelete = (id) => {
         onDeleteMessage(id);
-        setMessages(prev => prev.filter(m => m.id !== id));
     };
 
     return (
@@ -444,9 +450,37 @@ function ModLiveTab({chatMessages, onDeleteMessage}) {
                     }}>MODERATOR MODE</span>
                 </div>
                 <div style={{
+                    padding: '8px 10px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary)',
+                    display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0,
+                }}>
+                    <input
+                        type="text"
+                        value={userSearch}
+                        onChange={e => setUserSearch(e.target.value)}
+                        placeholder="Search user..."
+                        style={{
+                            flex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8,
+                            padding: '7px 10px', fontSize: 12, color: 'var(--text-primary)', outline: 'none',
+                        }}
+                        onFocus={e => e.target.style.borderColor = 'var(--accent)'}
+                        onBlur={e => e.target.style.borderColor = 'var(--border)'}
+                    />
+                    {userSearch && (
+                        <button
+                            onClick={() => setUserSearch('')}
+                            style={{
+                                padding: '7px 9px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)',
+                                color: 'var(--text-secondary)', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', cursor: 'pointer',
+                            }}
+                        >
+                            CLEAR
+                        </button>
+                    )}
+                </div>
+                <div style={{
                     flex: 1, overflowY: 'auto', padding: '12px 12px 8px', display: 'flex', flexDirection: 'column', gap: 10,
                 }}>
-                    {messages.map(msg => (
+                    {filteredMessages.map(msg => (
                         <div key={msg.id} style={{
                             display: 'flex', gap: 8, alignItems: 'flex-start', padding: '4px 6px', borderRadius: 8, transition: 'background 0.2s',
                         }}
@@ -477,12 +511,20 @@ function ModLiveTab({chatMessages, onDeleteMessage}) {
                             </button>
                         </div>
                     ))}
+                    {filteredMessages.length === 0 && (
+                        <div style={{
+                            padding: '18px 10px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 12,
+                            fontFamily: 'var(--font-mono)', letterSpacing: '0.04em',
+                        }}>
+                            No users match "{userSearch}".
+                        </div>
+                    )}
                 </div>
                 <div style={{
                     padding: '10px 12px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, alignItems: 'center',
                     flexShrink: 0, background: 'var(--bg-secondary)',
                 }}>
-                    <input type="text" value={inputText} onChange={e => setInputText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSend()} placeholder="Moderator messgae..." style={{
+                    <input type="text" value={inputText} onChange={e => setInputText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSend()} placeholder="Moderator message..." style={{
                         flex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 10px', fontSize: 12, color: 'var(--text-primary)', outline: 'none',
                     }}
                     onFocus={e => e.target.style.borderColor = 'var(--accent)'}
@@ -499,7 +541,7 @@ function ModLiveTab({chatMessages, onDeleteMessage}) {
 
 // main export / make the mod dashboard a thing
 export default function ModDash({
-    username, proposals, onApprove, onDecline, chatMessages, onDeleteMessage, players, teams, games, onCancelStake,
+    username, proposals, onApprove, onDecline, chatMessages, onNewMessage, onDeleteMessage, players, teams, games, onCancelStake,
 }) {
     const [activeTab, setActiveTab] = useState(MOD_TABS.PROPOSALS);
     const {confirm, modal} = useConfirm();
@@ -561,7 +603,7 @@ export default function ModDash({
                 );
             case MOD_TABS.LIVE: 
                 return(
-                    <ModLiveTab chatMessages={chatMessages} onDeleteMessage={handleDeleteMessage} />
+                    <ModLiveTab chatMessages={chatMessages} onDeleteMessage={handleDeleteMessage} onNewMessage={onNewMessage} username={username} />
                 );
             default: 
                 return null;

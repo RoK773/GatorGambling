@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import { LoginScreen, SignUpScreen } from './auth';
 import {
@@ -12,6 +12,7 @@ import {
 import ConfirmModal from '../components/confirmModal';
 import ProposalForm from '../components/proposalForm';
 import ModDash from '../components/modDash';
+import worldcupData from '../worldcup.json';
 
 const SCREENS = {
     LANDING: 'landing',
@@ -65,6 +66,73 @@ const SEED_MESSAGES = [
     { id: 3, user: 'GambaGuoba01', initials: 'GG', color: '#C6F135', text: 'Mexico sweep :muscle:'},
     { id: 4, user: 'ImJustKen', initials: 'IJ', color: '#FB923C', text: 'Amerika ya :3'},
 ];
+
+const CHAT_COLORS = ['#C6F135', '#38BDF8', '#FB923C', '#F43F5E', '#A78BFA', '#10B981'];
+const DEFAULT_CHAT_TEXT = 'Waiting for latest message...';
+const CHAT_USER_ROSTER = Array.from(new Set([...(worldcupData?.usernames || []), ...SEED_MESSAGES.map(msg => msg.user)]));
+const CHAT_USER_SET = new Set(CHAT_USER_ROSTER);
+const SEED_BY_USER = SEED_MESSAGES.reduce((acc, msg) => {
+    acc[msg.user] = msg;
+    return acc;
+}, {});
+const CHAT_COLOR_BY_USER = CHAT_USER_ROSTER.reduce((acc, user, index) => {
+    acc[user] = CHAT_COLORS[index % CHAT_COLORS.length];
+    return acc;
+}, {});
+const INITIAL_CHAT_MESSAGES = CHAT_USER_ROSTER.map(user => {
+    const seed = SEED_BY_USER[user];
+    return {
+        id: user,
+        user,
+        initials: seed?.initials || user.slice(0, 2).toUpperCase(),
+        color: seed?.color || CHAT_COLOR_BY_USER[user],
+        text: seed?.text || DEFAULT_CHAT_TEXT,
+    };
+});
+
+function upsertLatestChatByUser(prevMessages, incomingMessage) {
+    if (!incomingMessage || typeof incomingMessage !== 'object') {
+        return prevMessages;
+    }
+
+    const user = String(incomingMessage.user || '').trim();
+    if (!user || !CHAT_USER_SET.has(user)) {
+        return prevMessages;
+    }
+
+    const text = String(incomingMessage.text || '').trim();
+    const nextText = text || DEFAULT_CHAT_TEXT;
+    const nextInitials = String(incomingMessage.initials || user.slice(0, 2)).slice(0, 2).toUpperCase();
+    const nextColor = incomingMessage.color || CHAT_COLOR_BY_USER[user] || CHAT_COLORS[0];
+
+    const index = prevMessages.findIndex(msg => msg.user === user);
+    if (index === -1) {
+        return [
+            ...prevMessages,
+            {
+                id: user,
+                user,
+                initials: nextInitials,
+                color: nextColor,
+                text: nextText,
+            },
+        ];
+    }
+
+    const current = prevMessages[index];
+    if (current.text === nextText && current.initials === nextInitials && current.color === nextColor) {
+        return prevMessages;
+    }
+
+    const next = [...prevMessages];
+    next[index] = {
+        ...current,
+        initials: nextInitials,
+        color: nextColor,
+        text: nextText,
+    };
+    return next;
+}
 
 // avatar placeholder
 function Avatar({ size = 36, initials = 'U', style = {} } ) {
@@ -682,14 +750,22 @@ function GamesTab({games}){
 
 function GlobalChat({messages, onNewMessage, username}){
     const [inputText, setInputText] = useState('');
+    const messagesEndRef = useRef(null);
+
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages]);
 
     const handleSubmit = () => {
         const trimmed = inputText.trim();
-        if (!trimmed){
+        if (!trimmed || typeof onNewMessage !== 'function'){
             return;
         }
         onNewMessage({
-            id: Date.now(), user: username || 'You', initials: (username || 'YO').slice(0, 2).toUpperCase(), color: 'var(--accent)', text: trimmed,
+            user: username || 'You',
+            initials: (username || 'YO').slice(0, 2).toUpperCase(),
+            color: 'var(--accent)',
+            text: trimmed,
         });
         setInputText('');
     };
@@ -746,6 +822,7 @@ function GlobalChat({messages, onNewMessage, username}){
                     </div>
 
                 ))}
+                <div ref={messagesEndRef} />
             </div>
             <div style={{
                 padding: '10px 12px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8,
@@ -1189,6 +1266,7 @@ export default function App(){
     const [games, setGames] = useState(INITIAL_GAMES);
     const [proposals, setProposals] = useState([]);
     const [chatMessages, setChatMessages] = useState(SEED_MESSAGES);
+    const [moderatorChatMessages, setModeratorChatMessages] = useState(INITIAL_CHAT_MESSAGES);
     const isModerator = userRole === 'moderator';
     
     const handleLogin = useCallback(async (loginData) => {
@@ -1339,12 +1417,56 @@ export default function App(){
     }, []);
 
     const handleNewMessage = useCallback((msg) =>{
-        setChatMessages(prev => [...prev, msg]);
+        if (!msg || typeof msg !== 'object') {
+            return;
+        }
+
+        const user = String(msg.user || '').trim();
+        const text = String(msg.text || '').trim();
+        if (!user || !text) {
+            return;
+        }
+
+        const normalizedMessage = {
+            id: msg.id || Date.now() + Math.random(),
+            user,
+            initials: String(msg.initials || user.slice(0, 2)).slice(0, 2).toUpperCase(),
+            color: msg.color || CHAT_COLOR_BY_USER[user] || CHAT_COLORS[0],
+            text,
+        };
+
+        setChatMessages(prev => {
+            const next = [...prev, normalizedMessage];
+            return next.length > 100 ? next.slice(next.length - 100) : next;
+        });
+
+        setModeratorChatMessages(prev => upsertLatestChatByUser(prev, normalizedMessage));
     }, []);
 
     const handleDeleteMessage = useCallback((id) =>{
-        setChatMessages(prev => prev.filter(m => m.id !== id));
+        setModeratorChatMessages(prev => prev.map(msg => (
+            msg.id === id ? { ...msg, text: '[message removed by moderator]' } : msg
+        )));
     }, []);
+
+    useEffect(() => {
+        const usernames = CHAT_USER_ROSTER;
+        const feedMessages = worldcupData?.messages || [];
+        if (usernames.length === 0 || feedMessages.length === 0) {
+            return;
+        }
+
+        const interval = setInterval(() => {
+            const randomUser = usernames[Math.floor(Math.random() * usernames.length)];
+            const randomText = feedMessages[Math.floor(Math.random() * feedMessages.length)];
+            handleNewMessage({
+                user: randomUser,
+                text: randomText,
+            });
+        }, 300);
+
+        return () => clearInterval(interval);
+    }, [handleNewMessage]);
 
     return (
         <>
@@ -1384,7 +1506,7 @@ export default function App(){
         )}
 
         {screen === SCREENS.DASHBOARD && ( isModerator ? (
-            <ModDash username={username} proposals={proposals} onApprove={handleApproveProposal} onDecline={handleDeclineProposal} chatMessages={chatMessages} onDeleteMessage={handleDeleteMessage} players={players} teams={teams} games={games} onCancelStake={handleCancelStake} />
+            <ModDash username={username} proposals={proposals} onApprove={handleApproveProposal} onDecline={handleDeclineProposal} chatMessages={moderatorChatMessages} onNewMessage={handleNewMessage} onDeleteMessage={handleDeleteMessage} players={players} teams={teams} games={games} onCancelStake={handleCancelStake} />
         ) : (
             <>
             <Dashboard username={username} players={players} teams={teams} games={games} chatMessages={chatMessages} onNewMessage={handleNewMessage} />
