@@ -1,4 +1,3 @@
-// checks if username and password match an existing user in MongoDB and returns success or failure
 import dns from 'dns';
 import { MongoClient, ServerApiVersion } from 'mongodb';
 
@@ -31,33 +30,30 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const { username, password } = req.body || {};
+    const normalizedUsername = String(req.body?.username || '').trim();
 
-    if (!username || !password) {
-        return res.status(400).json({ error: 'username and password are required' });
+    if (!normalizedUsername) {
+        return res.status(400).json({ error: 'username is required' });
     }
 
     try {
         const client = await clientPromise;
         const users = client.db(dbName).collection(collectionName);
 
-        const user = await users.findOne({
-            username,
-            $or: [{ password }, { passwordHash: password }],
-        });
+        const user = await users.findOne(
+            { username: normalizedUsername },
+            { projection: { card: 1 } },
+        );
 
         if (!user) {
-            return res.status(401).json({ error: 'Invalid username or password' });
+            return res.status(404).json({ error: 'User not found.' });
         }
 
         return res.status(200).json({
-            message: 'Login successful',
-            username: user.username,
-            credits: Number.isFinite(Number(user.credits)) ? Number(user.credits) : 0,
             hasCardOnFile: Boolean(String(user.card || '').trim()),
         });
     } catch (error) {
-        console.error('Login check failed:', error);
-        return res.status(500).json({ error: 'Failed to log in' });
+        console.error('Card status check failed:', error);
+        return res.status(500).json({ error: 'Failed to verify card status.' });
     }
 }

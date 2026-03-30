@@ -997,7 +997,7 @@ function SettingsButton({ icon, label, onClick, disabled = false}){
     );
 }
 
-function ProfilePage({ username, onLogout, isModerator = false, credits = 0, onUpdateCard, notice = ''}){
+function ProfilePage({ username, onLogout, isModerator = false, credits = 0, onUpdateCard, onDeposit, notice = ''}){
     const formattedCredits = new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: 'USD',
@@ -1007,6 +1007,12 @@ function ProfilePage({ username, onLogout, isModerator = false, credits = 0, onU
     const [cvvInput, setCvvInput] = useState('');
     const [cardError, setCardError] = useState('');
     const [isSavingCard, setIsSavingCard] = useState(false);
+    const [showDepositModal, setShowDepositModal] = useState(false);
+    const [depositAmountInput, setDepositAmountInput] = useState('');
+    const [depositError, setDepositError] = useState('');
+    const [isDepositing, setIsDepositing] = useState(false);
+    const [showAddCardBanner, setShowAddCardBanner] = useState(false);
+    const [isCheckingCard, setIsCheckingCard] = useState(false);
 
     const openCardModal = () => {
         setCardError('');
@@ -1020,6 +1026,49 @@ function ProfilePage({ username, onLogout, isModerator = false, credits = 0, onU
             return;
         }
         setShowCardModal(false);
+    };
+
+    const closeDepositModal = () => {
+        if (isDepositing) {
+            return;
+        }
+        setShowDepositModal(false);
+    };
+
+    const openDepositModal = async () => {
+        if (!username || isCheckingCard) {
+            return;
+        }
+
+        setIsCheckingCard(true);
+        setDepositError('');
+        setShowAddCardBanner(false);
+
+        try {
+            const response = await fetch('/api/card-status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username }),
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Unable to verify card status right now.');
+            }
+
+            if (!data.hasCardOnFile) {
+                setShowAddCardBanner(true);
+                return;
+            }
+
+            setDepositAmountInput('');
+            setShowDepositModal(true);
+        } catch (error) {
+            setDepositError(error?.message || 'Unable to verify card status right now.');
+        } finally {
+            setIsCheckingCard(false);
+        }
     };
 
     const handleSaveCard = async () => {
@@ -1050,6 +1099,37 @@ function ProfilePage({ username, onLogout, isModerator = false, credits = 0, onU
             setCardError(error?.message || 'Unable to save card right now.');
         } finally {
             setIsSavingCard(false);
+        }
+    };
+
+    const handleDepositSubmit = async () => {
+        const normalizedAmount = Number(depositAmountInput);
+
+        if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+            setDepositError('Enter a valid deposit amount greater than 0.');
+            return;
+        }
+
+        setIsDepositing(true);
+        setDepositError('');
+
+        try {
+            if (!onDeposit) {
+                throw new Error('Deposit is unavailable right now.');
+            }
+
+            await onDeposit(normalizedAmount);
+            setShowDepositModal(false);
+            setDepositAmountInput('');
+        } catch (error) {
+            const message = error?.message || 'Unable to process deposit right now.';
+            if (message.toLowerCase().includes('card')) {
+                setShowDepositModal(false);
+                setShowAddCardBanner(true);
+            }
+            setDepositError(message);
+        } finally {
+            setIsDepositing(false);
         }
     };
 
@@ -1091,18 +1171,52 @@ function ProfilePage({ username, onLogout, isModerator = false, credits = 0, onU
                         </span>
                         </div>
                     ) : (
-                    
                         <div style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(198, 241, 53, 0.08)',
-                        border: '1px solid rgba(198, 241, 53, 0.2)', borderRadius: 10, padding: '8px 18px', marginTop: 16,
+                            marginTop: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
                         }}>
-                            <span style={{
-                                fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600,
-                            }}>CREDITS</span>
-                            <span style={{
-                                fontFamily: 'var(--font-mono)', fontSize: 20, color: 'var(--accent)', fontWeight: 500,
-                            }}>{formattedCredits}</span>
-                    </div>
+                            <div style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(198, 241, 53, 0.08)',
+                                border: '1px solid rgba(198, 241, 53, 0.2)', borderRadius: 10, padding: '8px 18px',
+                            }}>
+                                <span style={{
+                                    fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600,
+                                }}>CREDITS</span>
+                                <span style={{
+                                    fontFamily: 'var(--font-mono)', fontSize: 20, color: 'var(--accent)', fontWeight: 500,
+                                }}>{formattedCredits}</span>
+                            </div>
+                            <button style={{
+                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                                background: 'var(--accent)', color: '#080A0F', border: 'none', borderRadius: 10, padding: '9px 16px',
+                                fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', cursor: 'pointer', transition: 'all 0.2s',
+                            }}
+                            onClick={openDepositModal}
+                            onMouseEnter={e => {
+                                e.currentTarget.style.background = 'var(--accent-dim)';
+                            }}
+                            onMouseLeave={e => {
+                                e.currentTarget.style.background = 'var(--accent)';
+                            }}
+                            >
+                                {isCheckingCard ? 'CHECKING...' : 'DEPOSIT'}
+                            </button>
+                            {showAddCardBanner && (
+                                <div style={{
+                                    background: 'rgba(255, 71, 87, 0.12)', border: '1px solid rgba(255, 71, 87, 0.4)', borderRadius: 8,
+                                    padding: '8px 12px', fontSize: 11, color: 'var(--danger)', fontWeight: 700, letterSpacing: '0.04em',
+                                }}>
+                                    ADD A CARD ON FILE BEFORE MAKING A DEPOSIT.
+                                </div>
+                            )}
+                            {depositError && !showDepositModal && (
+                                <div style={{
+                                    background: 'rgba(255, 71, 87, 0.12)', border: '1px solid rgba(255, 71, 87, 0.4)', borderRadius: 8,
+                                    padding: '8px 12px', fontSize: 11, color: 'var(--danger)',
+                                }}>
+                                    {depositError}
+                                </div>
+                            )}
+                        </div>
                     )}
                 </div>
                 {!isModerator && (
@@ -1245,6 +1359,61 @@ function ProfilePage({ username, onLogout, isModerator = false, credits = 0, onU
                     </div>
                 </div>
             )}
+
+            {showDepositModal && (
+                <div onClick={closeDepositModal} style={{
+                    position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(6px)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+                }}>
+                    <div onClick={e => e.stopPropagation()} style={{
+                        width: '100%', maxWidth: 430, background: 'var(--bg-card)', border: '1px solid var(--border-bright)', borderRadius: 16,
+                        boxShadow: '0 24px 60px rgba(0, 0, 0, 0.55)', padding: '24px 20px',
+                    }}>
+                        <h3 style={{
+                            margin: 0, marginBottom: 6, fontFamily: 'var(--font-display)', letterSpacing: '0.06em', fontSize: 20,
+                        }}>DEPOSIT FUNDS</h3>
+                        <p style={{
+                            margin: 0, marginBottom: 18, fontSize: 12, color: 'var(--text-secondary)',
+                        }}>Enter an amount to add to your account balance.</p>
+
+                        <div style={{ marginBottom: 12 }}>
+                            <label style={{
+                                display: 'block', fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 6,
+                            }}>DEPOSIT AMOUNT (USD)</label>
+                            <input
+                                type="number"
+                                min="0.01"
+                                step="0.01"
+                                value={depositAmountInput}
+                                onChange={e => setDepositAmountInput(e.target.value)}
+                                placeholder="50.00"
+                                style={{
+                                    width: '100%', boxSizing: 'border-box', background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+                                    border: '1px solid var(--border)', borderRadius: 10, padding: '11px 12px', fontSize: 14,
+                                    outline: 'none', fontFamily: 'var(--font-mono)', letterSpacing: '0.05em',
+                                }}
+                            />
+                        </div>
+
+                        {depositError && (
+                            <div style={{
+                                marginBottom: 14, color: 'var(--danger)', fontSize: 12,
+                            }}>{depositError}</div>
+                        )}
+
+                        <div style={{ display: 'flex', gap: 10 }}>
+                            <button onClick={closeDepositModal} disabled={isDepositing} style={{
+                                flex: 1, padding: '12px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg-secondary)',
+                                color: 'var(--text-secondary)', fontWeight: 600, cursor: isDepositing ? 'not-allowed' : 'pointer', opacity: isDepositing ? 0.6 : 1,
+                            }}>CANCEL</button>
+                            <button onClick={handleDepositSubmit} disabled={isDepositing} style={{
+                                flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: 'var(--accent)',
+                                color: '#080A0F', fontWeight: 700, cursor: isDepositing ? 'not-allowed' : 'pointer', opacity: isDepositing ? 0.7 : 1,
+                            }}>{isDepositing ? 'DEPOSITING...' : 'DEPOSIT'}</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -1255,6 +1424,7 @@ export default function App(){
     const [username, setUsername] = useState('');
     const [userCredits, setUserCredits] = useState(0);
     const [userRole, setUserRole] = useState('user');
+    const [hasCardOnFile, setHasCardOnFile] = useState(false);
     const [activeTab, setActiveTab] = useState(TABS.PICKS);
     const [isLoggingIn, setIsLoggingIn] = useState(false);
     const [loginError, setLoginError] = useState('');
@@ -1280,6 +1450,7 @@ export default function App(){
             setUsername(payload.username);
             setUserCredits(0);
             setUserRole('moderator');
+            setHasCardOnFile(false);
             setScreen(SCREENS.DASHBOARD);
             return;
         }
@@ -1309,6 +1480,7 @@ export default function App(){
             setUsername(data.username || payload.username || 'Player');
             setUserCredits(Number.isFinite(Number(data.credits)) ? Number(data.credits) : 0);
             setUserRole('user');
+            setHasCardOnFile(Boolean(data.hasCardOnFile));
             setScreen(SCREENS.DASHBOARD);
         } catch (error) {
             setLoginError('Unable to sign in right now');
@@ -1340,6 +1512,7 @@ export default function App(){
             setUsername(payload.username || 'Player');
             setUserCredits(Number.isFinite(Number(payload.credits)) ? Number(payload.credits) : 0);
             setUserRole('user');
+            setHasCardOnFile(false);
             setScreen(SCREENS.DASHBOARD);
         } catch (error) {
             setSignupError('Invalid account information.');
@@ -1353,6 +1526,7 @@ export default function App(){
         setUserCredits(0);
         setProfileNotice('');
         setUserRole('user');
+        setHasCardOnFile(false);
         setScreen(SCREENS.LANDING);
     }, []);
 
@@ -1373,7 +1547,29 @@ export default function App(){
             throw new Error(data.error || 'Unable to update card right now.');
         }
 
+        setHasCardOnFile(true);
         setProfileNotice(data.message || 'Card updated successfully.');
+    }, [username]);
+
+    const handleDeposit = useCallback(async (amount) => {
+        if (!username) {
+            throw new Error('You must be logged in to make a deposit.');
+        }
+
+        const response = await fetch('/api/deposit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, amount }),
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Unable to process deposit right now.');
+        }
+
+        setUserCredits(Number.isFinite(Number(data.credits)) ? Number(data.credits) : 0);
+        setProfileNotice(data.message || 'Deposit successful.');
     }, [username]);
 
     const handleLogoClick = useCallback(() => {
@@ -1517,7 +1713,7 @@ export default function App(){
         )}
 
         {screen === SCREENS.PROFILE && (
-            <ProfilePage username={username} onLogout={handleLogout} isModerator={isModerator} credits={userCredits} onUpdateCard={handleUpdateCard} notice={profileNotice} />
+            <ProfilePage username={username} onLogout={handleLogout} isModerator={isModerator} credits={userCredits} onUpdateCard={handleUpdateCard} onDeposit={handleDeposit} notice={profileNotice} hasCardOnFile={hasCardOnFile} />
         )}
         </>
     );
