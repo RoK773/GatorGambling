@@ -2,7 +2,7 @@
 import {useState} from 'react';
 import ConfirmModal from './confirmModal';
 
-// drawing icons
+// drawing icons - style only 
 const Icon = {
     Check: () => (
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -36,7 +36,7 @@ const Icon = {
     ),
 };
 
-// tab configuration
+// tab configuration (constTabs)
 const MOD_TABS = {
     PROPOSALS: 'proposals',
     PLAYERS: 'players',
@@ -45,6 +45,7 @@ const MOD_TABS = {
     LIVE: 'live',
 };
 
+// assign keys to tabs / tabConfig
 const MOD_TAB_CONFIG = [
     {key: MOD_TABS.PROPOSALS, label: 'User Proposals', badge: true},
     {key: MOD_TABS.PLAYERS, label: 'Players'},
@@ -62,14 +63,17 @@ function useConfirm() {
                 title, message, confirmLabel, confirmDanger, resolve,
             });
         });
+        // confirm
     const handleConfirm = () => {
         state?.resolve(true);
         setState(null);
     };
+    // cancel
     const handleCancel = () => {
         state?.resolve(false);
         setState(null);
     };
+    // set up the modal - if cancel, do nothing. otherwise, react to the command
     const modal = state ? (
         <ConfirmModal title={state.title} message={state.message} confirmLabel={state.confirmLabel} confirmDanger={state.confirmDanger} onConfirm={handleConfirm} onCancel={handleCancel} />
     ) : null;
@@ -81,6 +85,8 @@ function condSummary(category, condition){
     if (!condition || Object.keys(condition).length === 0) {
         return null;
     }
+
+    // player condition summary 
     if (category === 'Player'){
         const {statType, comparator, condVal} = condition;
         if (!condVal){
@@ -88,6 +94,8 @@ function condSummary(category, condition){
         }
         return `${statType || 'Goals'} - ${comparator || 'Over'} ${condVal}`;
     }
+
+    // team condition summary
     if (category === 'Team'){
         const {result, marginType, condVal} = condition;
         if (!result){
@@ -101,6 +109,8 @@ function condSummary(category, condition){
         }
         return `${result} - ${marginType || 'By More Than'} ${condVal}`;
     }
+    
+    // game condition summary
     if (category === 'Game'){
         const {outcome, homeScore, awayScore, showScore} = condition;
         if (!outcome){
@@ -119,6 +129,7 @@ function condSummary(category, condition){
 function ProposalsTab({proposals, onApprove, onDecline}){
     if (proposals.length === 0){
         return (
+            // if no proposals, provide 'empty' screen (style only)
             <div style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                 minHeight: 400, gap: 16, animation: 'fadeIn 0.4s ease',
@@ -138,6 +149,7 @@ function ProposalsTab({proposals, onApprove, onDecline}){
         );
     }
     return (
+        // otherwise, if proposals, display proposals and set up approval / decline conditions
         <div style={{
             display: 'flex', flexDirection: 'column', gap: 14, animation: 'fadeIn 0.4s ease',
         }}>
@@ -148,13 +160,15 @@ function ProposalsTab({proposals, onApprove, onDecline}){
     );
 }
 
-// build the proposal card
+// build the proposal card (propCard)
 function ProposalCard({ proposal, index, onApprove, onDecline}) {
+    // constants for the proposal card
     const submittedAt = proposal.proposedAt ? new Date(proposal.proposedAt).toLocaleString() : 'Unknown';
     const detailKeys = Object.entries(proposal).filter(
         ([k]) => !['id', 'category', 'proposedAt', 'status', 'condition'].includes(k)
     );
     return (
+        // style elements + general card setup
         <div style={{
             background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '18px 20px', animation: 'fadeIn 0.4s ease both', animationDelay: `${index * 0.05}s`,
         }}>
@@ -179,6 +193,7 @@ function ProposalCard({ proposal, index, onApprove, onDecline}) {
                 <div style={{
                     display: 'flex', gap: 8,
                 }}>
+                    {/* approval button / aprvBet + settings */}
                     <button onClick={() => onApprove(proposal.id)} style={{
                         display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8,
                         background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)',
@@ -188,6 +203,8 @@ function ProposalCard({ proposal, index, onApprove, onDecline}) {
                     onMouseLeave={e => e.currentTarget.style.background = 'rgba(34, 197, 94, 0.1)'}>
                         <Icon.Check />APPROVE
                     </button>
+
+                    {/* decline button / decBet + settings */}
                     <button onClick={() => onDecline(proposal.id)} style={{
                         display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8,
                         background: 'rgba(255, 71, 87, 0.08)', border: '1px solid rgba(255, 71, 87, 0.25)',
@@ -203,6 +220,7 @@ function ProposalCard({ proposal, index, onApprove, onDecline}) {
                 display: 'flex', flexWrap: 'wrap', gap: '10px 24px', background: 'var(--bg-secondary)',
                 borderRadius: 10, padding: '14px 16px', border: '1px solid var(--border)',
             }}>
+                {/* actual bet setup for the card - betConfig */}
                 {detailKeys.map(([key, val]) => (
                     <div key={key}>
                         <div style={{
@@ -273,6 +291,7 @@ function ModGamesTab({games, onCancelStake}) {
     );
 }
 
+// game row for mod and cancellation
 function ModGameRow({g, i, onCancel}) {
     const [hover, setHover] = useState(false);
     return (
@@ -317,6 +336,8 @@ function ModGameRow({g, i, onCancel}) {
                         fontFamily: 'var(--font-mono)', fontSize: 16, color: 'var(--accent)', fontWeight: 500,
                     }}>{g.stake}</div>
                 </div>
+
+                {/* cancel gameStake button */}
                 <button onClick={onCancel} style={{
                     display: 'flex', alignItems: 'center', gap: 6, padding: '10px 14px', borderRadius: 8,
                     border: '1px solid rgba(255, 71, 87, 0.3)', color: 'var(--danger)', fontSize: 12, fontWeight: 700,
@@ -383,9 +404,11 @@ function ModItemCard({title, subtitle, meta, stake, index, onCancel}) {
 
 // live tab for mod **global chat
 function ModLiveTab({chatMessages, onDeleteMessage, onNewMessage, username}) {
+    // general constants for global chat
     const [inputText, setInputText] = useState('');
     const [userSearch, setUserSearch] = useState('');
     const normalizedSearch = userSearch.trim().toLowerCase();
+    // messages after trim with filter (cancellations) applied 
     const filteredMessages = normalizedSearch
         ? chatMessages.filter(msg => String(msg.user || '').toLowerCase().includes(normalizedSearch))
         : chatMessages;
@@ -405,11 +428,13 @@ function ModLiveTab({chatMessages, onDeleteMessage, onNewMessage, username}) {
         setInputText('');
     };
 
+    // handle deletes (THIS IS NOT MSG DEL DEF - go to onDeleteMessage def)
     const handleDelete = (id) => {
         onDeleteMessage(id);
     };
 
     return (
+        // general page setup for mod (adds header)
         <div style={{
             display: 'flex',  flexDirection: 'row', gap: 16, alignItems: 'flex-start', animation: 'fadeIn 0.4s ease',
         }}>
@@ -453,6 +478,7 @@ function ModLiveTab({chatMessages, onDeleteMessage, onNewMessage, username}) {
                     padding: '8px 10px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary)',
                     display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0,
                 }}>
+                    {/* allows moderator text input for global chat */}
                     <input
                         type="text"
                         value={userSearch}
@@ -477,6 +503,7 @@ function ModLiveTab({chatMessages, onDeleteMessage, onNewMessage, username}) {
                         </button>
                     )}
                 </div>
+                {/* allows mods to delete messages msgDel implementation */}
                 <div style={{
                     flex: 1, overflowY: 'auto', padding: '12px 12px 8px', display: 'flex', flexDirection: 'column', gap: 10,
                 }}>
@@ -520,6 +547,7 @@ function ModLiveTab({chatMessages, onDeleteMessage, onNewMessage, username}) {
                         </div>
                     )}
                 </div>
+                {/* moderators can send messages / msgSend */}
                 <div style={{
                     padding: '10px 12px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, alignItems: 'center',
                     flexShrink: 0, background: 'var(--bg-secondary)',
@@ -543,9 +571,11 @@ function ModLiveTab({chatMessages, onDeleteMessage, onNewMessage, username}) {
 export default function ModDash({
     username, proposals, onApprove, onDecline, chatMessages, onNewMessage, onDeleteMessage, players, teams, games, onCancelStake,
 }) {
+    // constants
     const [activeTab, setActiveTab] = useState(MOD_TABS.PROPOSALS);
     const {confirm, modal} = useConfirm();
 
+    // handle stake approval
     const handleApprove = async (id) => {
         const proposal = proposals.find(p => p.id === id);
         const ok = await confirm({
@@ -556,6 +586,7 @@ export default function ModDash({
         }
     };
 
+    // handle stake decline
     const handleDecline = async (id) => {
         const ok = await confirm({
             title: 'DECLINE PROPOSAL', message: 'Decline and permanently delete this proposal? This cannot be undone.', confirmLabel: 'DECLINE', confirmDanger: true,
@@ -565,6 +596,7 @@ export default function ModDash({
         }
     };
 
+    // handle stake cancellation
     const handleCancelStake = async (type, id) => {
         const ok = await confirm({
             title: 'CANCEL STAKE', message: `Remove this ${type} stake from the active pool? All associated bets will be voided.`, confirmLabel: 'CANCEL STAKE', confirmDanger: true,
@@ -574,15 +606,17 @@ export default function ModDash({
         }
     };
 
+    // handle message deletion
     const handleDeleteMessage = async (msgId) => {
         const ok = await confirm({
             title: 'DELETE MESSAGE', message: 'Permanently delete this chat message? This action cannot be undone.', confirmLabel: 'DELETE', confirmDanger: true,
         });
         if (ok) {
-            onDeleteMessage(msgId);
+            onDeleteMessage(msgId); // THIS IS NOT MSG DELETE DEF - continute to onDeleteMessage (this could be optimized)
         }
     };
 
+    // make things visible <3 / tabRender
     const renderContent = () => {
         switch(activeTab) {
             case MOD_TABS.PROPOSALS:
@@ -611,6 +645,7 @@ export default function ModDash({
         }
     };
 
+    // highlights the current tab label with the tab's contents displayed
     const currentTabLabel = MOD_TAB_CONFIG.findLast(t => t.key === activeTab)?.label || '';
     return(
         <>
@@ -634,6 +669,7 @@ export default function ModDash({
                     <div style={{
                         display: 'flex', padding: '0 20px', minWidth: 'max-content',
                     }}>
+                        {/* tabline */}
                         {MOD_TAB_CONFIG.map(tab => {
                             const isActive = activeTab === tab.key;
                             const pendingCount = tab.badge ? proposals.length : 0;
@@ -675,6 +711,7 @@ export default function ModDash({
                         }}>
                             {currentTabLabel.toUpperCase()}
                         </h2>
+                        {/* instruction text for tabs + display */}
                         {activeTab === MOD_TABS.PROPOSALS && ( <p style={{
                             fontSize: 13, color: 'var(--text-secondary)', marginTop: 4,
                         }}>Review and activate bet proposals submitted by users.</p>
