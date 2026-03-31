@@ -127,7 +127,7 @@ export function SignUpScreen({ onSignUp, onBack, LogoComponent, isLoading = fals
                     </p>
                     
                     <InputField label="Username" value={form.username} onChange={set('username')} placeholder="Username"/>
-                    <InputField label="Password" value={form.password} onChange={set('password')} placeholder="Password"/>
+                    <InputField label="Password" type="password" value={form.password} onChange={set('password')} placeholder="Password"/>
                     <InputField label="Email" value={form.email} onChange={set('email')} placeholder="your@email.com"/>
                     <InputField label="Date of Birth" type="date" value={form.dob} onChange={set('dob')}/>
                     <InputField label="Location" value={form.location} onChange={set('location')} placeholder="Province, Country" />
