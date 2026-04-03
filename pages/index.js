@@ -163,7 +163,11 @@ function Logo({ onClick, style = {} }) {
                 boxShadow: '0 0 16px var(--accent-glow)',
             }}>
 
-                <Trophy size={20} color="#050A0F" strokeWidth={2.5} />
+                <img 
+                    src="/gator_gambling_logo.png" 
+                    alt="Logo" 
+                    style={{ width: '100%', height: '100%', borderRadius: 10, objectFit: 'contain' }} 
+                />
             </div>
             <span style={{
                 fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--text-primary)', letterSpacing: '0.06em',
@@ -289,7 +293,11 @@ function LandingScreen({ onSignUp, onLogin }) {
                         margin: '0 auto 20px', boxShadow: '0 0 40px var(--accent-glow-strong)',
                         animation: 'pulse-glow 3s ease-in-out infinite',
                     }}>
-                        <Trophy size={36} color="#080A0F" strokeWidth={2.5} />
+                        <img 
+                            src="/gator_gambling_logo.png" 
+                            alt="Logo" 
+                            style={{ width: '100%', height: '100%', borderRadius: 20, objectFit: 'contain' }} 
+                        />
                     </div>
                     <h1 style={{
                         fontFamily: 'var(--font-display)', fontSize: 48,
@@ -900,8 +908,7 @@ const TAB_CONFIG = [
     {key: TABS.LIVE, label: "Live", icon: <Radio size={15} />, live:true},
 ];
 
-function Dashboard({username, players, teams, games, chatMessages, onNewMessage}){
-    const [activeTab, setActiveTab] = useState(TABS.PICKS);
+function Dashboard({username, players, teams, games, chatMessages, onNewMessage, activeTab, setActiveTab}){
     const renderTabContent = () => {
         switch (activeTab){
             case TABS.PICKS: return <YourPicksTab/>;
@@ -1573,10 +1580,9 @@ export default function App(){
     }, [username]);
 
     const handleLogoClick = useCallback(() => {
-        if (screen === SCREENS.PROFILE){
-            setScreen(SCREENS.DASHBOARD);
-        }
-    }, [screen]);
+        setScreen(SCREENS.DASHBOARD);
+        setActiveTab(TABS.PICKS);
+    }, []);
 
     const handleAvatarClick = useCallback(() => {
         setScreen(SCREENS.PROFILE);
@@ -1705,7 +1711,7 @@ export default function App(){
             <ModDash username={username} proposals={proposals} onApprove={handleApproveProposal} onDecline={handleDeclineProposal} chatMessages={moderatorChatMessages} onNewMessage={handleNewMessage} onDeleteMessage={handleDeleteMessage} players={players} teams={teams} games={games} onCancelStake={handleCancelStake} />
         ) : (
             <>
-            <Dashboard username={username} players={players} teams={teams} games={games} chatMessages={chatMessages} onNewMessage={handleNewMessage} />
+            <Dashboard username={username} players={players} teams={teams} games={games} chatMessages={chatMessages} onNewMessage={handleNewMessage} activeTab={activeTab} setActiveTab={setActiveTab} />
             <ProposalForm onSubmit={handleAddProposal} />
             </>
         )
