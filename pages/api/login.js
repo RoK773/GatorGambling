@@ -55,6 +55,8 @@ export default async function handler(req, res) {
             username: user.username,
             credits: Number.isFinite(Number(user.credits)) ? Number(user.credits) : 0,
             hasCardOnFile: Boolean(String(user.card || '').trim()),
+            player_picks: Array.isArray(user.player_picks) ? user.player_picks : [],
+            team_picks: Array.isArray(user.team_picks) ? user.team_picks : [],
         });
     } catch (error) {
         console.error('Login check failed:', error);
