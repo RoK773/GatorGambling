@@ -125,6 +125,9 @@ export default async function handler(req, res) {
             location: normalizedLocation,
             credits: 0,
             card: null,
+            player_picks: [],
+            team_picks: [],
+            game_picks: [],
             createdAt: new Date(),
         });
 

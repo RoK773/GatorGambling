@@ -90,6 +90,29 @@ const INITIAL_CHAT_MESSAGES = CHAT_USER_ROSTER.map(user => {
     };
 });
 
+function mapPlayerBetToPlayerCard(playerBet, index) {
+    const name = String(playerBet?.name || '').trim() || 'Unknown Player';
+    const number = String(playerBet?.number || '').trim() || '--';
+    const team = String(playerBet?.team || playerBet?.pos || '').trim() || 'N/A';
+    const payoutMultRaw = playerBet?.payout_mult;
+    const payoutMultNum = Number(payoutMultRaw);
+    const stake = Number.isFinite(payoutMultNum)
+        ? `x${payoutMultNum}`
+        : String(payoutMultRaw || '--');
+
+    return {
+        id: playerBet?.id || playerBet?._id || `${name}-${number}-${index}`,
+        name,
+        number,
+        pos: team,
+        stake,
+        stat: playerBet?.stat,
+        range: playerBet?.range,
+        stat_num: playerBet?.stat_num ?? playerBet?.state_num,
+        payout_mult: playerBet?.payout_mult,
+    };
+}
+
 function upsertLatestChatByUser(prevMessages, incomingMessage) {
     if (!incomingMessage || typeof incomingMessage !== 'object') {
         return prevMessages;
@@ -414,21 +437,18 @@ function ConditionZone({children}) {
     );
 }
 
-const PLAYER_STATS = ['Goals', 'Assists', 'Fouls', 'Shots on Target', 'Saves', 'Minutes Played'];
-const COMPARATORS = ['Over', 'Under', 'Exactly'];
-
 // bet card
-function PlayerBetCard({ title, subtitle, meta, stake, animDelay }) {
+function PlayerBetCard({ title, subtitle, meta, stake, stat, range, statNum, animDelay }) {
     const [hover, setHover] = useState(false);
     const [betPlaced, setBet] = useState(false);
-    const [statType, setStat] = useState(PLAYER_STATS[0]);
-    const [comparator, setComp] = useState(COMPARATORS[0]);
-    const [condVal, setCondVal] = useState('');
-
-    const conditionText = condVal ? `${statType} - ${comparator} ${condVal}` : null;
+    const lockedStat = String(stat || '').trim() || '--';
+    const lockedRange = String(range || '').trim() || '--';
+    const lockedStatNum = String(statNum ?? '').trim() || '--';
+    const hasCondition = lockedStat !== '--' && lockedRange !== '--' && lockedStatNum !== '--';
+    const conditionText = hasCondition ? `${lockedStat} - ${lockedRange} ${lockedStatNum}` : 'Condition unavailable';
 
     const handleBet = () => {
-        if (!condVal || Number(condVal) < 0){
+        if (!hasCondition){
             return;
         }
         setBetPlaced(true);
@@ -463,9 +483,19 @@ function PlayerBetCard({ title, subtitle, meta, stake, animDelay }) {
                     <div style={{
                         display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
                     }}>
-                        <ConditionSelect value={statType} onChange={e => setStat(e.target.value)} options={PLAYER_STATS} minWidth={118} />
-                        <ConditionSelect value={comparator} onChange={e => setComp(e.target.value)} options={COMPARATORS} minWidth={82} />
-                        <ConditionNumber value={condVal} onChange={e => setCondVal(e.target.value)} placeholder="0" />
+                        <div style={{
+                            minWidth: 118, background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 7,
+                            padding: '6px 10px', fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', color: 'var(--text-primary)',
+                        }}>{lockedStat}</div>
+                        <div style={{
+                            minWidth: 82, background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 7,
+                            padding: '6px 10px', fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', color: 'var(--text-primary)',
+                        }}>{lockedRange}</div>
+                        <div style={{
+                            width: 58, background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 7,
+                            padding: '6px 8px', fontSize: 12, fontWeight: 700, color: 'var(--text-primary)',
+                            fontFamily: 'var(--font-mono)', textAlign: 'center',
+                        }}>{lockedStatNum}</div>
                     </div>
                     {conditionText && ( <div style={{
                         fontSize: 10, color: 'var(--accent)', fontFamily: 'var(--font-mono)', fontWeight: 700, letterSpacing: '0.06em', paddingTop: 2,
@@ -491,13 +521,13 @@ function PlayerBetCard({ title, subtitle, meta, stake, animDelay }) {
                 </div>
                 <BarChart2 size={20} color="var(--text-muted)"/>
             </div>
-            <button onClick={handleBet} disabled={!condVal || betPlaced} title={!condVal ? 'Set a condition for your bet' : ''} style={{
+            <button onClick={handleBet} disabled={!hasCondition || betPlaced} title={!hasCondition ? 'Condition unavailable for this bet' : ''} style={{
                 background: betPlaced ? 'var(--success)' : 'var(--accent)',
                 color: '#080A0F', fontWeight: 700, fontSize: 13, letterSpacing: '0.08em', 
-                padding: '11px', borderRadius: 8, border: !condVal ? '1px solid var(--border)' : 'none', cursor: !condVal ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s', opacity: !condVal ? 0.6 : 1,
+                padding: '11px', borderRadius: 8, border: !hasCondition ? '1px solid var(--border)' : 'none', cursor: !hasCondition ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s', opacity: !hasCondition ? 0.6 : 1,
             }}>
-                {betPlaced ? '✓ BET PLACED' : !condVal ? 'SET CONDITION FIRST' : 'PLACE BET'}
+                {betPlaced ? '✓ BET PLACED' : !hasCondition ? 'CONDITION UNAVAILABLE' : 'PLACE BET'}
             </button>
         </div>
     );
@@ -616,7 +646,7 @@ function PlayersTab({players}){
             display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16,
         }}>
             {players.map((p, i) => (
-                <PlayerBetCard key={p.id} title={p.name} subtitle={`#${p.number}`} meta={p.pos} stake={p.stake} animDelay={`${i*0.05}s`} />
+                <PlayerBetCard key={p.id} title={p.name} subtitle={`#${p.number}`} meta={p.pos} stake={p.stake} stat={p.stat} range={p.range} statNum={p.stat_num} animDelay={`${i*0.05}s`} />
  
                 ))}
         </div>
@@ -1669,6 +1699,46 @@ export default function App(){
 
         return () => clearInterval(interval);
     }, [handleNewMessage]);
+
+    useEffect(() => {
+        if (screen !== SCREENS.DASHBOARD || isModerator || activeTab !== TABS.PLAYERS) {
+            return;
+        }
+
+        let isCancelled = false;
+
+        const loadPlayerBets = async () => {
+            try {
+                const response = await fetch('/api/player-bets', {
+                    method: 'GET',
+                });
+
+                const data = await response.json().catch(() => ({}));
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to load player bets right now.');
+                }
+
+                if (!Array.isArray(data.players)) {
+                    return;
+                }
+
+                if (isCancelled) {
+                    return;
+                }
+
+                setPlayers(data.players.map(mapPlayerBetToPlayerCard));
+            } catch (error) {
+                console.error('Failed to refresh player bets:', error);
+            }
+        };
+
+        loadPlayerBets();
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [activeTab, isModerator, screen]);
 
     return (
         <>
