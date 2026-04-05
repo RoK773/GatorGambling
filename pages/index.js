@@ -1324,7 +1324,7 @@ const TAB_CONFIG = [
     {key: TABS.LIVE, label: "Live", icon: <Radio size={15} />, live:true},
 ];
 
-function Dashboard({username, players, playerPicks, teams, teamPicks, games, chatMessages, onNewMessage, activeTab, setActiveTab, userCredits, onPlacePlayerBet, onPlaceTeamBet}){
+function Dashboard({username, players, playerPicks, teams, teamPicks, games, chatMessages, onNewMessage, activeTab, setActiveTab, userCredits, onPlacePlayerBet, onPlaceTeamBet, showBetSuccessBanner = false}){
     const playerPickKeySet = new Set((playerPicks || []).map(getPlayerBetMatchKey).filter(Boolean));
     const availablePlayers = (players || []).filter(player => !playerPickKeySet.has(getPlayerBetMatchKey(player)));
     const teamPickKeySet = new Set((teamPicks || []).map(getTeamBetMatchKey).filter(Boolean));
@@ -1381,6 +1381,21 @@ function Dashboard({username, players, playerPicks, teams, teamPicks, games, cha
             <div style={{
                 maxWidth: 1100, margin: '0 auto', padding: '28px 20px 60px',
             }}>
+                {showBetSuccessBanner && (
+                    <div style={{
+                        marginBottom: 16,
+                        background: 'rgba(16, 185, 129, 0.14)',
+                        border: '1px solid rgba(16, 185, 129, 0.4)',
+                        borderRadius: 10,
+                        padding: '11px 14px',
+                        fontSize: 12,
+                        color: '#34D399',
+                        fontWeight: 700,
+                        letterSpacing: '0.04em',
+                    }}>
+                        Bet successfully placed
+                    </div>
+                )}
                 <div style={{
                     marginBottom: 24,
                 }}>
@@ -1859,6 +1874,7 @@ export default function App(){
     const [isSigningUp, setIsSigningUp] = useState(false);
     const [signupError, setSignupError] = useState('');
     const [profileNotice, setProfileNotice] = useState('');
+    const profileNoticeTimeoutRef = useRef(null);
     const [players, setPlayers] = useState(INITIAL_PLAYERS);
     const [playerPicks, setPlayerPicks] = useState([]);
     const [teams, setTeams] = useState(INITIAL_TEAMS);
@@ -1867,7 +1883,23 @@ export default function App(){
     const [proposals, setProposals] = useState([]);
     const [chatMessages, setChatMessages] = useState(SEED_MESSAGES);
     const [moderatorChatMessages, setModeratorChatMessages] = useState(INITIAL_CHAT_MESSAGES);
+    const [showBetSuccessBanner, setShowBetSuccessBanner] = useState(false);
+    const betSuccessBannerTimeoutRef = useRef(null);
+    const previousActiveTabRef = useRef(activeTab);
     const isModerator = userRole === 'moderator';
+
+    const triggerBetSuccessBanner = useCallback(() => {
+        setShowBetSuccessBanner(true);
+
+        if (betSuccessBannerTimeoutRef.current) {
+            clearTimeout(betSuccessBannerTimeoutRef.current);
+        }
+
+        betSuccessBannerTimeoutRef.current = setTimeout(() => {
+            setShowBetSuccessBanner(false);
+            betSuccessBannerTimeoutRef.current = null;
+        }, 2500);
+    }, []);
     
     const handleLogin = useCallback(async (loginData) => {
         const payload = typeof loginData === 'string'
@@ -1958,11 +1990,17 @@ export default function App(){
     }, []);
 
     const handleLogout = useCallback(() => {
+        if (profileNoticeTimeoutRef.current) {
+            clearTimeout(profileNoticeTimeoutRef.current);
+            profileNoticeTimeoutRef.current = null;
+        }
+
         setUsername('');
         setUserCredits(0);
         setPlayerPicks([]);
         setTeamPicks([]);
         setProfileNotice('');
+        setShowBetSuccessBanner(false);
         setUserRole('user');
         setHasCardOnFile(false);
         setScreen(SCREENS.LANDING);
@@ -1983,6 +2021,11 @@ export default function App(){
 
         if (!response.ok) {
             throw new Error(data.error || 'Unable to update card right now.');
+        }
+
+        if (profileNoticeTimeoutRef.current) {
+            clearTimeout(profileNoticeTimeoutRef.current);
+            profileNoticeTimeoutRef.current = null;
         }
 
         setHasCardOnFile(true);
@@ -2006,8 +2049,16 @@ export default function App(){
             throw new Error(data.error || 'Unable to process deposit right now.');
         }
 
+        if (profileNoticeTimeoutRef.current) {
+            clearTimeout(profileNoticeTimeoutRef.current);
+        }
+
         setUserCredits(Number.isFinite(Number(data.credits)) ? Number(data.credits) : 0);
         setProfileNotice(data.message || 'Deposit successful.');
+        profileNoticeTimeoutRef.current = setTimeout(() => {
+            setProfileNotice('');
+            profileNoticeTimeoutRef.current = null;
+        }, 3000);
     }, [username]);
 
     const handlePlacePlayerBet = useCallback(async (amount, pickData = {}) => {
@@ -2037,7 +2088,9 @@ export default function App(){
         if (data.placedPick && typeof data.placedPick === 'object') {
             setPlayerPicks(prev => [...prev, mapPlayerBetToPlayerCard(data.placedPick, prev.length)]);
         }
-    }, [username]);
+
+        triggerBetSuccessBanner();
+    }, [triggerBetSuccessBanner, username]);
 
     const handlePlaceTeamBet = useCallback(async (amount, pickData = {}) => {
         const normalizedAmount = Number(amount);
@@ -2066,7 +2119,9 @@ export default function App(){
         if (data.placedPick && typeof data.placedPick === 'object') {
             setTeamPicks(prev => [...prev, mapTeamBetToTeamCard(data.placedPick, prev.length)]);
         }
-    }, [username]);
+
+        triggerBetSuccessBanner();
+    }, [triggerBetSuccessBanner, username]);
 
     const handleLogoClick = useCallback(() => {
         setScreen(SCREENS.DASHBOARD);
@@ -2239,6 +2294,35 @@ export default function App(){
         };
     }, [activeTab, isModerator, screen]);
 
+    useEffect(() => {
+        const previousTab = previousActiveTabRef.current;
+        const didTabChange = previousTab !== activeTab;
+        previousActiveTabRef.current = activeTab;
+
+        if (!didTabChange || !showBetSuccessBanner) {
+            return;
+        }
+
+        setShowBetSuccessBanner(false);
+
+        if (betSuccessBannerTimeoutRef.current) {
+            clearTimeout(betSuccessBannerTimeoutRef.current);
+            betSuccessBannerTimeoutRef.current = null;
+        }
+    }, [activeTab, showBetSuccessBanner]);
+
+    useEffect(() => {
+        return () => {
+            if (profileNoticeTimeoutRef.current) {
+                clearTimeout(profileNoticeTimeoutRef.current);
+            }
+
+            if (betSuccessBannerTimeoutRef.current) {
+                clearTimeout(betSuccessBannerTimeoutRef.current);
+            }
+        };
+    }, []);
+
     return (
         <>
         <Head>
@@ -2280,7 +2364,7 @@ export default function App(){
             <ModDash username={username} proposals={proposals} onApprove={handleApproveProposal} onDecline={handleDeclineProposal} chatMessages={moderatorChatMessages} onNewMessage={handleNewMessage} onDeleteMessage={handleDeleteMessage} players={players} teams={teams} games={games} onCancelStake={handleCancelStake} />
         ) : (
             <>
-            <Dashboard username={username} players={players} playerPicks={playerPicks} teams={teams} teamPicks={teamPicks} games={games} chatMessages={chatMessages} onNewMessage={handleNewMessage} activeTab={activeTab} setActiveTab={setActiveTab} userCredits={userCredits} onPlacePlayerBet={handlePlacePlayerBet} onPlaceTeamBet={handlePlaceTeamBet} />
+            <Dashboard username={username} players={players} playerPicks={playerPicks} teams={teams} teamPicks={teamPicks} games={games} chatMessages={chatMessages} onNewMessage={handleNewMessage} activeTab={activeTab} setActiveTab={setActiveTab} userCredits={userCredits} onPlacePlayerBet={handlePlacePlayerBet} onPlaceTeamBet={handlePlaceTeamBet} showBetSuccessBanner={showBetSuccessBanner} />
             <ProposalForm onSubmit={handleAddProposal} />
             </>
         )
