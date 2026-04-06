@@ -34,22 +34,6 @@ const MODERATOR_CREDENTIALS ={
     password: 'moderator01Auth',
 }
 
-const INITIAL_PLAYERS = [
-    { id: 1, name: 'Matthew Savoie', number: '22', stake: '$400', pos: 'CAN' },
-    { id: 2, name: 'Ryan McDonagh', number: '27', stake: '$400', pos: 'AME'},
-    { id: 3, name: 'Sam Bennett', number: '19', stake: '$1', pos: 'CAN' },
-    { id: 4, name: 'Jonas Johannson', number: '31', stake: '$20', pos: 'SWE' },
-    { id: 5, name: 'Auston Matthews', number: '34', stake: '$15', pos: 'MEX' },
-];
-
-const INITIAL_TEAMS = [
-    { id: 1, name: 'Canada', record: '4-6', stake: '$50'},
-    { id: 2, name: 'United States of America', record: '3-7', stake: '$40'},
-    { id: 3, name: 'Sweden', record: '5-5', stake: '$50'},
-    { id: 4, name: 'Mexico', record: '6-4', stake: '$50'},
-    { id: 5, name: 'England', record: '3-7', stake: '$20'},
-];
-
 const INITIAL_GAMES = [
     { id: 1, home: 'Canada', away: 'United States of America', time: '6:00 PM', winner: 'Canada', stake: '$120', spread: '-3.5' },
     { id: 2, home: 'United States of America', away: 'England', time: '4:00 PM', winner: 'United States of America', stake: '$70', spread: '-2.1' },
@@ -89,6 +73,7 @@ const INITIAL_CHAT_MESSAGES = CHAT_USER_ROSTER.map(user => {
     };
 });
 
+// Betting feature: normalize Player bet documents into card-ready UI data.
 function mapPlayerBetToPlayerCard(playerBet, index) {
     const name = String(playerBet?.name || '').trim() || 'Unknown Player';
     const number = String(playerBet?.number || '').trim() || '--';
@@ -112,6 +97,7 @@ function mapPlayerBetToPlayerCard(playerBet, index) {
     };
 }
 
+// Betting feature: normalize Team bet documents into card-ready UI data.
 function mapTeamBetToTeamCard(teamBet, index) {
     const country = String(teamBet?.country || teamBet?.name || '').trim() || 'Unknown Team';
     const record = String(teamBet?.record || '').trim() || '--';
@@ -133,6 +119,7 @@ function mapTeamBetToTeamCard(teamBet, index) {
     };
 }
 
+// Betting feature: stable key for matching available Player bets against confirmed picks.
 function getPlayerBetMatchKey(playerBetLike) {
     if (!playerBetLike || typeof playerBetLike !== 'object') {
         return '';
@@ -153,6 +140,7 @@ function getPlayerBetMatchKey(playerBetLike) {
     return `meta:${name}|${number}|${team}|${stat}|${range}|${statNum}`;
 }
 
+// Betting feature: stable key for matching available Team bets against confirmed picks.
 function getTeamBetMatchKey(teamBetLike) {
     if (!teamBetLike || typeof teamBetLike !== 'object') {
         return '';
@@ -496,10 +484,12 @@ function ConditionZone({children}) {
     );
 }
 
+// Betting feature: shared credit formatting for bet modals.
 function formatCreditsDisplay(value) {
     return Number.isFinite(Number(value)) ? Number(value).toFixed(2) : '0.00';
 }
 
+// Betting feature: reusable success/error banner shown on bet cards.
 function BetStatusBanner({ banner }) {
     if (!banner) {
         return null;
@@ -524,6 +514,7 @@ function BetStatusBanner({ banner }) {
     );
 }
 
+// Betting feature: reusable modal for entering and confirming bet amount.
 function BetAmountModal({
     isOpen,
     title,
@@ -601,7 +592,7 @@ function BetAmountModal({
     );
 }
 
-// bet card
+// Betting feature: Player bet card with fixed condition UI + credit-backed placement flow.
 function PlayerBetCard({ playerId, title, subtitle, meta, stake, stat, range, statNum, payoutMult, animDelay, availableCredits = 0, onPlaceBet, confirmed = false }) {
     const [hover, setHover] = useState(false);
     const [betPlaced, setBet] = useState(false);
@@ -780,6 +771,7 @@ function PlayerBetCard({ playerId, title, subtitle, meta, stake, stat, range, st
     );
 }
 
+// Betting feature: Team bet card with fixed condition UI + credit-backed placement flow.
 function TeamBetCard({ teamId, title, subtitle, stake, outcome, range, points, payoutMult, animDelay, availableCredits = 0, onPlaceBet, confirmed = false }) {
     const [hover, setHover] = useState(false);
     const [betPlaced, setBet] = useState(false);
@@ -945,6 +937,7 @@ function TeamBetCard({ teamId, title, subtitle, stake, outcome, range, points, p
     );
 }
 
+// Betting feature: shared card grid wrapper used across Players/Teams/Picks sections.
 function BetGrid({ children }) {
     return (
         <div style={{
@@ -955,6 +948,7 @@ function BetGrid({ children }) {
     );
 }
 
+// Betting feature: shared heading + grid wrapper for grouped picks sections.
 function PicksSection({ title, children }) {
     return (
         <>
@@ -970,7 +964,7 @@ function PicksSection({ title, children }) {
     );
 }
 
-// tab contents 
+// Betting feature: combined picks tab (Player + Team confirmed picks).
 function YourPicksTab({playerPicks, teamPicks}){
     const playerPickList = Array.isArray(playerPicks) ? playerPicks : [];
     const teamPickList = Array.isArray(teamPicks) ? teamPicks : [];
@@ -1030,6 +1024,7 @@ function YourPicksTab({playerPicks, teamPicks}){
     );
 }
 
+// Betting feature: available Player bets listing.
 function PlayersTab({players, availableCredits, onPlaceBet}){
     return(
         <BetGrid>
@@ -1041,6 +1036,7 @@ function PlayersTab({players, availableCredits, onPlaceBet}){
     );
 }
 
+// Betting feature: available Team bets listing.
 function TeamsTab({teams, availableCredits, onPlaceBet}){
     return(
         <BetGrid>
@@ -1325,6 +1321,7 @@ const TAB_CONFIG = [
 ];
 
 function Dashboard({username, players, playerPicks, teams, teamPicks, games, chatMessages, onNewMessage, activeTab, setActiveTab, userCredits, onPlacePlayerBet, onPlaceTeamBet, showBetSuccessBanner = false}){
+    // Betting feature: hide already-confirmed bets from available tabs.
     const playerPickKeySet = new Set((playerPicks || []).map(getPlayerBetMatchKey).filter(Boolean));
     const availablePlayers = (players || []).filter(player => !playerPickKeySet.has(getPlayerBetMatchKey(player)));
     const teamPickKeySet = new Set((teamPicks || []).map(getTeamBetMatchKey).filter(Boolean));
@@ -1875,9 +1872,9 @@ export default function App(){
     const [signupError, setSignupError] = useState('');
     const [profileNotice, setProfileNotice] = useState('');
     const profileNoticeTimeoutRef = useRef(null);
-    const [players, setPlayers] = useState(INITIAL_PLAYERS);
+    const [players, setPlayers] = useState([]);
     const [playerPicks, setPlayerPicks] = useState([]);
-    const [teams, setTeams] = useState(INITIAL_TEAMS);
+    const [teams, setTeams] = useState([]);
     const [teamPicks, setTeamPicks] = useState([]);
     const [games, setGames] = useState(INITIAL_GAMES);
     const [proposals, setProposals] = useState([]);
@@ -1888,6 +1885,7 @@ export default function App(){
     const previousActiveTabRef = useRef(activeTab);
     const isModerator = userRole === 'moderator';
 
+    // Betting feature: shared success-banner trigger for Player/Team bet placement.
     const triggerBetSuccessBanner = useCallback(() => {
         setShowBetSuccessBanner(true);
 
@@ -2061,6 +2059,7 @@ export default function App(){
         }, 3000);
     }, [username]);
 
+    // Betting feature: place Player bet, persist to DB, sync credits + picks locally.
     const handlePlacePlayerBet = useCallback(async (amount, pickData = {}) => {
         const normalizedAmount = Number(amount);
 
@@ -2092,6 +2091,7 @@ export default function App(){
         triggerBetSuccessBanner();
     }, [triggerBetSuccessBanner, username]);
 
+    // Betting feature: place Team bet, persist to DB, sync credits + picks locally.
     const handlePlaceTeamBet = useCallback(async (amount, pickData = {}) => {
         const normalizedAmount = Number(amount);
 
@@ -2214,6 +2214,7 @@ export default function App(){
         return () => clearInterval(interval);
     }, [handleNewMessage]);
 
+    // Betting feature: refresh available Player bets from Mongo when Players tab opens.
     useEffect(() => {
         if (screen !== SCREENS.DASHBOARD || isModerator || activeTab !== TABS.PLAYERS) {
             return;
@@ -2254,6 +2255,7 @@ export default function App(){
         };
     }, [activeTab, isModerator, screen]);
 
+    // Betting feature: refresh available Team bets from Mongo when Teams tab opens.
     useEffect(() => {
         if (screen !== SCREENS.DASHBOARD || isModerator || activeTab !== TABS.TEAMS) {
             return;
@@ -2294,6 +2296,7 @@ export default function App(){
         };
     }, [activeTab, isModerator, screen]);
 
+    // Betting feature: dismiss global success banner when user switches tabs.
     useEffect(() => {
         const previousTab = previousActiveTabRef.current;
         const didTabChange = previousTab !== activeTab;
