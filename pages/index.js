@@ -1550,7 +1550,7 @@ function SettingsButton({ icon, label, onClick, disabled = false}){
     );
 }
 
-function ProfilePage({ username, onLogout, isModerator = false, credits = 0, onUpdateCard, onDeposit, notice = ''}){
+function ProfilePage({ username, email = '', onLogout, isModerator = false, credits = 0, onUpdateCard, onDeposit, notice = ''}){
     const formattedCredits = new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: 'USD',
@@ -1710,7 +1710,7 @@ function ProfilePage({ username, onLogout, isModerator = false, credits = 0, onU
                     }}> {username || 'USERNAME'}</h2>
                     <p style={{
                         fontSize: 14, color: 'var(--text-secondary)', marginBottom: 4,
-                    }}>user@email.com</p>
+                    }}>{email || 'No email on file'}</p>
                     {isModerator ? (
                     <div style={{
                         display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(198, 241, 53, 0.08)',
@@ -1975,6 +1975,7 @@ function ProfilePage({ username, onLogout, isModerator = false, credits = 0, onU
 export default function App(){
     const [screen, setScreen] = useState(SCREENS.LANDING);
     const [username, setUsername] = useState('');
+    const [userEmail, setUserEmail] = useState('');
     const [userCredits, setUserCredits] = useState(0);
     const [userRole, setUserRole] = useState('user');
     const [hasCardOnFile, setHasCardOnFile] = useState(false);
@@ -2022,6 +2023,7 @@ export default function App(){
 
         if( payload.username === MODERATOR_CREDENTIALS.username && payload.password === MODERATOR_CREDENTIALS.password){
             setUsername(payload.username);
+            setUserEmail('');
             setUserCredits(0);
             setPlayerPicks([]);
             setTeamPicks([]);
@@ -2055,6 +2057,7 @@ export default function App(){
             const data = await response.json().catch(() => ({}));
 
             setUsername(data.username || payload.username || 'Player');
+            setUserEmail(String(data.email || '').trim());
             setUserCredits(Number.isFinite(Number(data.credits)) ? Number(data.credits) : 0);
             setPlayerPicks(Array.isArray(data.player_picks) ? data.player_picks.map(mapPlayerBetToPlayerCard) : []);
             setTeamPicks(Array.isArray(data.team_picks) ? data.team_picks.map(mapTeamBetToTeamCard) : []);
@@ -2090,6 +2093,7 @@ export default function App(){
             }
 
             setUsername(payload.username || 'Player');
+            setUserEmail(String(payload.email || '').trim());
             setUserCredits(Number.isFinite(Number(payload.credits)) ? Number(payload.credits) : 0);
             setPlayerPicks([]);
             setTeamPicks([]);
@@ -2111,6 +2115,7 @@ export default function App(){
         }
 
         setUsername('');
+        setUserEmail('');
         setUserCredits(0);
         setPlayerPicks([]);
         setTeamPicks([]);
@@ -2566,7 +2571,7 @@ export default function App(){
         )}
 
         {screen === SCREENS.PROFILE && (
-            <ProfilePage username={username} onLogout={handleLogout} isModerator={isModerator} credits={userCredits} onUpdateCard={handleUpdateCard} onDeposit={handleDeposit} notice={profileNotice} hasCardOnFile={hasCardOnFile} />
+            <ProfilePage username={username} email={userEmail} onLogout={handleLogout} isModerator={isModerator} credits={userCredits} onUpdateCard={handleUpdateCard} onDeposit={handleDeposit} notice={profileNotice} hasCardOnFile={hasCardOnFile} />
         )}
         </>
     );
