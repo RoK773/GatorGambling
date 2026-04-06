@@ -128,6 +128,9 @@ export default async function handler(req, res) {
             player_picks: [],
             team_picks: [],
             game_picks: [],
+            wins: 0,
+            losses: 0,
+            profit: 0,
             createdAt: new Date(),
         });
 

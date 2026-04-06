@@ -34,13 +34,6 @@ const MODERATOR_CREDENTIALS ={
     password: 'moderator01Auth',
 }
 
-const INITIAL_GAMES = [
-    { id: 1, home: 'Canada', away: 'United States of America', time: '6:00 PM', winner: 'Canada', stake: '$120', spread: '-3.5' },
-    { id: 2, home: 'United States of America', away: 'England', time: '4:00 PM', winner: 'United States of America', stake: '$70', spread: '-2.1' },
-    { id: 3, home: 'England', away: 'Sweden', time: '5:00 PM', winner: 'Sweden', stake: '$200', spread: '3.0'},
-    { id: 4, home: 'Sweden', away: 'Mexico', time: '4:30 PM', winner: 'Mexico', stake: '$250', spread: '-1.6'},
-];
-
 // seed messages so App can own chatMessages state and pass it down for mod deletion
 // static messages for global chat
 const SEED_MESSAGES = [
@@ -119,6 +112,32 @@ function mapTeamBetToTeamCard(teamBet, index) {
     };
 }
 
+// Betting feature: normalize Game bet documents into row-ready UI data.
+function mapGameBetToGameRow(gameBet, index) {
+    const awayTeam = String(gameBet?.away_team || gameBet?.away || '').trim() || 'Away Team';
+    const homeTeam = String(gameBet?.home_team || gameBet?.home || '').trim() || 'Home Team';
+    const time = String(gameBet?.time || '').trim() || '--:--';
+    const winner = String(gameBet?.winner || '').trim() || '--';
+    const odds = String(gameBet?.odds || gameBet?.spread || '').trim() || '--';
+    const payoutMultRaw = gameBet?.payout_mult;
+    const payoutMultNum = Number(payoutMultRaw);
+    const stake = Number.isFinite(payoutMultNum)
+        ? `x${payoutMultNum}`
+        : String(payoutMultRaw || '--');
+
+    return {
+        id: gameBet?.id || gameBet?.gameId || gameBet?._id || `${awayTeam}-${homeTeam}-${time}-${index}`,
+        away: awayTeam,
+        home: homeTeam,
+        time,
+        winner,
+        odds,
+        spread: odds,
+        payout_mult: gameBet?.payout_mult,
+        stake,
+    };
+}
+
 // Betting feature: stable key for matching available Player bets against confirmed picks.
 function getPlayerBetMatchKey(playerBetLike) {
     if (!playerBetLike || typeof playerBetLike !== 'object') {
@@ -158,6 +177,26 @@ function getTeamBetMatchKey(teamBetLike) {
     const points = String(teamBetLike.points ?? '').trim();
 
     return `meta:${country}|${record}|${outcome}|${range}|${points}`;
+}
+
+// Betting feature: stable key for matching available Game bets against confirmed picks.
+function getGameBetMatchKey(gameBetLike) {
+    if (!gameBetLike || typeof gameBetLike !== 'object') {
+        return '';
+    }
+
+    const id = String(gameBetLike.id || gameBetLike.gameId || '').trim();
+    if (id) {
+        return `id:${id}`;
+    }
+
+    const away = String(gameBetLike.away || gameBetLike.away_team || '').trim().toLowerCase();
+    const home = String(gameBetLike.home || gameBetLike.home_team || '').trim().toLowerCase();
+    const time = String(gameBetLike.time || '').trim().toLowerCase();
+    const winner = String(gameBetLike.winner || '').trim().toLowerCase();
+    const odds = String(gameBetLike.odds || gameBetLike.spread || '').trim().toLowerCase();
+
+    return `meta:${away}|${home}|${time}|${winner}|${odds}`;
 }
 
 function upsertLatestChatByUser(prevMessages, incomingMessage) {
@@ -964,11 +1003,12 @@ function PicksSection({ title, children }) {
     );
 }
 
-// Betting feature: combined picks tab (Player + Team confirmed picks).
-function YourPicksTab({playerPicks, teamPicks}){
+// Betting feature: combined picks tab (Player + Team + Game confirmed picks).
+function YourPicksTab({playerPicks, teamPicks, gamePicks}){
     const playerPickList = Array.isArray(playerPicks) ? playerPicks : [];
     const teamPickList = Array.isArray(teamPicks) ? teamPicks : [];
-    const hasAnyPicks = playerPickList.length > 0 || teamPickList.length > 0;
+    const gamePickList = Array.isArray(gamePicks) ? gamePicks : [];
+    const hasAnyPicks = playerPickList.length > 0 || teamPickList.length > 0 || gamePickList.length > 0;
 
     if (!hasAnyPicks) {
         return(
@@ -1020,6 +1060,21 @@ function YourPicksTab({playerPicks, teamPicks}){
                     ))}
                 </PicksSection>
             )}
+
+            {gamePickList.length > 0 && (
+                <div style={{
+                    display: 'flex', flexDirection: 'column', gap: 12,
+                }}>
+                    <h3 style={{
+                        margin: 0,
+                        fontFamily: 'var(--font-display)',
+                        fontSize: 18,
+                        letterSpacing: '0.06em',
+                        color: 'var(--text-primary)',
+                    }}>GAME PICKS</h3>
+                    <GamesTab games={gamePickList} confirmed />
+                </div>
+            )}
         </div>
     );
 }
@@ -1047,122 +1102,178 @@ function TeamsTab({teams, availableCredits, onPlaceBet}){
     );
 }
 
-const GAME_OUTCOMES = ['Home Team Wins', 'Away Team Wins', 'Draw'];
-
-function GamesRow({g, i}) {
+function GamesRow({g, i, availableCredits = 0, onPlaceBet, confirmed = false}) {
     const [hover, setHover] = useState(false);
     const [betPlaced, setBetPlaced] = useState(false);
-    const [outcome, setOutcome] = useState(GAME_OUTCOMES[0]);
-    const [homeScore, setHomeScore] = useState('');
-    const [awayScore, setAwayScore] = useState('');
-    const [showScore, setShowScore] = useState(false);
-    const hasScore = showScore && homeScore !== '' && awayScore !== '';
-    const outcomeLabel = outcome === 'Home Team Wins' ? g.home : outcome === 'Away Team Wins' ? g.away : 'Draw';
-    const conditionText = hasScore ? `${outcomeLabel} - ${g.home} ${homeScore} : ${awayScore} ${g.away}` :  `${outcomeLabel} wins`;
+    const [isSubmittingBet, setIsSubmittingBet] = useState(false);
+    const [showBetModal, setShowBetModal] = useState(false);
+    const [betAmountInput, setBetAmountInput] = useState('');
+    const [betAmountError, setBetAmountError] = useState('');
+    const [betBanner, setBetBanner] = useState(null);
+
+    const lockedWinner = String(g?.winner || '').trim() || '--';
+    const lockedOdds = String(g?.odds || g?.spread || '').trim() || '--';
+    const hasCondition = lockedWinner !== '--' && lockedOdds !== '--';
+    const conditionText = hasCondition ? lockedWinner : 'Condition unavailable';
 
     const handleBet = () => {
-        setBetPlaced(true);
-        setTimeout(() => setBetPlaced(false), 2000);
-    }
+        if (!hasCondition || confirmed) {
+            return;
+        }
+
+        setBetAmountInput('');
+        setBetAmountError('');
+        setBetBanner(null);
+        setShowBetModal(true);
+    };
+
+    const handleConfirmBetAmount = async () => {
+        const amount = Number(betAmountInput);
+        const credits = Number.isFinite(Number(availableCredits)) ? Number(availableCredits) : 0;
+
+        if (!Number.isFinite(amount) || amount <= 0) {
+            setBetAmountError('Enter a valid credit amount greater than 0.');
+            return;
+        }
+
+        if (amount > credits) {
+            setBetAmountError('Not enough credits. Deposit more credits to place this bet.');
+            setBetBanner({
+                type: 'error',
+                message: 'Not enough credits. Please deposit more credits.',
+            });
+            return;
+        }
+
+        try {
+            setIsSubmittingBet(true);
+
+            if (typeof onPlaceBet === 'function') {
+                await onPlaceBet(amount, {
+                    gameId: g.id,
+                    away_team: g.away,
+                    home_team: g.home,
+                    time: g.time,
+                    winner: g.winner,
+                    odds: g.odds || g.spread,
+                    payout_mult: g.payout_mult,
+                });
+            }
+
+            setShowBetModal(false);
+            setBetAmountError('');
+            setBetBanner({
+                type: 'success',
+                message: 'Bet successfully placed.',
+            });
+            setBetPlaced(true);
+            setTimeout(() => setBetPlaced(false), 2000);
+        } catch (error) {
+            const message = error?.message || 'Unable to place bet right now.';
+            setBetAmountError(message);
+            setBetBanner({
+                type: 'error',
+                message,
+            });
+        } finally {
+            setIsSubmittingBet(false);
+        }
+    };
+
+    const handleCloseBetModal = () => {
+        setShowBetModal(false);
+        setBetAmountError('');
+    };
 
     return(
-        <div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} style={{
-            background: hover ? 'var(--bg-card-hover)' : 'var(--bg-card)', border: `1px solid ${hover ? 'var(--border-bright)' : 'var(--border)'}`,
-            borderRadius: 14, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 14, transition: 'all 0.2s', animation: 'fadeIn 0.4s ease both', animationDelay: `${i * 0.07}s`,
-        }}>
-            <div style={{
-                display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
+        <>
+            <div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} style={{
+                background: hover ? 'var(--bg-card-hover)' : 'var(--bg-card)', border: `1px solid ${hover ? 'var(--border-bright)' : 'var(--border)'}`,
+                borderRadius: 14, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 14, transition: 'all 0.2s', animation: 'fadeIn 0.4s ease both', animationDelay: `${i * 0.07}s`,
             }}>
                 <div style={{
-                    background: 'rgba(198, 241, 53, 0.1)', color: 'var(--accent)', fontSize: 11, fontWeight: 700, padding: '4px 10px', 
-                    borderRadius: 6, border: '1px solid rgba(198, 241, 53, 0.2)', fontFamily: 'var(--font-mono)', flexShrink: 0,
-                }}>{g.spread}</div>
-                <div style={{
-                    flex: 1, minWidth: 200,
+                    display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
                 }}>
                     <div style={{
-                        fontFamily: 'var(--font-display)', fontSize: 16, letterSpacing: '0.04em', color: 'var(--text-primary)',
-                    }}>
-                        {g.away}
-                        <span style={{
-                            color: 'var(--text-muted)',
-                        }}>@</span> {g.home}
-                    </div>
+                        background: 'rgba(198, 241, 53, 0.1)', color: 'var(--accent)', fontSize: 11, fontWeight: 700, padding: '4px 10px',
+                        borderRadius: 6, border: '1px solid rgba(198, 241, 53, 0.2)', fontFamily: 'var(--font-mono)', flexShrink: 0,
+                    }}>{lockedOdds}</div>
                     <div style={{
-                        fontSize: 12, color: 'var(--text-secondary)', marginTop: 3, fontFamily: 'var(--font-mono)',
+                        flex: 1, minWidth: 200,
                     }}>
-                        {g.time}
-                    </div>
-                </div>
-                <div style={{
-                    textAlign: 'right', flexShrink: 0,
-                }}>
-                    <div style={{
-                        fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em',
-                    }}>STAKE</div>
-                    <div style={{
-                        fontFamily: 'var(--font-mono)', fontSize: 16, color: 'var(--accent)', fontWeight: 500,
-                    }}>{g.stake}</div>
-                </div>
-            </div>
-            <ConditionZone>
-                <div style={{
-                    display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
-                }}>
-                    <ConditionLabel>Winner</ConditionLabel>
-                    <ConditionSelect value={outcome} onChange={e => setOutcome(e.target.value)} options={[
-                        {value: 'Home Team Wins', label: `${g.home} wins`},
-                        {value: 'Away Team Wins', label: `${g.away} wins`},
-                        {value: 'Draw', label: 'Draw'},
-                    ]}
-                    minWidth={160}
-                    />
-                </div>
-                <div style={{
-                    display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
-                }}>
-                    <button onClick={() => setShowScore(s => !s)} style={{
-                        display: 'flex', alignItems: 'center', gap: 5, background: showScore ? 'rgba(198, 241, 53, 0.1)' : 'transparent',
-                        border: showScore ? '1px solid rgba(198, 241, 53, 0.3)' : '1px solid var(--border)', borderRadius: 6,
-                        padding: '5px 10px', cursor: 'pointer', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', 
-                        color: showScore ? 'var(--accent)' : 'var(--text-muted)', transition: 'all 0.2s',
-                    }}>
-                        {showScore ? 'SCORE' : '+ PREDICT SCORE'}
-                    </button>
-                    {showScore && ( <div style={{
-                        display: 'flex', alignItems: 'center', gap: 6,
-                    }}>
-                        <ConditionLabel>{g.home}</ConditionLabel>
-                        <ConditionNumber value={homeScore} onChange={e => setHomeScore(e.target.value)} placeholder="0" min={0} />
+                        <div style={{
+                            fontFamily: 'var(--font-display)', fontSize: 16, letterSpacing: '0.04em', color: 'var(--text-primary)',
+                        }}>
+                            {g.away}
                             <span style={{
-                                color: 'var(--text-muted)', fontWeight: 700,
-                            }}>-</span>
-                            <ConditionNumber value={awayScore} onChange={e => setAwayScore(e.target.value)} placeholder="0" min={0} />
-                            <ConditionLabel>{g.away}</ConditionLabel>
+                                color: 'var(--text-muted)',
+                            }}>@</span> {g.home}
                         </div>
-                        )}
+                        <div style={{
+                            fontSize: 12, color: 'var(--text-secondary)', marginTop: 3, fontFamily: 'var(--font-mono)',
+                        }}>
+                            {g.time}
+                        </div>
+                    </div>
+                    <div style={{
+                        textAlign: 'right', flexShrink: 0,
+                    }}>
+                        <div style={{
+                            fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em',
+                        }}>STAKE</div>
+                        <div style={{
+                            fontFamily: 'var(--font-mono)', fontSize: 16, color: 'var(--accent)', fontWeight: 500,
+                        }}>{g.stake}</div>
+                    </div>
                 </div>
-                <div style={{
-                    fontSize: 10, color: 'var(--accent)', fontFamily: 'var(--font-mono)', fontWeight: 700, letterSpacing: '0.06em', paddingTop: 2,
-                }}>
-                    {conditionText}
-                </div>
-            </ConditionZone>
-            <button onClick={handleBet} style={{
-                background: betPlaced ? 'var(--success)' : 'var(--accent)', color: '#080A0F', letterSpacing: '0.08em', padding: '11px 20px',
-                borderRadius: 8, border: 'none', cursor: 'pointer', transition: 'all 0.2s', fontWeight: 700, fontSize: 13, alignSelf: 'flex-end',
-            }}>{betPlaced ? '✓ BET PLACED' : 'PLACE BET'}</button>
-        </div>
+
+                <BetStatusBanner banner={betBanner} />
+
+                <ConditionZone>
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+                    }}>
+                        <ConditionLabel>Winner</ConditionLabel>
+                        <div style={{
+                            minWidth: 160, background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 7,
+                            padding: '6px 10px', fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', color: 'var(--text-primary)',
+                        }}>{lockedWinner}</div>
+                    </div>
+                    <div style={{
+                        fontSize: 10, color: 'var(--accent)', fontFamily: 'var(--font-mono)', fontWeight: 700, letterSpacing: '0.06em', paddingTop: 2,
+                    }}>
+                        {conditionText}
+                    </div>
+                </ConditionZone>
+                <button onClick={handleBet} disabled={confirmed || !hasCondition || betPlaced} title={confirmed ? 'This bet is already confirmed' : (!hasCondition ? 'Condition unavailable for this bet' : '')} style={{
+                    background: confirmed ? 'var(--success)' : (betPlaced ? 'var(--success)' : 'var(--accent)'), color: '#080A0F', letterSpacing: '0.08em', padding: '11px 20px',
+                    borderRadius: 8, border: (!hasCondition && !confirmed) ? '1px solid var(--border)' : 'none', cursor: (confirmed || !hasCondition) ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s', fontWeight: 700, fontSize: 13, alignSelf: 'flex-end', opacity: (confirmed || !hasCondition) ? 0.75 : 1,
+                }}>{confirmed ? 'BET CONFIRMED' : (betPlaced ? '✓ BET PLACED' : (!hasCondition ? 'CONDITION UNAVAILABLE' : 'PLACE BET'))}</button>
+            </div>
+
+            <BetAmountModal
+                isOpen={showBetModal && !confirmed}
+                title="PLACE GAME BET"
+                availableCredits={availableCredits}
+                amountInput={betAmountInput}
+                amountError={betAmountError}
+                isSubmitting={isSubmittingBet}
+                onClose={handleCloseBetModal}
+                onAmountChange={setBetAmountInput}
+                onConfirm={handleConfirmBetAmount}
+            />
+        </>
     );
 }
 
-function GamesTab({games}){
+function GamesTab({games, availableCredits = 0, onPlaceBet, confirmed = false}){
     return(
         <div style={{
             display: 'flex', flexDirection: 'column', gap: 16,
         }}>
             {games.map((g, i) => (
-                <GamesRow key={g.id} g={g} i={i}/>
+                <GamesRow key={g.id} g={g} i={i} availableCredits={availableCredits} onPlaceBet={onPlaceBet} confirmed={confirmed} />
         ))}
         </div>
     );
@@ -1320,19 +1431,21 @@ const TAB_CONFIG = [
     {key: TABS.LIVE, label: "Live", icon: <Radio size={15} />, live:true},
 ];
 
-function Dashboard({username, players, playerPicks, teams, teamPicks, games, chatMessages, onNewMessage, activeTab, setActiveTab, userCredits, onPlacePlayerBet, onPlaceTeamBet, showBetSuccessBanner = false}){
+function Dashboard({username, players, playerPicks, teams, teamPicks, games, gamePicks, chatMessages, onNewMessage, activeTab, setActiveTab, userCredits, onPlacePlayerBet, onPlaceTeamBet, onPlaceGameBet, showBetSuccessBanner = false}){
     // Betting feature: hide already-confirmed bets from available tabs.
     const playerPickKeySet = new Set((playerPicks || []).map(getPlayerBetMatchKey).filter(Boolean));
     const availablePlayers = (players || []).filter(player => !playerPickKeySet.has(getPlayerBetMatchKey(player)));
     const teamPickKeySet = new Set((teamPicks || []).map(getTeamBetMatchKey).filter(Boolean));
     const availableTeams = (teams || []).filter(team => !teamPickKeySet.has(getTeamBetMatchKey(team)));
+    const gamePickKeySet = new Set((gamePicks || []).map(getGameBetMatchKey).filter(Boolean));
+    const availableGames = (games || []).filter(game => !gamePickKeySet.has(getGameBetMatchKey(game)));
 
     const renderTabContent = () => {
         switch (activeTab){
-            case TABS.PICKS: return <YourPicksTab playerPicks={playerPicks} teamPicks={teamPicks} />;
+            case TABS.PICKS: return <YourPicksTab playerPicks={playerPicks} teamPicks={teamPicks} gamePicks={gamePicks} />;
             case TABS.PLAYERS: return <PlayersTab players={availablePlayers} availableCredits={userCredits} onPlaceBet={onPlacePlayerBet} />;
             case TABS.TEAMS: return <TeamsTab teams={availableTeams} availableCredits={userCredits} onPlaceBet={onPlaceTeamBet}/>;
-            case TABS.GAMES: return <GamesTab games={games}/>;
+            case TABS.GAMES: return <GamesTab games={availableGames} availableCredits={userCredits} onPlaceBet={onPlaceGameBet} />;
             case TABS.LIVE: return <LiveTab chatMessages={chatMessages} onNewMessage={onNewMessage} username={username}/>;
             default: return null;
         }
@@ -1876,7 +1989,8 @@ export default function App(){
     const [playerPicks, setPlayerPicks] = useState([]);
     const [teams, setTeams] = useState([]);
     const [teamPicks, setTeamPicks] = useState([]);
-    const [games, setGames] = useState(INITIAL_GAMES);
+    const [games, setGames] = useState([]);
+    const [gamePicks, setGamePicks] = useState([]);
     const [proposals, setProposals] = useState([]);
     const [chatMessages, setChatMessages] = useState(SEED_MESSAGES);
     const [moderatorChatMessages, setModeratorChatMessages] = useState(INITIAL_CHAT_MESSAGES);
@@ -1911,6 +2025,7 @@ export default function App(){
             setUserCredits(0);
             setPlayerPicks([]);
             setTeamPicks([]);
+            setGamePicks([]);
             setUserRole('moderator');
             setHasCardOnFile(false);
             setScreen(SCREENS.DASHBOARD);
@@ -1943,6 +2058,7 @@ export default function App(){
             setUserCredits(Number.isFinite(Number(data.credits)) ? Number(data.credits) : 0);
             setPlayerPicks(Array.isArray(data.player_picks) ? data.player_picks.map(mapPlayerBetToPlayerCard) : []);
             setTeamPicks(Array.isArray(data.team_picks) ? data.team_picks.map(mapTeamBetToTeamCard) : []);
+            setGamePicks(Array.isArray(data.game_picks) ? data.game_picks.map(mapGameBetToGameRow) : []);
             setUserRole('user');
             setHasCardOnFile(Boolean(data.hasCardOnFile));
             setScreen(SCREENS.DASHBOARD);
@@ -1977,6 +2093,7 @@ export default function App(){
             setUserCredits(Number.isFinite(Number(payload.credits)) ? Number(payload.credits) : 0);
             setPlayerPicks([]);
             setTeamPicks([]);
+            setGamePicks([]);
             setUserRole('user');
             setHasCardOnFile(false);
             setScreen(SCREENS.DASHBOARD);
@@ -1997,6 +2114,7 @@ export default function App(){
         setUserCredits(0);
         setPlayerPicks([]);
         setTeamPicks([]);
+        setGamePicks([]);
         setProfileNotice('');
         setShowBetSuccessBanner(false);
         setUserRole('user');
@@ -2118,6 +2236,38 @@ export default function App(){
         setUserCredits(Number.isFinite(Number(data.credits)) ? Number(data.credits) : 0);
         if (data.placedPick && typeof data.placedPick === 'object') {
             setTeamPicks(prev => [...prev, mapTeamBetToTeamCard(data.placedPick, prev.length)]);
+        }
+
+        triggerBetSuccessBanner();
+    }, [triggerBetSuccessBanner, username]);
+
+    // Betting feature: place Game bet, persist to DB, sync credits + picks locally.
+    const handlePlaceGameBet = useCallback(async (amount, pickData = {}) => {
+        const normalizedAmount = Number(amount);
+
+        if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+            throw new Error('Enter a valid credit amount greater than 0.');
+        }
+
+        if (!username) {
+            throw new Error('You must be logged in to place a bet.');
+        }
+
+        const response = await fetch('/api/place-game-bet', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, amount: normalizedAmount, pick: pickData }),
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Unable to place bet right now.');
+        }
+
+        setUserCredits(Number.isFinite(Number(data.credits)) ? Number(data.credits) : 0);
+        if (data.placedPick && typeof data.placedPick === 'object') {
+            setGamePicks(prev => [...prev, mapGameBetToGameRow(data.placedPick, prev.length)]);
         }
 
         triggerBetSuccessBanner();
@@ -2296,6 +2446,47 @@ export default function App(){
         };
     }, [activeTab, isModerator, screen]);
 
+    // Betting feature: refresh available Game bets from Mongo when Games tab opens.
+    useEffect(() => {
+        if (screen !== SCREENS.DASHBOARD || isModerator || activeTab !== TABS.GAMES) {
+            return;
+        }
+
+        let isCancelled = false;
+
+        const loadGameBets = async () => {
+            try {
+                const response = await fetch('/api/game-bets', {
+                    method: 'GET',
+                });
+
+                const data = await response.json().catch(() => ({}));
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to load game bets right now.');
+                }
+
+                if (!Array.isArray(data.games)) {
+                    return;
+                }
+
+                if (isCancelled) {
+                    return;
+                }
+
+                setGames(data.games.map(mapGameBetToGameRow));
+            } catch (error) {
+                console.error('Failed to refresh game bets:', error);
+            }
+        };
+
+        loadGameBets();
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [activeTab, isModerator, screen]);
+
     // Betting feature: dismiss global success banner when user switches tabs.
     useEffect(() => {
         const previousTab = previousActiveTabRef.current;
@@ -2367,7 +2558,7 @@ export default function App(){
             <ModDash username={username} proposals={proposals} onApprove={handleApproveProposal} onDecline={handleDeclineProposal} chatMessages={moderatorChatMessages} onNewMessage={handleNewMessage} onDeleteMessage={handleDeleteMessage} players={players} teams={teams} games={games} onCancelStake={handleCancelStake} />
         ) : (
             <>
-            <Dashboard username={username} players={players} playerPicks={playerPicks} teams={teams} teamPicks={teamPicks} games={games} chatMessages={chatMessages} onNewMessage={handleNewMessage} activeTab={activeTab} setActiveTab={setActiveTab} userCredits={userCredits} onPlacePlayerBet={handlePlacePlayerBet} onPlaceTeamBet={handlePlaceTeamBet} showBetSuccessBanner={showBetSuccessBanner} />
+            <Dashboard username={username} players={players} playerPicks={playerPicks} teams={teams} teamPicks={teamPicks} games={games} gamePicks={gamePicks} chatMessages={chatMessages} onNewMessage={handleNewMessage} activeTab={activeTab} setActiveTab={setActiveTab} userCredits={userCredits} onPlacePlayerBet={handlePlacePlayerBet} onPlaceTeamBet={handlePlaceTeamBet} onPlaceGameBet={handlePlaceGameBet} showBetSuccessBanner={showBetSuccessBanner} />
             <ProposalForm onSubmit={handleAddProposal} />
             </>
         )
