@@ -1550,11 +1550,19 @@ function SettingsButton({ icon, label, onClick, disabled = false}){
     );
 }
 
-function ProfilePage({ username, email = '', onLogout, isModerator = false, credits = 0, onUpdateCard, onDeposit, notice = ''}){
+function ProfilePage({ username, email = '', onLogout, isModerator = false, credits = 0, totalBets = 0, wins = 0, losses = 0, profit = 0, onUpdateCard, onDeposit, notice = ''}){
     const formattedCredits = new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: 'USD',
     }).format(Number.isFinite(Number(credits)) ? Number(credits) : 0);
+    const normalizedWins = Number.isFinite(Number(wins)) ? Number(wins) : 0;
+    const normalizedLosses = Number.isFinite(Number(losses)) ? Number(losses) : 0;
+    const totalSettledBets = normalizedWins + normalizedLosses;
+    const winRateDisplay = totalSettledBets > 0
+        ? `${((normalizedWins / totalSettledBets) * 100).toFixed(1)}%`
+        : '0.0%';
+    const normalizedProfit = Number.isFinite(Number(profit)) ? Number(profit) : 0;
+    const profitDisplay = normalizedProfit > 0 ? `+${normalizedProfit}` : String(normalizedProfit);
     const [showCardModal, setShowCardModal] = useState(false);
     const [cardNumberInput, setCardNumberInput] = useState('');
     const [cvvInput, setCvvInput] = useState('');
@@ -1777,9 +1785,9 @@ function ProfilePage({ username, email = '', onLogout, isModerator = false, cred
                     display: 'flex', gap: 10, marginBottom: 32,
                 }}>
                     {[
-                        { label: 'Total Bets', value: '47'},
-                        { label: 'Win Rate', value: '68'},
-                        { label: 'Profit', value: '+340'},
+                        { label: 'Total Bets', value: String(Number.isFinite(Number(totalBets)) ? Number(totalBets) : 0)},
+                        { label: 'Win Rate', value: winRateDisplay},
+                        { label: 'Profit', value: profitDisplay},
                     ].map((s, i) => (
                         <div key={i} style={{
                             flex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)',
@@ -1977,6 +1985,10 @@ export default function App(){
     const [username, setUsername] = useState('');
     const [userEmail, setUserEmail] = useState('');
     const [userCredits, setUserCredits] = useState(0);
+    const [userTotalBets, setUserTotalBets] = useState(0);
+    const [userWins, setUserWins] = useState(0);
+    const [userLosses, setUserLosses] = useState(0);
+    const [userProfit, setUserProfit] = useState(0);
     const [userRole, setUserRole] = useState('user');
     const [hasCardOnFile, setHasCardOnFile] = useState(false);
     const [activeTab, setActiveTab] = useState(TABS.PICKS);
@@ -2025,6 +2037,10 @@ export default function App(){
             setUsername(payload.username);
             setUserEmail('');
             setUserCredits(0);
+            setUserTotalBets(0);
+            setUserWins(0);
+            setUserLosses(0);
+            setUserProfit(0);
             setPlayerPicks([]);
             setTeamPicks([]);
             setGamePicks([]);
@@ -2059,6 +2075,10 @@ export default function App(){
             setUsername(data.username || payload.username || 'Player');
             setUserEmail(String(data.email || '').trim());
             setUserCredits(Number.isFinite(Number(data.credits)) ? Number(data.credits) : 0);
+            setUserTotalBets(Number.isFinite(Number(data.total_bets)) ? Number(data.total_bets) : 0);
+            setUserWins(Number.isFinite(Number(data.wins)) ? Number(data.wins) : 0);
+            setUserLosses(Number.isFinite(Number(data.losses)) ? Number(data.losses) : 0);
+            setUserProfit(Number.isFinite(Number(data.profit)) ? Number(data.profit) : 0);
             setPlayerPicks(Array.isArray(data.player_picks) ? data.player_picks.map(mapPlayerBetToPlayerCard) : []);
             setTeamPicks(Array.isArray(data.team_picks) ? data.team_picks.map(mapTeamBetToTeamCard) : []);
             setGamePicks(Array.isArray(data.game_picks) ? data.game_picks.map(mapGameBetToGameRow) : []);
@@ -2095,6 +2115,10 @@ export default function App(){
             setUsername(payload.username || 'Player');
             setUserEmail(String(payload.email || '').trim());
             setUserCredits(Number.isFinite(Number(payload.credits)) ? Number(payload.credits) : 0);
+            setUserTotalBets(0);
+            setUserWins(0);
+            setUserLosses(0);
+            setUserProfit(0);
             setPlayerPicks([]);
             setTeamPicks([]);
             setGamePicks([]);
@@ -2117,6 +2141,10 @@ export default function App(){
         setUsername('');
         setUserEmail('');
         setUserCredits(0);
+        setUserTotalBets(0);
+        setUserWins(0);
+        setUserLosses(0);
+        setUserProfit(0);
         setPlayerPicks([]);
         setTeamPicks([]);
         setGamePicks([]);
@@ -2207,6 +2235,11 @@ export default function App(){
         }
 
         setUserCredits(Number.isFinite(Number(data.credits)) ? Number(data.credits) : 0);
+        if (Number.isFinite(Number(data.total_bets))) {
+            setUserTotalBets(Number(data.total_bets));
+        } else {
+            setUserTotalBets(prev => prev + 1);
+        }
         if (data.placedPick && typeof data.placedPick === 'object') {
             setPlayerPicks(prev => [...prev, mapPlayerBetToPlayerCard(data.placedPick, prev.length)]);
         }
@@ -2239,6 +2272,11 @@ export default function App(){
         }
 
         setUserCredits(Number.isFinite(Number(data.credits)) ? Number(data.credits) : 0);
+        if (Number.isFinite(Number(data.total_bets))) {
+            setUserTotalBets(Number(data.total_bets));
+        } else {
+            setUserTotalBets(prev => prev + 1);
+        }
         if (data.placedPick && typeof data.placedPick === 'object') {
             setTeamPicks(prev => [...prev, mapTeamBetToTeamCard(data.placedPick, prev.length)]);
         }
@@ -2271,6 +2309,11 @@ export default function App(){
         }
 
         setUserCredits(Number.isFinite(Number(data.credits)) ? Number(data.credits) : 0);
+        if (Number.isFinite(Number(data.total_bets))) {
+            setUserTotalBets(Number(data.total_bets));
+        } else {
+            setUserTotalBets(prev => prev + 1);
+        }
         if (data.placedPick && typeof data.placedPick === 'object') {
             setGamePicks(prev => [...prev, mapGameBetToGameRow(data.placedPick, prev.length)]);
         }
@@ -2571,7 +2614,7 @@ export default function App(){
         )}
 
         {screen === SCREENS.PROFILE && (
-            <ProfilePage username={username} email={userEmail} onLogout={handleLogout} isModerator={isModerator} credits={userCredits} onUpdateCard={handleUpdateCard} onDeposit={handleDeposit} notice={profileNotice} hasCardOnFile={hasCardOnFile} />
+            <ProfilePage username={username} email={userEmail} onLogout={handleLogout} isModerator={isModerator} credits={userCredits} totalBets={userTotalBets} wins={userWins} losses={userLosses} profit={userProfit} onUpdateCard={handleUpdateCard} onDeposit={handleDeposit} notice={profileNotice} hasCardOnFile={hasCardOnFile} />
         )}
         </>
     );

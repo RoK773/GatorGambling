@@ -128,6 +128,7 @@ export default async function handler(req, res) {
             player_picks: [],
             team_picks: [],
             game_picks: [],
+            total_bets: 0,
             wins: 0,
             losses: 0,
             profit: 0,
