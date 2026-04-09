@@ -53,7 +53,7 @@ export default async function handler(req, res) {
 
         const user = await users.findOne(
             { username: normalizedUsername },
-            { projection: { credits: 1 } },
+            { projection: { credits: 1, total_bets: 1, player_picks: 1, team_picks: 1, game_picks: 1 } },
         );
 
         if (!user) {
@@ -61,12 +61,20 @@ export default async function handler(req, res) {
         }
 
         const currentCredits = Number.isFinite(Number(user.credits)) ? Number(user.credits) : 0;
+        const currentTotalBets = Number.isFinite(Number(user.total_bets))
+            ? Number(user.total_bets)
+            : (
+                (Array.isArray(user.player_picks) ? user.player_picks.length : 0) +
+                (Array.isArray(user.team_picks) ? user.team_picks.length : 0) +
+                (Array.isArray(user.game_picks) ? user.game_picks.length : 0)
+            );
 
         if (amount > currentCredits) {
             return res.status(400).json({ error: 'Not enough credits. Deposit more credits to place this bet.' });
         }
 
         const nextCredits = Number((currentCredits - amount).toFixed(2));
+        const nextTotalBets = currentTotalBets + 1;
 
         const normalizedPick = {
             playerId: String(incomingPick.playerId || '').trim() || null,
@@ -84,7 +92,7 @@ export default async function handler(req, res) {
         await users.updateOne(
             { username: normalizedUsername },
             {
-                $set: { credits: nextCredits },
+                $set: { credits: nextCredits, total_bets: nextTotalBets },
                 $push: { player_picks: normalizedPick },
             },
         );
@@ -92,6 +100,7 @@ export default async function handler(req, res) {
         return res.status(200).json({
             message: 'Bet successfully placed.',
             credits: nextCredits,
+            total_bets: nextTotalBets,
             placedPick: normalizedPick,
         });
     } catch (error) {

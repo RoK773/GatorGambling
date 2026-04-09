@@ -50,11 +50,24 @@ export default async function handler(req, res) {
             return res.status(401).json({ error: 'Invalid username or password' });
         }
 
+        const fallbackTotalBets =
+            (Array.isArray(user.player_picks) ? user.player_picks.length : 0) +
+            (Array.isArray(user.team_picks) ? user.team_picks.length : 0) +
+            (Array.isArray(user.game_picks) ? user.game_picks.length : 0);
+
+        const totalBets = Number.isFinite(Number(user.total_bets))
+            ? Number(user.total_bets)
+            : fallbackTotalBets;
+
         return res.status(200).json({
             message: 'Login successful',
             username: user.username,
             email: String(user.email || '').trim(),
             credits: Number.isFinite(Number(user.credits)) ? Number(user.credits) : 0,
+            total_bets: totalBets,
+            wins: Number.isFinite(Number(user.wins)) ? Number(user.wins) : 0,
+            losses: Number.isFinite(Number(user.losses)) ? Number(user.losses) : 0,
+            profit: Number.isFinite(Number(user.profit)) ? Number(user.profit) : 0,
             hasCardOnFile: Boolean(String(user.card || '').trim()),
             player_picks: Array.isArray(user.player_picks) ? user.player_picks : [],
             team_picks: Array.isArray(user.team_picks) ? user.team_picks : [],
