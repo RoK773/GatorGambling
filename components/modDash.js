@@ -4,33 +4,39 @@ import ConfirmModal from './confirmModal';
 
 // drawing icons - style only 
 const Icon = {
+    // used on the approve button (checkmark)
     Check: () => (
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="20 6 9 17 4 12"/>
         </svg>
     ),
+    // x / close - used on decline
     X: ({size = 14}) => (
         <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
     ),
+    // trashcan - used on the delete chat message button
     Trash: () => (
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="3 6 5 6 21 6"/><path d="M19 61-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
         </svg>
     ),
+    // ban / circle slash - used on cancel stake buttons and banning users
     Ban: () => (
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
             <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
         </svg>
     ),
+    // used in the moderator status banner and empty-state
     Shield: () => (
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 22s8-4 8-10V51-8-3-8 3v7c0 6 8 10 8 10z"/>
         </svg>
     ),
+    // used in the empty-proposals state
     Inbox: () => (
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoint="round">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2 v-61-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/>
         </svg>
     ),
@@ -126,7 +132,26 @@ function condSummary(category, condition){
 }
 
 // proposals tab
-function ProposalsTab({proposals, onApprove, onDecline}){
+function ProposalsTab({proposals, onApprove, onDecline, isLoading }){
+    if (isLoading){
+        return (
+            <div style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                minHeight: 400, gap: 16, animation: 'fadeIn 0.4s ease',
+            }}>
+                <div style={{
+                    color: 'var(--text-muted)', opacity: 0.5,
+                }}>
+                    <Icon.Inbox/>
+                </div>
+                <p style={{
+                    fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)'
+                }}>
+                    Loading Proposals...
+                </p>
+            </div>
+        );
+    }
     if (proposals.length === 0){
         return (
             // if no proposals, provide 'empty' screen (style only)
@@ -353,6 +378,7 @@ function ModGameRow({g, i, onCancel}) {
     );
 }
 
+// reusable card for player and team stakes in their respective tabs
 function ModItemCard({title, subtitle, meta, stake, index, onCancel}) {
     const [hover, setHover] = useState(false);
     return (
@@ -428,11 +454,6 @@ function ModLiveTab({chatMessages, onDeleteMessage, onNewMessage, username}) {
         setInputText('');
     };
 
-    // handle deletes (THIS IS NOT MSG DEL DEF - go to onDeleteMessage def)
-    const handleDelete = (id) => {
-        onDeleteMessage(id);
-    };
-
     return (
         // general page setup for mod (adds header)
         <div style={{
@@ -453,7 +474,7 @@ function ModLiveTab({chatMessages, onDeleteMessage, onNewMessage, username}) {
                 }}>MODERATION VIEW</h3>
                 <p style={{
                     fontSize: 14, color: 'var(--text-secondary)', textAlign: 'center', maxWidth: 300,
-                }}>Monitor the global chat and remove and inappropriate messages.</p>
+                }}>Monitor the global chat and remove any inappropriate messages.</p>
             </div>
             <div style={{
                 flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg-card)', border: '1px solid var(--border)',
@@ -522,12 +543,12 @@ function ModLiveTab({chatMessages, onDeleteMessage, onNewMessage, username}) {
                             }}>
                                 <span style={{
                                     fontSize: 10, fontWeight: 700, color: msg.color, fontFamily: 'var(--font-mono)',
-                                }}>{msg.user}</span>
+                                }}>{msg.user}{''}</span>
                                 <span style={{
                                     fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5,
                                 }}>{msg.text}</span>
                             </div>
-                            <button onClick={() => handleDelete(msg.id)} title="Delete message" style={{
+                            <button onClick={() => onDeleteMessage(msg.id)} title="Delete message" style={{
                                 flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 6,
                                 background: 'rgba(255, 71, 87, 0.08)', border: '1px solid rgba(255, 71, 87, 0.2)', color: 'var(--danger)',
                                 fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', cursor: 'pointer', transition: 'all 0.2s',
@@ -569,7 +590,7 @@ function ModLiveTab({chatMessages, onDeleteMessage, onNewMessage, username}) {
 
 // main export / make the mod dashboard a thing
 export default function ModDash({
-    username, proposals, onApprove, onDecline, chatMessages, onNewMessage, onDeleteMessage, players, teams, games, onCancelStake,
+    username, proposals, onApprove, onDecline, chatMessages, onNewMessage, onDeleteMessage, players, teams, games, onCancelStake, isLoadingProposals = false,
 }) {
     // constants
     const [activeTab, setActiveTab] = useState(MOD_TABS.PROPOSALS);
@@ -621,7 +642,7 @@ export default function ModDash({
         switch(activeTab) {
             case MOD_TABS.PROPOSALS:
                 return (
-                    <ProposalsTab proposals={proposals} onApprove={handleApprove} onDecline={handleDecline} />
+                    <ProposalsTab proposals={proposals} onApprove={handleApprove} onDecline={handleDecline} isLoading={isLoadingProposals}/>
                 );
             case MOD_TABS.PLAYERS: 
                 return(
@@ -664,7 +685,7 @@ export default function ModDash({
                         <Icon.Shield />
                         <span style={{
                             fontSize: 10, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.12em', fontFamily: 'var(--font-mono)',
-                        }}>MODERATOR MODE - ELEVATED PERISSIONS ACTIVE</span>
+                        }}>MODERATOR MODE - ELEVATED PERMISSIONS ACTIVE</span>
                     </div>
                     <div style={{
                         display: 'flex', padding: '0 20px', minWidth: 'max-content',
@@ -677,7 +698,7 @@ export default function ModDash({
                                 <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
                                     display: 'flex', alignItems: 'center', gap: 7, padding: '0 16px', height: 'var(--tab-height)', background: 'none', 
                                     color: isActive ? 'var(--accent)' : 'var(--text-muted)', letterSpacing: '0.04em', fontSize: 13,
-                                    borderBottom: isActive ? '2px solid var(--accent)' : '2px solid transparent', transition: 'all 0.2s', flexSrhink: 0,
+                                    borderBottom: isActive ? '2px solid var(--accent)' : '2px solid transparent', transition: 'all 0.2s', flexShrink: 0,
                                     cursor: 'pointer', border: 'none', borderBottom: isActive ? '2px solid var(--accent)' : '2px solid transparent',
                                 }}
                                 onMouseEnter={e => {if (!isActive){
@@ -716,7 +737,8 @@ export default function ModDash({
                             fontSize: 13, color: 'var(--text-secondary)', marginTop: 4,
                         }}>Review and activate bet proposals submitted by users.</p>
                         )}
-                        {(activeTab === MOD_TABS.PLAYERS || activeTab === MOD_TABS.TEAMS || activeTab === MOD_TABS.GAMES) && ( <p style={{
+                        {[MOD_TABS.PLAYERS, MOD_TABS.TEAMS, MOD_TABS.GAMES].includes(activeTab) &&(
+                            <p style={{
                             fontSize: 13, color: 'var(--text-secondary)', marginTop: 4,
                         }}>Cancel active stakes to remove them from the board.</p>
                         )}

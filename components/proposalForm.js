@@ -1,9 +1,10 @@
 // A means for users to create proposal stakes to be sent to the moderator dashboard
-import {useState} from 'react';
+import {useState, useEffect, useRef, useCallback } from 'react';
 const PLAYER_STATS = ['Goals', 'Assists', 'Fouls', 'Shots on Target', 'Saves', 'Minutes Played'];
 const COMPARATORS = ['Over', 'Under', 'Exactly'];
 const TEAM_RESULTS = ['Wins', 'Losses', 'Draws'];
 const MARGIN_TYPES = ['By More Than', 'By Less Than', 'By Exactly'];
+const CATEGORIES = ['Player', 'Team', 'Game'];
 
 // tiny selection - allows for dropdown selection
 function PillSelect({value, onChange, options, minWidth = 100, disabled = false}) {
@@ -45,6 +46,142 @@ function PillNumber({value, onChange, disabled = false, placeholder = '0'}) {
     );
 }
 
+// searchable dropdown - allows for searching within a dropdown
+function SearchableDropdown({items, onSelect, placeholder = 'Search...', loading = false, disabled = false}){
+    const [query, setQuery] = useState('');
+    const [open, setOpen] = useState(false);
+    const [selected, setSelected] = useState(null);
+    const containerRef = useRef(null);
+
+    // filter item list to whose label contains the input string
+    const filtered = items
+        .filter(item => item.label.toLowerCase().includes(query.toLowerCase()))
+        .slice(0, 8);
+
+    // close dropdown when user clicks outside of the component
+    useEffect(() => {
+        function handleClickOutside(e) {
+            if (containerRef.current && !containerRef.current.contains(e.target)){
+                setOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+    
+    // lock in chosen item & collapse list
+    const handleSelect = (item) => {
+        setSelected(item);
+        setQuery('');
+        setOpen(false);
+        onSelect(item);
+    };
+
+    // clear current selection
+    const handleClear = () => {
+        setSelected(null);
+        setQuery('');
+        onSelect(null);
+    };
+
+    const isLocked = Boolean(selected);
+
+    return (
+        <div ref={containerRef} style={{
+            position: 'relative',
+        }}>
+            <div style={{
+                display: 'flex', alignItems: 'center', gap: 6, backgoround: 'var(--bg-primary)', border: `1px solid ${open ? 'var(--accent)' : 'var(--border)'}`,
+                borderRadius: 9, padding: '10px 12px', transition: 'border-color 0.2s', opacity: disabled ? 0.5 : 1,
+            }}>
+                {/*search icon*/}
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2.5" strokeLinecap="round">
+                    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                {isLocked ? ( 
+                    <span style={{
+                        flex: 1, fontSize: 13, color: 'var(--accent)', fontWeight: 700, letterSpacing: '0.03em',
+                    }}>{selected.label}</span>
+                ) : (
+                    <input type="text" value={query} placeholder={loading ? 'Loading...' : placeholder} disabled={disabled || loading}
+                        onChange={e => {setQuery(e.target.value); setOpen(true);}} onFocus={() => setOpen(true)} style={{
+                            flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 13, color: 'var(--text-primary)',
+                        }}
+                    />
+                )}
+                {/* claer button (only available when locked) */}
+                {isLocked && (
+                    <button onClick={handleClear} style={{
+                        background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 0, display: 'flex', alignItems: 'center', transition: 'color 0.2s',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.color = 'var(--danger)'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+                    title= "Clear selection"
+                >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+                )}
+            </div>
+
+            {/* dropdown list, only visible while searching */}
+            {open && !isLocked && (
+                <div style={{
+                    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 600, background: 'var(--bg-card)', 
+                    border: '1px solid var(--border-bright)', borderRadius: 10, marginTop: 4, overflow: 'hidden', 
+                    boxShadow: '0 12px 40px rgba(0, 0, 0, 0.5)', maxHeight: 260, overflowY: 'auto',
+                }}>
+                    {filtered.length === 0 ? (
+                        <div style={{
+                            padding: '12px 14px', fontSize: 12, color: 'var(--text-muted)', textAlign: 'center',
+                        }}>
+                            {query ? 'No matches found.' : 'Start typing to search.'}
+                        </div>
+                    ) : filtered.map(item => (
+                        <button key={item.id} onMouseDown={() => handleSelect(item)} style={{
+                            display: 'block', width: '100%', textAlign: 'left', padding: '10px 14px', background: 'none',
+                            border: 'none', borderBottom: '1px solid var(-border)', cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)', transition: 'background 0.15s',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-card-hover)'}
+                        onMouseLeave={e=> e.currentTarget.style.background = 'none'}
+                        >
+                            <span style={{
+                                fontWeight: 700,
+                            }}>{item.label}</span>
+                            {item.hint && (
+                                <span style={{display: 'block', fontSize: 10, color: 'var(--text-muted)', marginTop: 1}}>
+                                    {item.hint}
+                                </span>
+                            )}
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// read=only metarow that renders a label/value pair for auto-populated fields
+function MetaRow({label, value}) {
+    return(
+        <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--bg-primary', borderRadius: 8, marginBottom: 6,
+        }}>
+            <span style={{
+                fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.1em',
+            }}>
+                {label.toUpperCase()}
+            </span>
+            <span style={{
+                fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontWeight: 60,
+            }}>
+                {value || '-'}
+            </span>
+        </div>
+    );
+}
+
 // player condition builders - condition, comparator, number 
 function PlayerConditionBuilder({ value, onChange}) {
     const stat = value.statType || PLAYER_STATS[0];
@@ -65,9 +202,9 @@ function PlayerConditionBuilder({ value, onChange}) {
                     <div style={{
                         display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center',
                     }}>
-                        <PillSelect value={stat} onChange={e => update({statType: e.target.value})} options={PLAYER_STATS} minWidth={118}/>
-                        <PillSelect value={comparator} onChange={e => update({comparator: e.target.value})} options={COMPARATORS} minWidth={82} />
-                        <PillNumber value={condVal} onChange={e => update({condVal: e.target.value})} placeholder="0" />
+                        <PillSelect value={stat} onChange={e => update({statType: e.target.value})} options={PLAYER_STATS} minWidth={118} disabled={disabled}/>
+                        <PillSelect value={comparator} onChange={e => update({comparator: e.target.value})} options={COMPARATORS} minWidth={82} disabled={disabled}/>
+                        <PillNumber value={condVal} onChange={e => update({condVal: e.target.value})} placeholder="0" disabled={disabled}/>
                     </div>
                     {preview && (
                         <div style={{
@@ -103,9 +240,9 @@ function TeamConditionBuilder({ value, onChange}) {
                 <div style={{
                     display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center',
                 }}>
-                    <PillSelect value={result} onChange={e => update({result: e.target.value})} options={TEAM_RESULTS} minWidth={80} />
-                    <PillSelect value={margin} onChange={e => update({marginType: e.target.value})} options={MARGIN_TYPES} minWidth={110} disabled={isDraw}/>
-                    <PillNumber value={isDraw ? '' : condVal} onChange={e => update({condVal: e.target.value})} disabled={isDraw} placeholder="pts"/>
+                    <PillSelect value={result} onChange={e => update({result: e.target.value})} options={TEAM_RESULTS} minWidth={80} disabled={disabled} />
+                    <PillSelect value={margin} onChange={e => update({marginType: e.target.value})} options={MARGIN_TYPES} minWidth={110} disabled={disabled}/>
+                    <PillNumber value={isDraw ? '' : condVal} onChange={e => update({condVal: e.target.value})} placeholder="pts" disabled={disabled || isDraw}/>
                 </div>
                 {preview && (<div style={{
                     fontSize: 10, color: 'var(--accent)', fontFamily: 'var(--font-mono)', fontWeight: 700, letterSpacing: '0.06em',
@@ -187,32 +324,6 @@ function GameConditionBuilder({value, onChange, homeTeam, awayTeam}) {
     );
 }
 
-// field definitions - connection builders are separate - these set up placeholder and initial cards
-// ignore that all of these are hockey players i don't know any soccer players
-const FIELD_CONFIGS ={
-    Player: [
-        {key: 'playerName', label: 'Player Name', placeholder: 'e.g. Auston Matthews', type: 'text'},
-        {key: 'number', label: 'Jersey Number', placeholder: 'e.g. 34', type: 'text'},
-        {key: 'nationality', label: 'Nationality', placeholder: 'e.g. MEX', type: 'text'},
-        {key: 'stake', label: 'Proposed Stake', placeholder: 'e.g. $10', type: 'text'},
-    ],
-    Team: [
-        {key: 'teamName', label: 'Team Name', placeholder: 'e.g. Canada', type: 'text'},
-        {key: 'record', label: 'Record', placeholder: 'e.g. 5-3', type: 'text'},
-        {key: 'stake', label: 'Proposed Stake', placeholder: 'e.g. $10', type: 'text'},
-    ],
-    Game: [
-        {key: 'homeTeam', label: 'Home Team', placeholder: 'e.g. Canada', type: 'text'},
-        {key: 'awayTeam', label: 'Away Team', placeholder: 'e.g. Sweden', type: 'text'},
-        {key: 'gameTime', label: 'Game Time', placeholder: 'e.g. 6:00 PM', type: 'text'},
-        {key: 'spread', label: 'Spread', placeholder: 'e.g. -3.5', type: 'text'},
-        {key: 'stake', label: 'Proposed Stake', placeholder: 'e.g. $10', type: 'text'},
-    ],
-};
-
-// for general use / reference
-const CATEGORIES = ['Player', 'Team', 'Game'];
-
 // sub components (formatting)
 function ModalField({label, value, onChange, placeholder, type='text'}) {
     return (
@@ -241,46 +352,157 @@ export default function ProposalForm({onSubmit}) {
     // define constants
     const [open, setOpen] = useState(false);
     const [category, setCategory] = useState('Player');
-    const [fields, setFields] = useState({});
+    const [playerOptions, setPlayerOptions] = useState([]);
+    const [teamOptions, setTeamOptions] = useState([]);
+    const [loadingPlayers, setLoadingPlayers] = useState(false);
+    const [loadingTeams, setLoadingTeams] = useState(false);
+    const [selectedPlayer, setSelectedPlayer] = useState(null);
+    const [selectedTeam, setSelectedTeam] = useState(null);
+    const [gameFields, setGameFields] = useState({homeTeam: '', awayTeam: '', gameTime: '', spread: ''});
     const [condition, setCondition] = useState({});
     const [submitted, setSubmitted] = useState(false);
     const [error, setError] = useState('');
-    const setField = (key, val) => setFields(prev => ({...prev, [key]: val}));
+    const [submitting, setSubmitting] = useState(false);
+
+    // fetch player list from /api/player-bets
+    useEffect(() => {
+        if (!open){
+            return;
+        }
+        if (playerOptions.length > 0){
+            return;
+        }
+        let cancelled = false;
+        setLoadingPlayers(true);
+        fetch('/api/player-bets')
+            .then(r => r.json())
+            .then(data => {
+                if (cancelled){
+                    return;
+                }
+                if (Array.isArray(data.players)){
+                    setPlayerOptions(data.players.map(p => ({
+                        id: p.id,
+                        label: p.name,
+                        hint: `#${p.number} · ${p.pos}`,
+                        number: p.number,
+                        team: p.pos,
+                        raw: p,
+                    })));
+                }
+            })
+    .catch(err => console.error('Failed to load player options:', err))
+    .finally(() => {if (!cancelled) setLoadingPlayers(false); });
+    return () => {cancelled = true;};
+}, [open, playerOptions.length]);
+
+// fetch teams list 
+useEffect(() => {
+    if (!open) {
+        return;
+    }
+    if (teamOptions.length > 0){
+        return;
+    }
+    let cancelled = false;
+    setLoadingTeams(true);
+    fetch('/api/team-bets')
+        .then(r => r.json())
+        .then(data => {
+            if (cancelled){
+                return;
+            }
+            if (Array.isArray(data.teams)){
+                setTeamOptions(data.teams.map(t => ({
+                    id: t.id, 
+                    label: t.name,
+                    hint: `Record: ${t.record}`,
+                    record: t.record,
+                    raw: t,
+                })));
+            }
+        })
+        .catch(err => console.error('Failed to load team options:', err))
+        .finally(() => { if (!cancelled) setLoadingTeams(false); });
+    return () => {cancelled = true;};
+    }, [open, teamOptions.length]);
+
+    // helpers
 
     // reset values when a new form is made
-    const resetAndClose = () => {
+    const resetAndClose = useCallback(() => {
         setOpen(false);
-        setFields({});
-        setCondition({});
         setCategory('Player');
+        setSelectedPlayer(null);
+        setSelectedTeam(null);
+        setGameFields({homeTeam: '', awayTeam: '', gameTime: '', spread: ''});
+        setCondition({});
         setError('');
         setSubmitted(false);
-    };
+        setSubmitting(false);
+    }, []);
 
     // category changes (catChange <-- for ctrl+F scrubbing)
     const handleCategoryChange = (cat) => {
         setCategory(cat);
-        setFields({});
+        setSelectedPlayer(null);
+        setSelectedTeam(null);
         setCondition({});
         setError('');
     };
 
     // submission
-    const handleSubmit = () => {
-        const config = FIELD_CONFIGS[category];
-        const missing = config.filter(f => !fields[f.key]?.trim());
-        if (missing.length > 0) {
-            setError(`Please fill in: ${missing.map(f => f.label).join(', ')}`);
+    const handleSubmit = async () => {
+        setError('');
+        if (category === 'Player' && !selectedPlayer){
+            setError('Please select a player from the dropdown before submitting.');
             return;
         }
-        setError('');
+        if (category === 'Team' && !selectedTeam){
+            setError('Please select a team from the dropdown before submitting.');
+            return;
+        }
+        if (category === 'Game'){
+            if (!gameFields.homeTeam.trim() || !gameFields.awayTeam.trim()){
+                setError('Please fill in both the Home Team and the Away Team fields.');
+                return;
+            }
+        }
+        
+        // proposal payload
+        const proposal = {
+            category, 
+            username: username || 'anonymous',
+            condition,
+            playerData: category === 'Player' && selectedPlayer ? {
+                playerId: selectedPlayer.id,
+                name: selectedPlayer.label,
+                number: selectedPlayer.number,
+                team: selectedPlayer.team,
+            } : undefined,
+            teamData: category === 'Team' && selectedTeam ? {
+                teamId: selectedTeam.id,
+                country: selectedTeam.label,
+                record: selectedTeam.record,
+            } : undefined,
+            gameData: category === 'Game' ? {
+                homeTeam: gameFields.homeTeam.trim(),
+                awayTeam: gameFields.awayTeam.trim(),
+                gameTeam: gameFields.gameTime.trim(),
+                spread: gameFields.spread.trim(),
+            } : undefined,
+        };
+        
+        setSubmitting(true);
 
-        onSubmit({
-            id:Date.now(), category, ...fields, condition, proposedAt: new Date().toISOString(), status: 'pending',
-        });
-
-        setSubmitted(true);
-        setTimeout(resetAndClose, 1600);
+        try{
+            await onSubmit(proposal);
+            setSubmitted(true);
+            setTimeout(resetAndClose, 1600);
+        } catch(err) {
+            setError(err?.message || 'Failed to submit proposal. Please try again.');
+            setSubmitting(false);
+        }
     };
 
     return ( 
@@ -304,8 +526,7 @@ export default function ProposalForm({onSubmit}) {
         </button>
         {/* form settings once form is open */}
         {open && ( <div onClick={resetAndClose} style={{
-            position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0, 0, 0, 0.78)', backdropFilter: 'blur(6px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.15s ease',
+            background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4, borderRadius: 6, transition: 'color 0.2s',
         }}>
             <div onClick={e => e.stopPropagation()} style={{
                 background: 'var(--bg-card)', border: '1px solid var(--border-bright)', borderRadius: 18, padding: '28px 26px',
@@ -352,23 +573,84 @@ export default function ProposalForm({onSubmit}) {
                         ))}
                     </div>
                 </div>
-                <div style={{
-                    background: 'var(--bg-secondary)', borderRadius: 12, padding: '18px 16px', marginBottom: 14, border: '1px solid var(--border)',
-                }}>
-                    {/* Quick setup for a reactive form - displays the bet builds for whatever category is selected */}
-                    {FIELD_CONFIGS[category].map(f => (
-                        <ModalField key={f.key} label={f.label} value={fields[f.key] || ''} onChange={e => setField(f.key, e.target.value)} placeholder={f.placeholder} type={f.type}/>
-                    ))}
-                </div>
+
+                {/* player category */}
                 {category === 'Player' && (
-                    <PlayerConditionBuilder value={condition} onChange={setCondition}/>
-                )}
-                {category === 'Team' && (
-                    <TeamConditionBuilder value={condition} onChange={setCondition}/>
-                )}
-                {category === 'Game' && (
-                    <GameConditionBuilder value={condition} onChange={setCondition} homeTeam={fields.homeTeam || ''} awayTeam={fields.awayTeam || ''} />
-                )}
+                    <div style={{ 
+                        background: 'var(--bg-secondary)', borderRadius: 12, padding: '18px 16px', marginBottom: 14, border: '1px solid var(--border)',
+                        }}>
+                        <div style={{
+                            marginBottom: 10,
+                        }}>
+                            <label style={{
+                                display: 'block', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6,
+                            }}>Player Name</label>
+                            <SearchableDropdown items={playerOptions} onSelect={item => {setSelectedPlayer(item); setCondition({});}}
+                            placeholder="Search players..." loading={loadingPlayers} disabled={loadingPlayers} />
+                            </div>
+                            {selectedPlayer && (
+                                <div style={{
+                                    marginTop: 12,
+                                }}>
+                                    <div style={{
+                                        fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.01em', textTransform: 'uppercase', marginBottom: 6,
+                                    }}>Player Details (auto-filled)</div>
+                                    <MetaRow label="Jersey #" value={selectedPlayer.number} />
+                                    <MetaRow label="Team / Nat." value={selectedPlayer.team} />
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* team category */}
+                        {category === 'Team' && (
+                            <div style={{
+                                background: 'var(--bg-secondary)', borderRadius: 12, padding: '18px 16px', marginBottom: 14, border: '1px solid var(--border)',
+                            }}>
+                                <div style={{
+                                    marginBottom: 10,
+                                }}>
+                                    <label style={{
+                                        display: 'block', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6,
+                                    }}>Team Name</label>
+                                    <SearchableDropdown items={teamOptions} onSelect={item => {setSelectedTeam(item); setCondition({});}}
+                                    placeholder="Search teams..." loading={loadingTeams} disabled={loadingTeams} />
+                                    </div>
+                                    {selectedTeam && (
+                                        <div style={{
+                                            marginTop: 12,
+                                        }}>
+                                            <div style={{
+                                                fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.01em', textTransform: 'uppercase', marginBottom: 6,
+                                            }}>Team Details (auto-filled)</div>
+                                            <MetaRow label="Record" value={selectedTeam.record} />
+                                        </div>
+                                    )}
+                                </div>
+                        )}
+
+                        {/* game category */}
+                        {category === 'Game' && (
+                            <div style={{
+                                background: 'var(--bg-secondary)', borderRadius: 12, padding: '18px 16px', marginBottom: 14, border: '1px solid var(--border)',
+                            }}>
+                                <ModalField label="Home Team" value={gameFields.homeTeam} onChange={e => setGameFields(p => ({ ...p, homeTeam: e.target.value}))} placeholder="e.g. Canada" />
+                                <ModalField label="Away Team" value={gameFields.awayTeam} onChange={e => setGameFields(p => ({ ...p, awayTeam: e.target.value}))} placeholder="e.g. Sweden" />
+                                <ModalField label="Game Time" value={gameFields.gameTime} onChange={e => setGameFields(p => ({...p, gameTime: e.target.value}))} placeholder="e.g. 6:00 PM" />
+                                <ModalField label="Spread" value={gameFields.spread} onChange={e => setGameFields(p => ({...p, spread: e.target.value }))} placeholder="e.g. -3.5" />
+                            </div>
+                        )}
+
+                        {/* condition builders */}
+                        {category === 'Player' && (
+                            <PlayerConditionBuilder value={condition} onChange={setCondition} disabled={!selectedPlayer}/>
+                        )}
+                        {category === 'Team' && (
+                            <TeamConditionBuilder value={condition} onChange={setCondition} disabled={!selectedTeam} />
+                        )}
+                        {category === 'Game' && (
+                            <GameConditionBuilder value={condition} onChange={setCondition} homeTeam={gameFields.homeTeam} awayTeam={gameFields.awayTeam} />
+                        )}
                 {error && (
                     <p style={{
                         fontSize: 13, color: 'var(--danger)', fontWeight: 600, marginBottom: 14, padding: '10px 14px', 
@@ -379,7 +661,7 @@ export default function ProposalForm({onSubmit}) {
                 <button onClick={handleSubmit} disabled={submitted} style={{
                     width: '100%', padding: '14px', borderRadius: 11, fontWeight: 700, fontSize: 14, letterSpacing: '0.08em',
                     background: submitted ? 'var(--success)' : 'var(--accent)', color: '#080A0F', border: 'none', 
-                    cursor: submitted ? 'default' : 'pointer', transition: 'background 0.3s',
+                    cursor: submitted ? 'default' : 'pointer', transition: 'background 0.3s', opacity: submitting ? 0.7 : 1,
                 }}
                 >
                 {submitted ? '✓ PROPOSAL SUBMITTED' : 'SUBMIT PROPOSAL'}

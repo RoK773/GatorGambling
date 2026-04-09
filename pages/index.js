@@ -85,7 +85,7 @@ function mapPlayerBetToPlayerCard(playerBet, index) {
         stake,
         stat: playerBet?.stat,
         range: playerBet?.range,
-        stat_num: playerBet?.stat_num ?? playerBet?.state_num,
+        stat_num: playerBet?.stat_num ?? playerBet?.stat_num,
         payout_mult: playerBet?.payout_mult,
     };
 }
@@ -723,7 +723,7 @@ function PlayerBetCard({ playerId, title, subtitle, meta, stake, stat, range, st
                 border: `1px solid ${hover ? 'var(--border-bright)' : 'var(--border)'}`,
                 borderRadius: 14, padding: 20, display: 'flex', flexDirection: 'column',
                 transition: 'all 0.2s', transform: hover ? 'translateY(-2px)' : 'none',
-                boxShadow: hover ? 'o 8px 24px rgba(0, 0, 0, 0.3)' : 'none', animation: 'fadeIn 0.4s ease both', animationDelay: animDelay,
+                boxShadow: hover ? '0 8px 24px rgba(0, 0, 0, 0.3)' : 'none', animation: 'fadeIn 0.4s ease both', animationDelay: animDelay,
             }}>
                 {meta && (
                     <div style={{
@@ -1999,6 +1999,28 @@ export default function App(){
     const betSuccessBannerTimeoutRef = useRef(null);
     const previousActiveTabRef = useRef(activeTab);
     const isModerator = userRole === 'moderator';
+    const [isLoadingProposals, setIsLoadingProposals] = useState(false);
+
+    // helper for loadPendingProposals
+    const loadPendingProposals = useCallback(async () => {
+        setIsLoadingProposals(true);
+        try{
+            const response = await fetch('/api/pending-bets');
+            const data = await response.json().catch(()=> ({}));
+            if (!response.ok){
+                console.error('Failed to load pending proposals:', data.error);
+                return;
+            }
+
+            if (Array.isArray(data.proposals)){
+                setProposals(data.proposals);
+            }
+        } catch (error){
+            console.error('Pending proposals fetch error:', error);
+        } finally {
+            setIsLoadingProposals(false);
+        }
+    }, []);
 
     // Betting feature: shared success-banner trigger for Player/Team bet placement.
     const triggerBetSuccessBanner = useCallback(() => {
@@ -2287,34 +2309,105 @@ export default function App(){
         setScreen(SCREENS.PROFILE);
     }, []);
 
-    const handleAddProposal = useCallback((proposal) => {
-        setProposals(prev => [...prev, proposal]);
-    }, []);
+    const handleAddProposal = useCallback(async (proposal) => {
+       try{
+        const response = await fetch('/api/propose-bet', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({...proposal, username}),
+        });
+        const data = await response.json().catch(() => ({}));
 
-    const handleApproveProposal = useCallback((id) => {
-        const proposal = proposals.find(p => p.id === id);
-        if (!proposal){
-            return;
+        if (!response.ok){
+            throw new Error(data.error || 'Failed to submit proposal.');
         }
-        if (proposal.category === 'Player'){
-            setPlayers(prev => [...prev, {id: proposal.id, name: proposal.playerName, number: proposal.number, stake: proposal.stake, pos: proposal.nationality }]);
-        } else if (proposal.category === 'Team'){
-            setTeams(prev => [...prev, {id: proposal.id, name: proposal.teamName, record: proposal.record, stake: proposal.stake }]);
-        } else if (proposal.category === 'Game'){
-            setGames(prev => [...prev, {id: proposal.id, home: proposal.homeTeam, away: proposal.awayTeam, time: proposal.gameTime, spread: proposal.spread, stake: proposal.stake}]);
+        setProposals(prev => [
+        ...prev,
+        {
+            ...proposal, 
+            id: data.proposalId,
+            proposedAt: new Date().toISOString(),
+            status: 'pending',
+        },
+       ]);
+       } catch (error){
+        throw error;
+       }
+    }, [username]);
+
+    const handleApproveProposal = useCallback(async (id) => {
+        setProposals(prev => prev.filter(p => p.id !== id));
+
+        try{
+            const response = await fetch('/api/approve-bet',{
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({proposalId: id}),
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok){
+                console.error('Approval failed:', data.error);
+                loadPendingProposals();
+                return;
+            }
+
+            if (activeTab === TABS.PLAYERS){
+                setActiveTab(null);
+                setTimeout(() => setActiveTab(TABS.PLAYERS), 0);
+            } else if (activeTab === TABS.TEAMS){
+                setActiveTab(null);
+                setTimeout(() => setActiveTab(TABS.TEAMS), 0);
+            } else if (activeTab === TABS.GAMES){
+                setActiveTab(null);
+                setTimeout(() => setActiveTab(TABS.GAMES), 0);
+            }
+        } catch (error){
+            console.error('Approval network error:', error);
+            loadPendingProposals();
         }
-        
-        setProposals(prev => prev.filter(p => p.id !== id));
-    }, [proposals]);
+    }, [activeTab, loadPendingProposals]);
 
-    const handleDeclineProposal = useCallback((id) => {
+    const handleDeclineProposal = useCallback(async (id) => {
         setProposals(prev => prev.filter(p => p.id !== id));
-    }, []);
+        try{
+            const response = await fetch('/api/decline-bet', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/JSON'},
+                body: JSON.stringify({proposalId: id}),
+            });
 
-    const handleCancelStake = useCallback((type, id) => {
+            if (!response.ok){
+                const data = await response.json().catch(() => ({}));
+                console.error('Decline failed:', data.error);
+                loadPendingProposals();
+            }
+        } catch (error){
+            console.error('Decline network error:', error);
+            loadPendingProposals();
+        }
+    }, [loadPendingProposals]);
+
+    const handleCancelStake = useCallback(async (type, id) => {
         if (type === 'player') setPlayers(prev => prev.filter(p => p.id !== id));
         if (type === 'team') setTeams(prev => prev.filter(t => t.id !== id));
         if (type === 'game') setGames(prev => prev.filter(g => g.id !== id));
+
+        try{
+            const response = await fetch('/api/cancel-bet', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/JSON'},
+                body: JSON.stringify({type, betId: id}),
+            });
+
+            if (!response.ok){
+                const data = await response.json().catch(() => ({}));
+                console.error('Cancel stake failed:', data.error);
+            }
+        } catch (error){
+            console.error('Cancel stake network error:', error);
+        }
     }, []);
 
     const handleNewMessage = useCallback((msg) =>{
@@ -2349,6 +2442,13 @@ export default function App(){
             msg.id === id ? { ...msg, text: '[message removed by moderator]' } : msg
         )));
     }, []);
+
+    useEffect(() => {
+        if (!isModerator || screen !== SCREENS.DASHBOARD) {
+            return;
+        }
+        loadPendingProposals();
+    }, [isModerator, screen, loadPendingProposals]);
 
     useEffect(() => {
         const usernames = CHAT_USER_ROSTER;
@@ -2560,11 +2660,13 @@ export default function App(){
         )}
 
         {screen === SCREENS.DASHBOARD && ( isModerator ? (
-            <ModDash username={username} proposals={proposals} onApprove={handleApproveProposal} onDecline={handleDeclineProposal} chatMessages={moderatorChatMessages} onNewMessage={handleNewMessage} onDeleteMessage={handleDeleteMessage} players={players} teams={teams} games={games} onCancelStake={handleCancelStake} />
+            <ModDash username={username} proposals={proposals} onApprove={handleApproveProposal} onDecline={handleDeclineProposal} chatMessages={moderatorChatMessages} 
+                    onNewMessage={handleNewMessage} onDeleteMessage={handleDeleteMessage} players={players} teams={teams} games={games} onCancelStake={handleCancelStake} isLoadingProposals={isLoadingProposals}/>
         ) : (
             <>
-            <Dashboard username={username} players={players} playerPicks={playerPicks} teams={teams} teamPicks={teamPicks} games={games} gamePicks={gamePicks} chatMessages={chatMessages} onNewMessage={handleNewMessage} activeTab={activeTab} setActiveTab={setActiveTab} userCredits={userCredits} onPlacePlayerBet={handlePlacePlayerBet} onPlaceTeamBet={handlePlaceTeamBet} onPlaceGameBet={handlePlaceGameBet} showBetSuccessBanner={showBetSuccessBanner} />
-            <ProposalForm onSubmit={handleAddProposal} />
+            <Dashboard username={username} players={players} playerPicks={playerPicks} teams={teams} teamPicks={teamPicks} games={games} gamePicks={gamePicks} chatMessages={chatMessages} 
+                    onNewMessage={handleNewMessage} activeTab={activeTab} setActiveTab={setActiveTab} userCredits={userCredits} onPlacePlayerBet={handlePlacePlayerBet} onPlaceTeamBet={handlePlaceTeamBet} onPlaceGameBet={handlePlaceGameBet} showBetSuccessBanner={showBetSuccessBanner} />
+            <ProposalForm onSubmit={handleAddProposal} username={username}/>
             </>
         )
             
