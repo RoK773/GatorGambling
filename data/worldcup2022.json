@@ -1,0 +1,265 @@
+{
+  "teams": [
+    {
+      "id": 1,
+      "name": "Argentina",
+      "fifa_code": "ARG",
+      "group": "C",
+      "total_goals": 15,
+      "ball_possession": "58%",
+      "placement": 1,
+      "players": [
+        {
+          "name": "Lionel Messi",
+          "position": "Forward",
+          "goals": 7,
+          "assists": 3
+        },
+        {
+          "name": "Angel Di Maria",
+          "position": "Midfielder",
+          "goals": 1,
+          "assists": 0
+        },
+        {
+          "name": "Julián Álvarez",
+          "position": "Forward",
+          "goals": 4,
+          "assists": 0
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "France",
+      "fifa_code": "FRA",
+      "group": "D",
+      "total_goals": 16,
+      "ball_possession": "55%",
+      "placement": 2,
+      "players": [
+        {
+          "name": "Kylian Mbappé",
+          "position": "Forward",
+          "goals": 8,
+          "assists": 2
+        },
+        {
+          "name": "Antoine Griezmann",
+          "position": "Midfielder",
+          "goals": 2,
+          "assists": 3
+        },
+        {
+          "name": "Olivier Giroud",
+          "position": "Forward",
+          "goals": 4,
+          "assists": 0
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Brazil",
+      "fifa_code": "BRA",
+      "group": "G",
+      "total_goals": 11,
+      "ball_possession": "57%",
+      "placement": 5,
+      "players": [
+        {
+          "name": "Richarlison",
+          "position": "Forward",
+          "goals": 3,
+          "assists": 0
+        },
+        {
+          "name": "Neymar",
+          "position": "Forward",
+          "goals": 2,
+          "assists": 1
+        },
+        {
+          "name": "Vinícius Júnior",
+          "position": "Forward",
+          "goals": 1,
+          "assists": 1
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "England",
+      "fifa_code": "ENG",
+      "group": "B",
+      "total_goals": 13,
+      "ball_possession": "53%",
+      "placement": 7,
+      "players": [
+        {
+          "name": "Harry Kane",
+          "position": "Forward",
+          "goals": 2,
+          "assists": 3
+        },
+        {
+          "name": "Bukayo Saka",
+          "position": "Forward",
+          "goals": 3,
+          "assists": 1
+        },
+        {
+          "name": "Marcus Rashford",
+          "position": "Forward",
+          "goals": 3,
+          "assists": 0
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "Netherlands",
+      "fifa_code": "NED",
+      "group": "A",
+      "total_goals": 10,
+      "ball_possession": "50%",
+      "placement": 8,
+      "players": [
+        {
+          "name": "Cody Gakpo",
+          "position": "Forward",
+          "goals": 3,
+          "assists": 0
+        },
+        {
+          "name": "Memphis Depay",
+          "position": "Forward",
+          "goals": 2,
+          "assists": 1
+        },
+        {
+          "name": "Denzel Dumfries",
+          "position": "Defender",
+          "goals": 1,
+          "assists": 1
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "Portugal",
+      "fifa_code": "POR",
+      "group": "H",
+      "total_goals": 12,
+      "ball_possession": "54%",
+      "placement": 6,
+      "players": [
+        {
+          "name": "Gonçalo Ramos",
+          "position": "Forward",
+          "goals": 3,
+          "assists": 0
+        },
+        {
+          "name": "Rafael Leão",
+          "position": "Forward",
+          "goals": 2,
+          "assists": 1
+        },
+        {
+          "name": "Bruno Fernandes",
+          "position": "Midfielder",
+          "goals": 2,
+          "assists": 1
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "name": "Spain",
+      "fifa_code": "ESP",
+      "group": "E",
+      "total_goals": 9,
+      "ball_possession": "56%",
+      "placement": 9,
+      "players": [
+        {
+          "name": "Álvaro Morata",
+          "position": "Forward",
+          "goals": 3,
+          "assists": 0
+        },
+        {
+          "name": "Ferran Torres",
+          "position": "Forward",
+          "goals": 2,
+          "assists": 1
+        },
+        {
+          "name": "Gavi",
+          "position": "Midfielder",
+          "goals": 1,
+          "assists": 1
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "name": "Croatia",
+      "fifa_code": "CRO",
+      "group": "F",
+      "total_goals": 8,
+      "ball_possession": "49%",
+      "placement": 3,
+      "players": [
+        {
+          "name": "Andrej Kramarić",
+          "position": "Forward",
+          "goals": 2,
+          "assists": 0
+        },
+        {
+          "name": "Luka Modrić",
+          "position": "Midfielder",
+          "goals": 1,
+          "assists": 1
+        },
+        {
+          "name": "Marko Livaja",
+          "position": "Forward",
+          "goals": 1,
+          "assists": 0
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "name": "Japan",
+      "fifa_code": "JPN",
+      "group": "E",
+      "total_goals": 5,
+      "ball_possession": "45%",
+      "placement": 13,
+      "players": [
+        {
+          "name": "Ritsu Doan",
+          "position": "Midfielder",
+          "goals": 2,
+          "assists": 0
+        },
+        {
+          "name": "Daizen Maeda",
+          "position": "Forward",
+          "goals": 1,
+          "assists": 1
+        },
+        {
+          "name": "Takumi Minamino",
+          "position": "Midfielder",
+          "goals": 1,
+          "assists": 0
+        }
+      ]
+    }
+  ]
+}
