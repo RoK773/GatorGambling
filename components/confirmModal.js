@@ -1,5 +1,6 @@
 // acts as a confirmation before moderator actions take effect
 export default function ConfirmModal({
+    // items for reference
     title = 'CONFIRM ACTION',
     message = 'Are you sure you want to proceed?',
     confirmLabel = 'Confirm',
@@ -8,7 +9,7 @@ export default function ConfirmModal({
     onCancel,
 }) {
     return(
-        // backdrop setup
+        // backdrop setup + button settings for cancelling / disapproving and approving bets
         <div onClick={onCancel} style={{
             position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(6px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.15s ease',
@@ -34,6 +35,7 @@ export default function ConfirmModal({
                 <div style={{
                     display: 'flex', gap: 10
                 }}>
+                    {/* button setup + style */}
                     <button onClick={onCancel} style={{
                         flex: 1, padding: '13px', borderRadius: 10, fontWeight: 600, fontSize: 13, letterSpacing: '0.05em',
                         background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', transition: 'all 0.2s'

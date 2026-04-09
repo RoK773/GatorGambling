@@ -5,7 +5,7 @@ const COMPARATORS = ['Over', 'Under', 'Exactly'];
 const TEAM_RESULTS = ['Wins', 'Losses', 'Draws'];
 const MARGIN_TYPES = ['By More Than', 'By Less Than', 'By Exactly'];
 
-// tiny selection 
+// tiny selection - allows for dropdown selection
 function PillSelect({value, onChange, options, minWidth = 100, disabled = false}) {
     return (
         <div style ={{
@@ -32,6 +32,7 @@ function PillSelect({value, onChange, options, minWidth = 100, disabled = false}
     );
 }
 
+// tiny input - allows for numerical input
 function PillNumber({value, onChange, disabled = false, placeholder = '0'}) {
     return (
         <input type="number" value={value} onChange={onChange} disabled={disabled} min={0} max={999} placeholder={placeholder} style={{
@@ -44,7 +45,7 @@ function PillNumber({value, onChange, disabled = false, placeholder = '0'}) {
     );
 }
 
-// player / team / game condition builders
+// player condition builders - condition, comparator, number 
 function PlayerConditionBuilder({ value, onChange}) {
     const stat = value.statType || PLAYER_STATS[0];
     const comparator = value.comparator || COMPARATORS[0];
@@ -80,6 +81,7 @@ function PlayerConditionBuilder({ value, onChange}) {
     );
 }
 
+// team condition builder - condition, comparator, number
 function TeamConditionBuilder({ value, onChange}) {
     const result = value.result || TEAM_RESULTS[0];
     const margin = value.marginType || MARGIN_TYPES[0];
@@ -116,6 +118,7 @@ function TeamConditionBuilder({ value, onChange}) {
     );
 }
 
+// game condition builder - condition, comparator, number
 function GameConditionBuilder({value, onChange, homeTeam, awayTeam}) {
     const outcome = value.outcome || 'Home Team Wins';
     const homeScore = value.homeScore || '';
@@ -184,7 +187,8 @@ function GameConditionBuilder({value, onChange, homeTeam, awayTeam}) {
     );
 }
 
-// field definitions - connection builders are separate, these are text/date fields
+// field definitions - connection builders are separate - these set up placeholder and initial cards
+// ignore that all of these are hockey players i don't know any soccer players
 const FIELD_CONFIGS ={
     Player: [
         {key: 'playerName', label: 'Player Name', placeholder: 'e.g. Auston Matthews', type: 'text'},
@@ -206,10 +210,10 @@ const FIELD_CONFIGS ={
     ],
 };
 
-// for general use
+// for general use / reference
 const CATEGORIES = ['Player', 'Team', 'Game'];
 
-// sub components 
+// sub components (formatting)
 function ModalField({label, value, onChange, placeholder, type='text'}) {
     return (
         <div style={{
@@ -234,6 +238,7 @@ function ModalField({label, value, onChange, placeholder, type='text'}) {
 
 // yippie main export (make it a thing)
 export default function ProposalForm({onSubmit}) {
+    // define constants
     const [open, setOpen] = useState(false);
     const [category, setCategory] = useState('Player');
     const [fields, setFields] = useState({});
@@ -242,7 +247,7 @@ export default function ProposalForm({onSubmit}) {
     const [error, setError] = useState('');
     const setField = (key, val) => setFields(prev => ({...prev, [key]: val}));
 
-    // reset values
+    // reset values when a new form is made
     const resetAndClose = () => {
         setOpen(false);
         setFields({});
@@ -252,7 +257,7 @@ export default function ProposalForm({onSubmit}) {
         setSubmitted(false);
     };
 
-    // category changes
+    // category changes (catChange <-- for ctrl+F scrubbing)
     const handleCategoryChange = (cat) => {
         setCategory(cat);
         setFields({});
@@ -279,6 +284,7 @@ export default function ProposalForm({onSubmit}) {
     };
 
     return ( 
+        // style main export -- button to expand the proposal form
         <>
         <button onClick={() => setOpen(true)} style={{
             position: 'fixed', bottom: 30, right: 30, zIndex: 30, display: 'flex', alignItems: 'center', gap: 10, background: 'var(--accent)', 
@@ -296,6 +302,7 @@ export default function ProposalForm({onSubmit}) {
             </svg>
             PROPOSE BET
         </button>
+        {/* form settings once form is open */}
         {open && ( <div onClick={resetAndClose} style={{
             position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0, 0, 0, 0.78)', backdropFilter: 'blur(6px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.15s ease',
@@ -304,6 +311,7 @@ export default function ProposalForm({onSubmit}) {
                 background: 'var(--bg-card)', border: '1px solid var(--border-bright)', borderRadius: 18, padding: '28px 26px',
                 maxWidth: 440, width: '100%', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 28px rgba(0, 0, 0, 0.7)', animation: 'slideUp 0.22s ease',
             }}>
+                {/* inner form styling */}
                 <div style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6,
                 }}>
@@ -327,6 +335,7 @@ export default function ProposalForm({onSubmit}) {
                 <div style={{
                     marginBottom: 18,
                 }}>
+                    {/*Define categories for betting / betCat <-- for ctrl+F scrubbing */}
                     <label style={{
                         display: 'block', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8,
                     }}>Bet Category</label>
@@ -346,6 +355,7 @@ export default function ProposalForm({onSubmit}) {
                 <div style={{
                     background: 'var(--bg-secondary)', borderRadius: 12, padding: '18px 16px', marginBottom: 14, border: '1px solid var(--border)',
                 }}>
+                    {/* Quick setup for a reactive form - displays the bet builds for whatever category is selected */}
                     {FIELD_CONFIGS[category].map(f => (
                         <ModalField key={f.key} label={f.label} value={fields[f.key] || ''} onChange={e => setField(f.key, e.target.value)} placeholder={f.placeholder} type={f.type}/>
                     ))}
@@ -365,6 +375,7 @@ export default function ProposalForm({onSubmit}) {
                         background: 'rgba(255, 71, 87, 0.08)', border: '1px solid rgba(255, 71, 87, 0.2)', borderRadius: 8,
                     }}>{error}</p>
                 )}
+                {/* submit button */}
                 <button onClick={handleSubmit} disabled={submitted} style={{
                     width: '100%', padding: '14px', borderRadius: 11, fontWeight: 700, fontSize: 14, letterSpacing: '0.08em',
                     background: submitted ? 'var(--success)' : 'var(--accent)', color: '#080A0F', border: 'none', 

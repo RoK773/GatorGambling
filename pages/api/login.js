@@ -53,8 +53,12 @@ export default async function handler(req, res) {
         return res.status(200).json({
             message: 'Login successful',
             username: user.username,
+            email: String(user.email || '').trim(),
             credits: Number.isFinite(Number(user.credits)) ? Number(user.credits) : 0,
             hasCardOnFile: Boolean(String(user.card || '').trim()),
+            player_picks: Array.isArray(user.player_picks) ? user.player_picks : [],
+            team_picks: Array.isArray(user.team_picks) ? user.team_picks : [],
+            game_picks: Array.isArray(user.game_picks) ? user.game_picks : [],
         });
     } catch (error) {
         console.error('Login check failed:', error);
