@@ -81,7 +81,7 @@ Rules:
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': 'false'
+        'ngrok-skip-browser-warning': 'true'
        },
       body: JSON.stringify({ model: 'llama3.1:8b', prompt, stream: false })
     });
