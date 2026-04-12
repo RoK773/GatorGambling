@@ -1550,7 +1550,7 @@ function SettingsButton({ icon, label, onClick, disabled = false}){
     );
 }
 
-function ProfilePage({ username, email = '', onLogout, isModerator = false, credits = 0, totalBets = 0, wins = 0, losses = 0, profit = 0, onUpdateCard, onDeposit, onChangeUsername, onChangeEmail, notice = ''}){
+function ProfilePage({ username, email = '', onLogout, isModerator = false, credits = 0, totalBets = 0, wins = 0, losses = 0, profit = 0, onUpdateCard, onDeposit, onChangeUsername, onChangeEmail, onChangePassword, notice = ''}){
     const formattedCredits = new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: 'USD',
@@ -1580,6 +1580,12 @@ function ProfilePage({ username, email = '', onLogout, isModerator = false, cred
     const [newEmailInput, setNewEmailInput] = useState('');
     const [emailError, setEmailError] = useState('');
     const [isChangingEmail, setIsChangingEmail] = useState(false);
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [currentPasswordInput, setCurrentPasswordInput] = useState('');
+    const [newPasswordInput, setNewPasswordInput] = useState('');
+    const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
+    const [passwordError, setPasswordError] = useState('');
+    const [isChangingPassword, setIsChangingPassword] = useState(false);
     const [showAddCardBanner, setShowAddCardBanner] = useState(false);
     const [isCheckingCard, setIsCheckingCard] = useState(false);
 
@@ -1628,6 +1634,21 @@ function ProfilePage({ username, email = '', onLogout, isModerator = false, cred
             return;
         }
         setShowEmailModal(false);
+    };
+
+    const openPasswordModal = () => {
+        setPasswordError('');
+        setCurrentPasswordInput('');
+        setNewPasswordInput('');
+        setConfirmPasswordInput('');
+        setShowPasswordModal(true);
+    };
+
+    const closePasswordModal = () => {
+        if (isChangingPassword) {
+            return;
+        }
+        setShowPasswordModal(false);
     };
 
     const openDepositModal = async () => {
@@ -1794,6 +1815,43 @@ function ProfilePage({ username, email = '', onLogout, isModerator = false, cred
         }
     };
 
+    const handlePasswordSubmit = async () => {
+        const normalizedCurrentPassword = String(currentPasswordInput || '').trim();
+        const normalizedNewPassword = String(newPasswordInput || '').trim();
+        const normalizedConfirmPassword = String(confirmPasswordInput || '').trim();
+
+        if (!normalizedCurrentPassword || !normalizedNewPassword || !normalizedConfirmPassword) {
+            setPasswordError('All password fields are required.');
+            return;
+        }
+
+        if (normalizedCurrentPassword === normalizedNewPassword) {
+            setPasswordError('New password must be different from current password.');
+            return;
+        }
+
+        if (normalizedNewPassword !== normalizedConfirmPassword) {
+            setPasswordError('New password and confirmation do not match.');
+            return;
+        }
+
+        setIsChangingPassword(true);
+        setPasswordError('');
+
+        try {
+            if (!onChangePassword) {
+                throw new Error('Password update is unavailable right now.');
+            }
+
+            await onChangePassword(normalizedCurrentPassword, normalizedNewPassword);
+            setShowPasswordModal(false);
+        } catch (error) {
+            setPasswordError(error?.message || 'Unable to update password right now.');
+        } finally {
+            setIsChangingPassword(false);
+        }
+    };
+
     return (
         <div style={{
             paddingTop: 'var(--header-height)',
@@ -1922,7 +1980,7 @@ function ProfilePage({ username, email = '', onLogout, isModerator = false, cred
                     }}>
                         <SettingsButton icon={<User size={16} />} label="Change Username" onClick={openUsernameModal} disabled={isModerator} />
                         <SettingsButton icon={<Mail size={16} />} label="Change Email" onClick={openEmailModal} disabled={isModerator} />
-                        <SettingsButton icon={<Lock size={16} />} label="Change Password" />
+                        <SettingsButton icon={<Lock size={16} />} label="Change Password" onClick={openPasswordModal} disabled={isModerator} />
                         {!isModerator && (
                         <SettingsButton icon={<CreditCard size={16} />} label="Edit Card on File" onClick={openCardModal} />
                         )}
@@ -2177,6 +2235,93 @@ function ProfilePage({ username, email = '', onLogout, isModerator = false, cred
                                 flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: 'var(--accent)',
                                 color: '#080A0F', fontWeight: 700, cursor: isChangingEmail ? 'not-allowed' : 'pointer', opacity: isChangingEmail ? 0.7 : 1,
                             }}>{isChangingEmail ? 'SAVING...' : 'SAVE EMAIL'}</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showPasswordModal && (
+                <div onClick={closePasswordModal} style={{
+                    position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(6px)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+                }}>
+                    <div onClick={e => e.stopPropagation()} style={{
+                        width: '100%', maxWidth: 430, background: 'var(--bg-card)', border: '1px solid var(--border-bright)', borderRadius: 16,
+                        boxShadow: '0 24px 60px rgba(0, 0, 0, 0.55)', padding: '24px 20px',
+                    }}>
+                        <h3 style={{
+                            margin: 0, marginBottom: 6, fontFamily: 'var(--font-display)', letterSpacing: '0.06em', fontSize: 20,
+                        }}>CHANGE PASSWORD</h3>
+                        <p style={{
+                            margin: 0, marginBottom: 18, fontSize: 12, color: 'var(--text-secondary)',
+                        }}>Enter your current password and set a new password.</p>
+
+                        <div style={{ marginBottom: 12 }}>
+                            <label style={{
+                                display: 'block', fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 6,
+                            }}>CURRENT PASSWORD</label>
+                            <input
+                                type="password"
+                                value={currentPasswordInput}
+                                onChange={e => setCurrentPasswordInput(e.target.value)}
+                                placeholder="Current password"
+                                style={{
+                                    width: '100%', boxSizing: 'border-box', background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+                                    border: '1px solid var(--border)', borderRadius: 10, padding: '11px 12px', fontSize: 14,
+                                    outline: 'none', fontFamily: 'var(--font-mono)', letterSpacing: '0.02em',
+                                }}
+                            />
+                        </div>
+
+                        <div style={{ marginBottom: 12 }}>
+                            <label style={{
+                                display: 'block', fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 6,
+                            }}>NEW PASSWORD</label>
+                            <input
+                                type="password"
+                                value={newPasswordInput}
+                                onChange={e => setNewPasswordInput(e.target.value)}
+                                placeholder="Enter new password"
+                                style={{
+                                    width: '100%', boxSizing: 'border-box', background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+                                    border: '1px solid var(--border)', borderRadius: 10, padding: '11px 12px', fontSize: 14,
+                                    outline: 'none', fontFamily: 'var(--font-mono)', letterSpacing: '0.02em',
+                                }}
+                            />
+                        </div>
+
+                        <div style={{ marginBottom: 12 }}>
+                            <label style={{
+                                display: 'block', fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 6,
+                            }}>CONFIRM NEW PASSWORD</label>
+                            <input
+                                type="password"
+                                value={confirmPasswordInput}
+                                onChange={e => setConfirmPasswordInput(e.target.value)}
+                                placeholder="Re-enter new password"
+                                style={{
+                                    width: '100%', boxSizing: 'border-box', background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+                                    border: '1px solid var(--border)', borderRadius: 10, padding: '11px 12px', fontSize: 14,
+                                    outline: 'none', fontFamily: 'var(--font-mono)', letterSpacing: '0.02em',
+                                }}
+                            />
+                        </div>
+
+                        {passwordError && (
+                            <div style={{
+                                marginBottom: 14, color: 'var(--danger)', fontSize: 12,
+                            }}>{passwordError}</div>
+                        )}
+
+                        <div style={{ display: 'flex', gap: 10 }}>
+                            <button onClick={closePasswordModal} disabled={isChangingPassword} style={{
+                                flex: 1, padding: '12px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg-secondary)',
+                                color: 'var(--text-secondary)', fontWeight: 600, cursor: isChangingPassword ? 'not-allowed' : 'pointer', opacity: isChangingPassword ? 0.6 : 1,
+                            }}>CANCEL</button>
+                            <button onClick={handlePasswordSubmit} disabled={isChangingPassword} style={{
+                                flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: 'var(--accent)',
+                                color: '#080A0F', fontWeight: 700, cursor: isChangingPassword ? 'not-allowed' : 'pointer', opacity: isChangingPassword ? 0.7 : 1,
+                            }}>{isChangingPassword ? 'SAVING...' : 'SAVE PASSWORD'}</button>
                         </div>
                     </div>
                 </div>
@@ -2505,6 +2650,42 @@ export default function App(){
 
         setUserEmail(String(data.email || normalizedNewEmail).trim());
         setProfileNotice(data.message || 'Email updated successfully.');
+        profileNoticeTimeoutRef.current = setTimeout(() => {
+            setProfileNotice('');
+            profileNoticeTimeoutRef.current = null;
+        }, 3000);
+    }, [username]);
+
+    const handleChangePassword = useCallback(async (currentPassword, newPassword) => {
+        const normalizedCurrentPassword = String(currentPassword || '').trim();
+        const normalizedNewPassword = String(newPassword || '').trim();
+
+        if (!username) {
+            throw new Error('You must be logged in to change your password.');
+        }
+
+        if (!normalizedCurrentPassword || !normalizedNewPassword) {
+            throw new Error('Current and new password are required.');
+        }
+
+        const response = await fetch('/api/update-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, currentPassword: normalizedCurrentPassword, newPassword: normalizedNewPassword }),
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Unable to update password right now.');
+        }
+
+        if (profileNoticeTimeoutRef.current) {
+            clearTimeout(profileNoticeTimeoutRef.current);
+            profileNoticeTimeoutRef.current = null;
+        }
+
+        setProfileNotice(data.message || 'Password updated successfully.');
         profileNoticeTimeoutRef.current = setTimeout(() => {
             setProfileNotice('');
             profileNoticeTimeoutRef.current = null;
@@ -2995,7 +3176,7 @@ export default function App(){
         )}
 
         {screen === SCREENS.PROFILE && (
-            <ProfilePage username={username} email={userEmail} onLogout={handleLogout} isModerator={isModerator} credits={userCredits} totalBets={userTotalBets} wins={userWins} losses={userLosses} profit={userProfit} onUpdateCard={handleUpdateCard} onDeposit={handleDeposit} onChangeUsername={handleChangeUsername} onChangeEmail={handleChangeEmail} notice={profileNotice} hasCardOnFile={hasCardOnFile} />
+            <ProfilePage username={username} email={userEmail} onLogout={handleLogout} isModerator={isModerator} credits={userCredits} totalBets={userTotalBets} wins={userWins} losses={userLosses} profit={userProfit} onUpdateCard={handleUpdateCard} onDeposit={handleDeposit} onChangeUsername={handleChangeUsername} onChangeEmail={handleChangeEmail} onChangePassword={handleChangePassword} notice={profileNotice} hasCardOnFile={hasCardOnFile} />
         )}
         </>
     );
