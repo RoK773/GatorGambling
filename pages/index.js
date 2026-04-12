@@ -1550,7 +1550,7 @@ function SettingsButton({ icon, label, onClick, disabled = false}){
     );
 }
 
-function ProfilePage({ username, email = '', onLogout, isModerator = false, credits = 0, totalBets = 0, wins = 0, losses = 0, profit = 0, onUpdateCard, onDeposit, notice = ''}){
+function ProfilePage({ username, email = '', onLogout, isModerator = false, credits = 0, totalBets = 0, wins = 0, losses = 0, profit = 0, onUpdateCard, onDeposit, onChangeUsername, notice = ''}){
     const formattedCredits = new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: 'USD',
@@ -1572,6 +1572,10 @@ function ProfilePage({ username, email = '', onLogout, isModerator = false, cred
     const [depositAmountInput, setDepositAmountInput] = useState('');
     const [depositError, setDepositError] = useState('');
     const [isDepositing, setIsDepositing] = useState(false);
+    const [showUsernameModal, setShowUsernameModal] = useState(false);
+    const [newUsernameInput, setNewUsernameInput] = useState('');
+    const [usernameError, setUsernameError] = useState('');
+    const [isChangingUsername, setIsChangingUsername] = useState(false);
     const [showAddCardBanner, setShowAddCardBanner] = useState(false);
     const [isCheckingCard, setIsCheckingCard] = useState(false);
 
@@ -1594,6 +1598,19 @@ function ProfilePage({ username, email = '', onLogout, isModerator = false, cred
             return;
         }
         setShowDepositModal(false);
+    };
+
+    const openUsernameModal = () => {
+        setUsernameError('');
+        setNewUsernameInput(username || '');
+        setShowUsernameModal(true);
+    };
+
+    const closeUsernameModal = () => {
+        if (isChangingUsername) {
+            return;
+        }
+        setShowUsernameModal(false);
     };
 
     const openDepositModal = async () => {
@@ -1691,6 +1708,36 @@ function ProfilePage({ username, email = '', onLogout, isModerator = false, cred
             setDepositError(message);
         } finally {
             setIsDepositing(false);
+        }
+    };
+
+    const handleUsernameSubmit = async () => {
+        const normalizedNewUsername = String(newUsernameInput || '').trim();
+
+        if (!normalizedNewUsername) {
+            setUsernameError('Username is required.');
+            return;
+        }
+
+        if (normalizedNewUsername === String(username || '').trim()) {
+            setUsernameError('Enter a different username.');
+            return;
+        }
+
+        setIsChangingUsername(true);
+        setUsernameError('');
+
+        try {
+            if (!onChangeUsername) {
+                throw new Error('Username update is unavailable right now.');
+            }
+
+            await onChangeUsername(normalizedNewUsername);
+            setShowUsernameModal(false);
+        } catch (error) {
+            setUsernameError(error?.message || 'Unable to update username right now.');
+        } finally {
+            setIsChangingUsername(false);
         }
     };
 
@@ -1820,7 +1867,7 @@ function ProfilePage({ username, email = '', onLogout, isModerator = false, cred
                     <div style={{
                         display: 'flex', flexDirection: 'column', gap: 8,
                     }}>
-                        <SettingsButton icon={<User size={16} />} label="Change Username" />
+                        <SettingsButton icon={<User size={16} />} label="Change Username" onClick={openUsernameModal} disabled={isModerator} />
                         <SettingsButton icon={<Mail size={16} />} label="Change Email" />
                         <SettingsButton icon={<Lock size={16} />} label="Change Password" />
                         {!isModerator && (
@@ -1971,6 +2018,59 @@ function ProfilePage({ username, email = '', onLogout, isModerator = false, cred
                                 flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: 'var(--accent)',
                                 color: '#080A0F', fontWeight: 700, cursor: isDepositing ? 'not-allowed' : 'pointer', opacity: isDepositing ? 0.7 : 1,
                             }}>{isDepositing ? 'DEPOSITING...' : 'DEPOSIT'}</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showUsernameModal && (
+                <div onClick={closeUsernameModal} style={{
+                    position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(6px)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+                }}>
+                    <div onClick={e => e.stopPropagation()} style={{
+                        width: '100%', maxWidth: 430, background: 'var(--bg-card)', border: '1px solid var(--border-bright)', borderRadius: 16,
+                        boxShadow: '0 24px 60px rgba(0, 0, 0, 0.55)', padding: '24px 20px',
+                    }}>
+                        <h3 style={{
+                            margin: 0, marginBottom: 6, fontFamily: 'var(--font-display)', letterSpacing: '0.06em', fontSize: 20,
+                        }}>CHANGE USERNAME</h3>
+                        <p style={{
+                            margin: 0, marginBottom: 18, fontSize: 12, color: 'var(--text-secondary)',
+                        }}>Choose a new username for your account.</p>
+
+                        <div style={{ marginBottom: 12 }}>
+                            <label style={{
+                                display: 'block', fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 6,
+                            }}>NEW USERNAME</label>
+                            <input
+                                type="text"
+                                value={newUsernameInput}
+                                onChange={e => setNewUsernameInput(e.target.value)}
+                                placeholder="Enter a new username"
+                                style={{
+                                    width: '100%', boxSizing: 'border-box', background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+                                    border: '1px solid var(--border)', borderRadius: 10, padding: '11px 12px', fontSize: 14,
+                                    outline: 'none', fontFamily: 'var(--font-mono)', letterSpacing: '0.05em',
+                                }}
+                            />
+                        </div>
+
+                        {usernameError && (
+                            <div style={{
+                                marginBottom: 14, color: 'var(--danger)', fontSize: 12,
+                            }}>{usernameError}</div>
+                        )}
+
+                        <div style={{ display: 'flex', gap: 10 }}>
+                            <button onClick={closeUsernameModal} disabled={isChangingUsername} style={{
+                                flex: 1, padding: '12px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg-secondary)',
+                                color: 'var(--text-secondary)', fontWeight: 600, cursor: isChangingUsername ? 'not-allowed' : 'pointer', opacity: isChangingUsername ? 0.6 : 1,
+                            }}>CANCEL</button>
+                            <button onClick={handleUsernameSubmit} disabled={isChangingUsername} style={{
+                                flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: 'var(--accent)',
+                                color: '#080A0F', fontWeight: 700, cursor: isChangingUsername ? 'not-allowed' : 'pointer', opacity: isChangingUsername ? 0.7 : 1,
+                            }}>{isChangingUsername ? 'SAVING...' : 'SAVE USERNAME'}</button>
                         </div>
                     </div>
                 </div>
@@ -2226,6 +2326,43 @@ export default function App(){
 
         setUserCredits(Number.isFinite(Number(data.credits)) ? Number(data.credits) : 0);
         setProfileNotice(data.message || 'Deposit successful.');
+        profileNoticeTimeoutRef.current = setTimeout(() => {
+            setProfileNotice('');
+            profileNoticeTimeoutRef.current = null;
+        }, 3000);
+    }, [username]);
+
+    const handleChangeUsername = useCallback(async (newUsername) => {
+        const normalizedNewUsername = String(newUsername || '').trim();
+
+        if (!username) {
+            throw new Error('You must be logged in to change your username.');
+        }
+
+        if (!normalizedNewUsername) {
+            throw new Error('Username is required.');
+        }
+
+        const response = await fetch('/api/update-username', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ currentUsername: username, newUsername: normalizedNewUsername }),
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Unable to update username right now.');
+        }
+
+        if (profileNoticeTimeoutRef.current) {
+            clearTimeout(profileNoticeTimeoutRef.current);
+            profileNoticeTimeoutRef.current = null;
+        }
+
+        const updatedUsername = String(data.username || normalizedNewUsername).trim();
+        setUsername(updatedUsername);
+        setProfileNotice(data.message || 'Username updated successfully.');
         profileNoticeTimeoutRef.current = setTimeout(() => {
             setProfileNotice('');
             profileNoticeTimeoutRef.current = null;
@@ -2716,7 +2853,7 @@ export default function App(){
         )}
 
         {screen === SCREENS.PROFILE && (
-            <ProfilePage username={username} email={userEmail} onLogout={handleLogout} isModerator={isModerator} credits={userCredits} totalBets={userTotalBets} wins={userWins} losses={userLosses} profit={userProfit} onUpdateCard={handleUpdateCard} onDeposit={handleDeposit} notice={profileNotice} hasCardOnFile={hasCardOnFile} />
+            <ProfilePage username={username} email={userEmail} onLogout={handleLogout} isModerator={isModerator} credits={userCredits} totalBets={userTotalBets} wins={userWins} losses={userLosses} profit={userProfit} onUpdateCard={handleUpdateCard} onDeposit={handleDeposit} onChangeUsername={handleChangeUsername} notice={profileNotice} hasCardOnFile={hasCardOnFile} />
         )}
         </>
     );
