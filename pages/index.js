@@ -1550,7 +1550,7 @@ function SettingsButton({ icon, label, onClick, disabled = false}){
     );
 }
 
-function ProfilePage({ username, email = '', onLogout, isModerator = false, credits = 0, totalBets = 0, wins = 0, losses = 0, profit = 0, onUpdateCard, onDeposit, onChangeUsername, notice = ''}){
+function ProfilePage({ username, email = '', onLogout, isModerator = false, credits = 0, totalBets = 0, wins = 0, losses = 0, profit = 0, onUpdateCard, onDeposit, onChangeUsername, onChangeEmail, notice = ''}){
     const formattedCredits = new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: 'USD',
@@ -1576,6 +1576,10 @@ function ProfilePage({ username, email = '', onLogout, isModerator = false, cred
     const [newUsernameInput, setNewUsernameInput] = useState('');
     const [usernameError, setUsernameError] = useState('');
     const [isChangingUsername, setIsChangingUsername] = useState(false);
+    const [showEmailModal, setShowEmailModal] = useState(false);
+    const [newEmailInput, setNewEmailInput] = useState('');
+    const [emailError, setEmailError] = useState('');
+    const [isChangingEmail, setIsChangingEmail] = useState(false);
     const [showAddCardBanner, setShowAddCardBanner] = useState(false);
     const [isCheckingCard, setIsCheckingCard] = useState(false);
 
@@ -1611,6 +1615,19 @@ function ProfilePage({ username, email = '', onLogout, isModerator = false, cred
             return;
         }
         setShowUsernameModal(false);
+    };
+
+    const openEmailModal = () => {
+        setEmailError('');
+        setNewEmailInput(email || '');
+        setShowEmailModal(true);
+    };
+
+    const closeEmailModal = () => {
+        if (isChangingEmail) {
+            return;
+        }
+        setShowEmailModal(false);
     };
 
     const openDepositModal = async () => {
@@ -1741,6 +1758,42 @@ function ProfilePage({ username, email = '', onLogout, isModerator = false, cred
         }
     };
 
+    const handleEmailSubmit = async () => {
+        const normalizedNewEmail = String(newEmailInput || '').trim();
+        const normalizedCurrentEmail = String(email || '').trim();
+
+        if (!normalizedNewEmail) {
+            setEmailError('Email is required.');
+            return;
+        }
+
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedNewEmail)) {
+            setEmailError('Use format name@domain.domain.');
+            return;
+        }
+
+        if (normalizedNewEmail.toLowerCase() === normalizedCurrentEmail.toLowerCase()) {
+            setEmailError('Enter a different email address.');
+            return;
+        }
+
+        setIsChangingEmail(true);
+        setEmailError('');
+
+        try {
+            if (!onChangeEmail) {
+                throw new Error('Email update is unavailable right now.');
+            }
+
+            await onChangeEmail(normalizedNewEmail);
+            setShowEmailModal(false);
+        } catch (error) {
+            setEmailError(error?.message || 'Unable to update email right now.');
+        } finally {
+            setIsChangingEmail(false);
+        }
+    };
+
     return (
         <div style={{
             paddingTop: 'var(--header-height)',
@@ -1868,7 +1921,7 @@ function ProfilePage({ username, email = '', onLogout, isModerator = false, cred
                         display: 'flex', flexDirection: 'column', gap: 8,
                     }}>
                         <SettingsButton icon={<User size={16} />} label="Change Username" onClick={openUsernameModal} disabled={isModerator} />
-                        <SettingsButton icon={<Mail size={16} />} label="Change Email" />
+                        <SettingsButton icon={<Mail size={16} />} label="Change Email" onClick={openEmailModal} disabled={isModerator} />
                         <SettingsButton icon={<Lock size={16} />} label="Change Password" />
                         {!isModerator && (
                         <SettingsButton icon={<CreditCard size={16} />} label="Edit Card on File" onClick={openCardModal} />
@@ -2071,6 +2124,59 @@ function ProfilePage({ username, email = '', onLogout, isModerator = false, cred
                                 flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: 'var(--accent)',
                                 color: '#080A0F', fontWeight: 700, cursor: isChangingUsername ? 'not-allowed' : 'pointer', opacity: isChangingUsername ? 0.7 : 1,
                             }}>{isChangingUsername ? 'SAVING...' : 'SAVE USERNAME'}</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showEmailModal && (
+                <div onClick={closeEmailModal} style={{
+                    position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(6px)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+                }}>
+                    <div onClick={e => e.stopPropagation()} style={{
+                        width: '100%', maxWidth: 430, background: 'var(--bg-card)', border: '1px solid var(--border-bright)', borderRadius: 16,
+                        boxShadow: '0 24px 60px rgba(0, 0, 0, 0.55)', padding: '24px 20px',
+                    }}>
+                        <h3 style={{
+                            margin: 0, marginBottom: 6, fontFamily: 'var(--font-display)', letterSpacing: '0.06em', fontSize: 20,
+                        }}>CHANGE EMAIL</h3>
+                        <p style={{
+                            margin: 0, marginBottom: 18, fontSize: 12, color: 'var(--text-secondary)',
+                        }}>Choose a new email address for your account.</p>
+
+                        <div style={{ marginBottom: 12 }}>
+                            <label style={{
+                                display: 'block', fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em', marginBottom: 6,
+                            }}>NEW EMAIL</label>
+                            <input
+                                type="email"
+                                value={newEmailInput}
+                                onChange={e => setNewEmailInput(e.target.value)}
+                                placeholder="name@domain.com"
+                                style={{
+                                    width: '100%', boxSizing: 'border-box', background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+                                    border: '1px solid var(--border)', borderRadius: 10, padding: '11px 12px', fontSize: 14,
+                                    outline: 'none', fontFamily: 'var(--font-mono)', letterSpacing: '0.02em',
+                                }}
+                            />
+                        </div>
+
+                        {emailError && (
+                            <div style={{
+                                marginBottom: 14, color: 'var(--danger)', fontSize: 12,
+                            }}>{emailError}</div>
+                        )}
+
+                        <div style={{ display: 'flex', gap: 10 }}>
+                            <button onClick={closeEmailModal} disabled={isChangingEmail} style={{
+                                flex: 1, padding: '12px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg-secondary)',
+                                color: 'var(--text-secondary)', fontWeight: 600, cursor: isChangingEmail ? 'not-allowed' : 'pointer', opacity: isChangingEmail ? 0.6 : 1,
+                            }}>CANCEL</button>
+                            <button onClick={handleEmailSubmit} disabled={isChangingEmail} style={{
+                                flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: 'var(--accent)',
+                                color: '#080A0F', fontWeight: 700, cursor: isChangingEmail ? 'not-allowed' : 'pointer', opacity: isChangingEmail ? 0.7 : 1,
+                            }}>{isChangingEmail ? 'SAVING...' : 'SAVE EMAIL'}</button>
                         </div>
                     </div>
                 </div>
@@ -2363,6 +2469,42 @@ export default function App(){
         const updatedUsername = String(data.username || normalizedNewUsername).trim();
         setUsername(updatedUsername);
         setProfileNotice(data.message || 'Username updated successfully.');
+        profileNoticeTimeoutRef.current = setTimeout(() => {
+            setProfileNotice('');
+            profileNoticeTimeoutRef.current = null;
+        }, 3000);
+    }, [username]);
+
+    const handleChangeEmail = useCallback(async (newEmail) => {
+        const normalizedNewEmail = String(newEmail || '').trim();
+
+        if (!username) {
+            throw new Error('You must be logged in to change your email.');
+        }
+
+        if (!normalizedNewEmail) {
+            throw new Error('Email is required.');
+        }
+
+        const response = await fetch('/api/update-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, newEmail: normalizedNewEmail }),
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Unable to update email right now.');
+        }
+
+        if (profileNoticeTimeoutRef.current) {
+            clearTimeout(profileNoticeTimeoutRef.current);
+            profileNoticeTimeoutRef.current = null;
+        }
+
+        setUserEmail(String(data.email || normalizedNewEmail).trim());
+        setProfileNotice(data.message || 'Email updated successfully.');
         profileNoticeTimeoutRef.current = setTimeout(() => {
             setProfileNotice('');
             profileNoticeTimeoutRef.current = null;
@@ -2853,7 +2995,7 @@ export default function App(){
         )}
 
         {screen === SCREENS.PROFILE && (
-            <ProfilePage username={username} email={userEmail} onLogout={handleLogout} isModerator={isModerator} credits={userCredits} totalBets={userTotalBets} wins={userWins} losses={userLosses} profit={userProfit} onUpdateCard={handleUpdateCard} onDeposit={handleDeposit} onChangeUsername={handleChangeUsername} notice={profileNotice} hasCardOnFile={hasCardOnFile} />
+            <ProfilePage username={username} email={userEmail} onLogout={handleLogout} isModerator={isModerator} credits={userCredits} totalBets={userTotalBets} wins={userWins} losses={userLosses} profit={userProfit} onUpdateCard={handleUpdateCard} onDeposit={handleDeposit} onChangeUsername={handleChangeUsername} onChangeEmail={handleChangeEmail} notice={profileNotice} hasCardOnFile={hasCardOnFile} />
         )}
         </>
     );
