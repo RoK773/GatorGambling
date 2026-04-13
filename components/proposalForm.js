@@ -526,7 +526,8 @@ useEffect(() => {
         </button>
         {/* form settings once form is open */}
         {open && ( <div onClick={resetAndClose} style={{
-            background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4, borderRadius: 6, transition: 'color 0.2s',
+            position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0, 0, 0, 0.78)', backdropFilter: 'blur(6px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.15s ease',
         }}>
             <div onClick={e => e.stopPropagation()} style={{
                 background: 'var(--bg-card)', border: '1px solid var(--border-bright)', borderRadius: 18, padding: '28px 26px',
