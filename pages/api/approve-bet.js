@@ -2,7 +2,7 @@
 import dns from 'dns';
 import {MongoClient, ServerApiVersion, ObjectId} from 'mongodb';
 dns.setServers(['8.8.8.8', '8.8.4.4']);
-const uri = process.env.MONGODB_URI || 'mongodb+srv://admin:admin1Password@cluster0.9uypigw.mongodb.net/?appName=Cluster0';
+const uri = process.env.MONGODB_URI;
 const dbName = process.env.MONGODB_SOCCER_DB || 'Soccer_Data';
 const PENDING_COLLECTION = 'Pending_Bets';
 const ACTIVE_COLLECTIONS = {

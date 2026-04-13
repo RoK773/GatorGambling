@@ -183,7 +183,7 @@ function MetaRow({label, value}) {
 }
 
 // player condition builders - condition, comparator, number 
-function PlayerConditionBuilder({ value, onChange}) {
+function PlayerConditionBuilder({ value, onChange, disabled}) {
     const stat = value.statType || PLAYER_STATS[0];
     const comparator = value.comparator || COMPARATORS[0];
     const condVal = value.condVal || '';
@@ -219,7 +219,7 @@ function PlayerConditionBuilder({ value, onChange}) {
 }
 
 // team condition builder - condition, comparator, number
-function TeamConditionBuilder({ value, onChange}) {
+function TeamConditionBuilder({ value, onChange, disabled}) {
     const result = value.result || TEAM_RESULTS[0];
     const margin = value.marginType || MARGIN_TYPES[0];
     const condVal = value.condVal || '';
