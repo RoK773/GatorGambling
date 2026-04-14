@@ -812,19 +812,6 @@ function LandingScreen({ onSignUp, onLogin }) {
                     }}>SIGN IN</button>
                 </div>
 
-                <div style={{ textAlign: 'center' }}>
-                    <button onClick={() => window.location.href = '/test_simulation'} style={{
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        color: '#9bff2a',
-                        fontSize: 12,
-                        fontWeight: 800,
-                        textDecoration: 'underline',
-                        textUnderlineOffset: 3,
-                        letterSpacing: '0.08em',
-                    }}>TRY MATCH SIMULATION</button>
-                </div>
                 <p style={{ 
                     textAlign: 'center',
                     fontSize: 11,
