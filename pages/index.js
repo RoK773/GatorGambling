@@ -66,6 +66,65 @@ const INITIAL_CHAT_MESSAGES = CHAT_USER_ROSTER.map(user => {
     };
 });
 
+const LANDING_STATS = [
+    { label: '37% Win Rate', value: '94%', icon: <TrendingUp size={18} /> },
+    { label: '5K+ Players', value: 'OVER 3 MILLION\nPLAYERS!', icon: <Users size={18} /> },
+    { label: 'Live Betting', value: 'WORLD CUP\nODDS HOT!', icon: <Radio size={18} /> },
+];
+
+const LANDING_PROMOS = [
+    {
+        title: '1000% MATCH BONUS INSIDE!',
+        copy: 'Create an account and jump into the board.',
+        accent: 'var(--accent)',
+    },
+    {
+        title: 'LIVE USER COUNTER',
+        copy: '104,231 bettors online right now.',
+        accent: '#86efac',
+    },
+    {
+        title: 'BET BRA (+1.5) @ +250',
+        copy: 'BET GER (+1.5) @ -300',
+        accent: '#fbbf24',
+    },
+];
+
+const LANDING_TICKER = [
+    'USER99 won $50,000 on a 12-fold World Cup parlay!',
+    'USERP1 won $50,000 on a 12-fold World Cup parlay!',
+    'JONES hit a 19-leg accumulator for $14,240!',
+    'HUGE LIVE CASHOUT CONFIRMED ON BRAZIL VS SPAIN!',
+];
+
+const FIFA_TOP_25 = [
+    { rank: 1, team: 'France', record: '1877.32 pts' },
+    { rank: 2, team: 'Spain', record: '1876.40 pts' },
+    { rank: 3, team: 'Argentina', record: '1874.81 pts' },
+    { rank: 4, team: 'England', record: '1825.97 pts' },
+    { rank: 5, team: 'Portugal', record: '1763.83 pts' },
+    { rank: 6, team: 'Brazil', record: '1761.16 pts' },
+    { rank: 7, team: 'Netherlands', record: '1757.87 pts' },
+    { rank: 8, team: 'Morocco', record: '1755.87 pts' },
+    { rank: 9, team: 'Belgium', record: '1734.71 pts' },
+    { rank: 10, team: 'Germany', record: '1730.37 pts' },
+    { rank: 11, team: 'Croatia', record: '1717.07 pts' },
+    { rank: 12, team: 'Italy', record: '1700.37 pts' },
+    { rank: 13, team: 'Colombia', record: '1693.09 pts' },
+    { rank: 14, team: 'Senegal', record: '1688.99 pts' },
+    { rank: 15, team: 'Mexico', record: '1681.03 pts' },
+    { rank: 16, team: 'United States', record: '1673.13 pts' },
+    { rank: 17, team: 'Uruguay', record: '1673.07 pts' },
+    { rank: 18, team: 'Japan', record: '1660.43 pts' },
+    { rank: 19, team: 'Switzerland', record: '1649.40 pts' },
+    { rank: 20, team: 'Denmark', record: '1620.81 pts' },
+    { rank: 21, team: 'Iran', record: 'Top 25' },
+    { rank: 22, team: 'Türkiye', record: 'Top 25' },
+    { rank: 23, team: 'Ecuador', record: 'Top 25' },
+    { rank: 24, team: 'Austria', record: 'Top 25' },
+    { rank: 25, team: 'South Korea', record: 'Top 25' },
+];
+
 // Betting feature: normalize Player bet documents into card-ready UI data.
 function mapPlayerBetToPlayerCard(playerBet, index) {
     const name = String(playerBet?.name || '').trim() || 'Unknown Player';
@@ -378,84 +437,445 @@ function AuthButton({ label, primary = false, onClick, disabled = false}){
 function LandingScreen({ onSignUp, onLogin }) {
     return (
         <div style={{
-            minHeight: '100vh', display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center',
-            background: 'var(--bg-primary)', padding: 24,
+            minHeight: '100vh',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative',
+            overflow: 'hidden',
+            backgroundImage: "linear-gradient(135deg, rgba(8, 10, 15, 0.84), rgba(8, 10, 15, 0.62)), url('/images.jpeg')",
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            padding: 24,
         }}>
             <div style={{
-                position: 'fixed', top: '-20px', left: '50%', transform: 'translateX(-50%)',
-                width: 600, height: 600, borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(198, 241, 53, 0.06) 0%, transparent 70%)',
+                position: 'absolute',
+                inset: 0,
+                background: 'radial-gradient(circle at top, rgba(198, 241, 53, 0.15), transparent 42%), linear-gradient(180deg, rgba(8, 10, 15, 0.2), rgba(8, 10, 15, 0.72))',
                 pointerEvents: 'none',
             }} />
             <div style={{
-                maxWidth: 420, width: '100%',
+                position: 'relative',
+                zIndex: 1,
+                width: 'min(980px, 100%)',
                 animation: 'slideUp 0.6s ease both',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 14,
             }}>
                 <div style={{
-                    textAlign: 'center', marginBottom: 48,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 22,
+                    width: '100%',
+                    flexWrap: 'wrap',
                 }}>
-                    <div style={{
-                        width: 72, height: 72, borderRadius: 20,
-                        background: 'var(--accent)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        margin: '0 auto 20px', boxShadow: '0 0 40px var(--accent-glow-strong)',
-                        animation: 'pulse-glow 3s ease-in-out infinite',
-                    }}>
-                        <img 
-                            src="/gator_gambling_logo.png" 
-                            alt="Logo" 
-                            style={{ width: '100%', height: '100%', borderRadius: 20, objectFit: 'contain' }} 
-                        />
-                    </div>
-                    <h1 style={{
-                        fontFamily: 'var(--font-display)', fontSize: 48,
-                        letterSpacing: '0.08em', color: 'var(--text-primary)', lineHeight: 1, marginBottom: 12,
-                    }}>GATORGAMBLING</h1>
-                    <p style={{
-                        fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6,
-                        maxWidth: 280, margin: '0 auto',
-                    }}>Chomp at the Bet!</p>
-                </div>
-                <div style={{
-                    display: 'flex', gap: 12, marginBottom: 40,
-                }}>
-                    {[
-                        { icon: <TrendingUp size={16} />, label: '87% Win Rate' },
-                        { icon: <Users size={16} />, label: '5K+ Players'},
-                        { icon: <Zap size={16} />, label: 'Live Betting'},
-                    ].map((item, i) => (
-                        <div key={i} style={{
-                            flex: 1, background: 'var(--bg-card)',
-                            border: '1px solid var(--border)', borderRadius: 10,
-                            padding: '10px 8px', display: 'flex', flexDirection: 'column',
-                            alignItems: 'center', gap: 6, color: 'var(--accent)',
+                    {['left', 'right'].map(side => (
+                        <div key={side} style={{
+                            width: 82,
+                            height: 120,
+                            borderRadius: 22,
+                            background: 'linear-gradient(180deg, rgba(255, 196, 77, 0.18), rgba(255, 196, 77, 0.06))',
+                            border: '1px solid rgba(255, 196, 77, 0.32)',
+                            boxShadow: '0 18px 35px rgba(0, 0, 0, 0.28)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transform: side === 'left' ? 'rotate(-8deg)' : 'rotate(8deg)',
+                            position: 'relative',
+                            overflow: 'hidden',
+                            padding: 8,
                         }}>
-                            {item.icon}
-                            <span style={{
-                                fontSize: 10, color: 'var(--text-secondary)', textAlign: 'center', fontWeight: 600,
-                            }}>{item.label}</span>
+                            <img
+                                src="/world-cup-trophy-hd-png-704081694879209fseti7gv8k.png"
+                                alt="World Cup trophy"
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'contain',
+                                    filter: 'drop-shadow(0 0 12px rgba(244, 194, 93, 0.45))',
+                                }}
+                            />
+                        </div>
+                    ))}
+                    <div style={{
+                        position: 'relative',
+                        width: 'min(560px, 100%)',
+                        minHeight: 248,
+                        borderRadius: 24,
+                        padding: 24,
+                        background: 'rgba(8, 10, 15, 0.78)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        boxShadow: '0 30px 90px rgba(0, 0, 0, 0.52)',
+                        backdropFilter: 'blur(14px)',
+                        overflow: 'hidden',
+                    }}>
+                        <div style={{
+                            position: 'absolute',
+                            top: 14,
+                            right: 14,
+                            background: '#ef4444',
+                            color: '#fff',
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: 10,
+                            fontWeight: 800,
+                            padding: '4px 8px',
+                            borderRadius: 8,
+                            letterSpacing: '0.12em',
+                            boxShadow: '0 0 0 1px rgba(255,255,255,0.15) inset',
+                        }}>● LIVE</div>
+                        <div style={{
+                            width: 54,
+                            height: 54,
+                            borderRadius: 18,
+                            margin: '0 auto 10px',
+                            background: 'rgba(255, 255, 255, 0.08)',
+                            border: '1px solid rgba(255, 255, 255, 0.12)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 0 0 1px rgba(0,0,0,0.15) inset',
+                        }}>
+                            <img
+                                src="/gator_gambling_logo.png"
+                                alt="Logo"
+                                style={{ width: '100%', height: '100%', borderRadius: 18, objectFit: 'contain' }}
+                            />
+                        </div>
+                        <h1 style={{
+                            fontFamily: 'var(--font-display)',
+                            fontSize: 66,
+                            lineHeight: 0.95,
+                            letterSpacing: '0.09em',
+                            color: '#ff4b3f',
+                            textAlign: 'center',
+                            marginBottom: 10,
+                            textShadow: '0 0 8px rgba(255, 59, 48, 0.75), 0 0 22px rgba(255, 59, 48, 0.3), 0 0 34px rgba(255, 255, 255, 0.12)',
+                        }}>GATORGAMBLING</h1>
+                        <p style={{
+                            fontSize: 16,
+                            color: 'rgba(255, 255, 255, 0.94)',
+                            textAlign: 'center',
+                            marginBottom: 18,
+                        }}>Chomp at the Bet!</p>
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            gap: 10,
+                            flexWrap: 'wrap',
+                        }}>
+                            {['37% Win Rate', '5K+ Players', 'Live Betting'].map((text, index) => (
+                                <div key={text} style={{
+                                    background: 'rgba(255,255,255,0.12)',
+                                    border: '1px solid rgba(255,255,255,0.12)',
+                                    borderRadius: 10,
+                                    padding: '5px 10px',
+                                    fontSize: 12,
+                                    fontWeight: 800,
+                                    color: '#f7f7f7',
+                                    boxShadow: '0 6px 14px rgba(0,0,0,0.18)',
+                                }}>{text}</div>
+                            ))}
+                        </div>
+                    </div>
+                    {['left', 'right'].map(side => (
+                        <div key={`${side}-small`} style={{
+                            width: 82,
+                            height: 120,
+                            borderRadius: 22,
+                            background: 'linear-gradient(180deg, rgba(255, 196, 77, 0.18), rgba(255, 196, 77, 0.06))',
+                            border: '1px solid rgba(255, 196, 77, 0.32)',
+                            boxShadow: '0 18px 35px rgba(0, 0, 0, 0.28)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transform: side === 'left' ? 'rotate(8deg)' : 'rotate(-8deg)',
+                            position: 'relative',
+                            overflow: 'hidden',
+                            padding: 8,
+                        }}>
+                            <img
+                                src="/world-cup-trophy-hd-png-704081694879209fseti7gv8k.png"
+                                alt="World Cup trophy"
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'contain',
+                                    filter: 'drop-shadow(0 0 12px rgba(244, 194, 93, 0.45))',
+                                }}
+                            />
                         </div>
                     ))}
                 </div>
+
                 <div style={{
-                    display: 'flex', flexDirection: 'column', gap: 12,
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                    gap: 10,
+                    width: 'min(760px, 100%)',
                 }}>
-                    <AuthButton label="CREATE ACCOUNT" primary onClick={onSignUp} />
-                    <AuthButton label="SIGN IN" onClick={onLogin} />
+                    {LANDING_STATS.map((item, index) => (
+                        <div key={item.label} style={{
+                            background: 'rgba(15, 18, 25, 0.85)',
+                            border: '1px solid rgba(255,255,255,0.08)',
+                            borderRadius: 14,
+                            padding: '10px 12px',
+                            boxShadow: '0 16px 40px rgba(0,0,0,0.32)',
+                            minHeight: 104,
+                            position: 'relative',
+                            overflow: 'hidden',
+                        }}>
+                            <div style={{
+                                position: 'absolute',
+                                inset: 0,
+                                background: 'linear-gradient(135deg, rgba(255,255,255,0.05), transparent 40%)',
+                                pointerEvents: 'none',
+                            }} />
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: 8,
+                                marginBottom: 8,
+                            }}>
+                                <div style={{
+                                    fontSize: 11,
+                                    color: 'rgba(255,255,255,0.72)',
+                                    fontWeight: 800,
+                                    letterSpacing: '0.05em',
+                                }}>{item.label}</div>
+                                <div style={{ color: '#86efac' }}>{item.icon}</div>
+                            </div>
+                            <div style={{
+                                fontFamily: 'var(--font-display)',
+                                fontSize: item.value.includes('\n') ? 26 : 28,
+                                lineHeight: 0.9,
+                                color: index === 0 ? '#f5f5f5' : '#f7f7f7',
+                                textAlign: 'center',
+                                textShadow: '0 0 10px rgba(255,255,255,0.08)',
+                                whiteSpace: 'pre-line',
+                            }}>{item.value}</div>
+                            {index === 0 && (
+                                <div style={{
+                                    fontSize: 10,
+                                    color: '#d1d5db',
+                                    marginTop: 6,
+                                    textAlign: 'center',
+                                    fontWeight: 600,
+                                }}>(*Results Not Guaranteed)</div>
+                            )}
+                        </div>
+                    ))}
                 </div>
-                <div style={{ textAlign: 'center', marginTop: 16 }}>
+
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1.4fr 1fr 1fr',
+                    gap: 10,
+                    width: 'min(820px, 100%)',
+                }}>
+                    <div style={{
+                        background: 'rgba(14, 18, 24, 0.88)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: 14,
+                        padding: 12,
+                        boxShadow: '0 16px 40px rgba(0,0,0,0.32)',
+                    }}>
+                        <div style={{
+                            background: '#ef4444',
+                            color: '#fff',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '4px 9px',
+                            borderRadius: 8,
+                            fontSize: 10,
+                            fontWeight: 800,
+                            letterSpacing: '0.08em',
+                            marginBottom: 8,
+                        }}>1000% MATCH BONUS INSIDE!</div>
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            gap: 10,
+                        }}>
+                            <div>
+                                <div style={{
+                                    fontFamily: 'var(--font-display)',
+                                    fontSize: 28,
+                                    color: '#f7f7f7',
+                                    letterSpacing: '0.08em',
+                                }}>CREATE ACCOUNT</div>
+                                <div style={{
+                                    fontSize: 11,
+                                    color: 'rgba(255,255,255,0.72)',
+                                    marginTop: 2,
+                                }}>Unlock live boards, bets, and promos.</div>
+                            </div>
+                            <div style={{
+                                width: 120,
+                                height: 72,
+                                borderRadius: 12,
+                                overflow: 'hidden',
+                                background: 'linear-gradient(135deg, rgba(134, 239, 172, 0.24), rgba(255,255,255,0.04))',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                position: 'relative',
+                            }}>
+                                <img
+                                    src="/bspin-bspin-casino.gif"
+                                    alt="Casino promo gif"
+                                    style={{
+                                        width: '100%',
+                                        height: '100%',
+                                        objectFit: 'cover',
+                                        display: 'block',
+                                    }}
+                                />
+                                <div style={{
+                                    position: 'absolute',
+                                    left: 6,
+                                    bottom: 6,
+                                    background: 'rgba(0,0,0,0.72)',
+                                    color: '#fff',
+                                    fontSize: 9,
+                                    fontWeight: 800,
+                                    letterSpacing: '0.08em',
+                                    padding: '2px 6px',
+                                    borderRadius: 999,
+                                }}>LIVE AD</div>
+                            </div>
+                        </div>
+                    </div>
+                    {LANDING_PROMOS.slice(1).map((promo) => (
+                        <div key={promo.title} style={{
+                            background: 'rgba(14, 18, 24, 0.88)',
+                            border: '1px solid rgba(255,255,255,0.08)',
+                            borderRadius: 14,
+                            padding: 12,
+                            boxShadow: '0 16px 40px rgba(0,0,0,0.32)',
+                        }}>
+                            <div style={{
+                                fontSize: 10,
+                                fontWeight: 800,
+                                color: promo.accent,
+                                letterSpacing: '0.12em',
+                                marginBottom: 6,
+                                textTransform: 'uppercase',
+                            }}>{promo.title}</div>
+                            <div style={{
+                                fontSize: 12,
+                                color: 'rgba(255,255,255,0.84)',
+                                lineHeight: 1.4,
+                            }}>{promo.copy}</div>
+                        </div>
+                    ))}
+                </div>
+
+                <div style={{
+                    width: 'min(420px, 100%)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 12,
+                    marginTop: 4,
+                }}>
+                    <button onClick={onSignUp} style={{
+                        width: '100%',
+                        padding: '16px 20px',
+                        borderRadius: 18,
+                        border: '1px solid rgba(107, 255, 91, 0.35)',
+                        background: 'linear-gradient(180deg, #9bff2a 0%, #6dff16 100%)',
+                        color: '#07110a',
+                        fontFamily: 'var(--font-display)',
+                        fontSize: 22,
+                        letterSpacing: '0.1em',
+                        boxShadow: '0 18px 40px rgba(109, 255, 22, 0.32)',
+                    }}>CREATE ACCOUNT</button>
+                    <button onClick={onLogin} style={{
+                        width: '100%',
+                        padding: '14px 20px',
+                        borderRadius: 18,
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        background: 'rgba(22, 26, 33, 0.96)',
+                        color: '#f7f7f7',
+                        fontFamily: 'var(--font-display)',
+                        fontSize: 22,
+                        letterSpacing: '0.08em',
+                        boxShadow: '0 12px 30px rgba(0,0,0,0.28)',
+                    }}>SIGN IN</button>
+                </div>
+
+                <div style={{ textAlign: 'center' }}>
                     <button onClick={() => window.location.href = '/test_simulation'} style={{
-                        background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', fontSize: 12, fontWeight: 600,
-                        textDecoration: 'underline', textUnderlineOffset: 3,
-                    }}> TRY MATCH SIMULATION</button>
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: '#9bff2a',
+                        fontSize: 12,
+                        fontWeight: 800,
+                        textDecoration: 'underline',
+                        textUnderlineOffset: 3,
+                        letterSpacing: '0.08em',
+                    }}>TRY MATCH SIMULATION</button>
                 </div>
                 <p style={{ 
-                    textAlign: 'center', fontSize: 11, color: 'var(--text-muted)',
-                    marginTop: 28,
+                    textAlign: 'center',
+                    fontSize: 11,
+                    color: 'rgba(255,255,255,0.78)',
+                    marginTop: 8,
                 }}>By continuing, you agree and consent to our Terms and Conditions & Privacy Policy</p>
+                </div>
+            <div style={{
+                position: 'fixed',
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 2,
+                background: 'rgba(7, 10, 16, 0.88)',
+                borderTop: '1px solid rgba(255,255,255,0.08)',
+                boxShadow: '0 -12px 30px rgba(0,0,0,0.32)',
+                overflow: 'hidden',
+                backdropFilter: 'blur(10px)',
+            }}>
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 14,
+                    padding: '8px 14px',
+                    minWidth: 'max-content',
+                    animation: 'ticker-scroll 18s linear infinite',
+                    whiteSpace: 'nowrap',
+                }}>
+                    <span style={{
+                        fontFamily: 'var(--font-display)',
+                        color: '#bbf7d0',
+                        fontSize: 18,
+                        letterSpacing: '0.08em',
+                    }}>RECENT BIG WINS:</span>
+                    {LANDING_TICKER.map((item, index) => (
+                        <span key={`${item}-${index}`} style={{
+                            color: '#ffffff',
+                            fontSize: 14,
+                            fontWeight: 600,
+                        }}>{item}</span>
+                    ))}
+                    {LANDING_TICKER.map((item, index) => (
+                        <span key={`dup-${item}-${index}`} style={{
+                            color: '#ffffff',
+                            fontSize: 14,
+                            fontWeight: 600,
+                        }}>{item}</span>
+                    ))}
+                </div>
+            </div>
         </div>
-    </div>
     );
 }
 
@@ -987,6 +1407,125 @@ function BetGrid({ children }) {
     );
 }
 
+function Top25Rail({ title }) {
+    return (
+        <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 10,
+            marginBottom: 18,
+        }}>
+            <h3 style={{
+                margin: 0,
+                fontFamily: 'var(--font-display)',
+                fontSize: 18,
+                letterSpacing: '0.06em',
+                color: 'var(--text-primary)',
+            }}>{title}</h3>
+            <div style={{
+                display: 'grid',
+                gridAutoFlow: 'column',
+                gridAutoColumns: '178px',
+                gap: 10,
+                overflowX: 'auto',
+                paddingBottom: 4,
+            }}>
+                {FIFA_TOP_25.map((entry, index) => (
+                    <div key={entry.rank} style={{
+                        background: 'var(--bg-card)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 14,
+                        padding: 14,
+                        minHeight: 108,
+                        animation: 'fadeIn 0.4s ease both',
+                        animationDelay: `${index * 0.03}s`,
+                    }}>
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: 10,
+                            marginBottom: 12,
+                        }}>
+                            <div style={{
+                                width: 34,
+                                height: 34,
+                                borderRadius: '50%',
+                                background: 'rgba(198, 241, 53, 0.1)',
+                                border: '1px solid rgba(198, 241, 53, 0.2)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontFamily: 'var(--font-display)',
+                                color: 'var(--accent)',
+                                fontSize: 18,
+                            }}>{entry.rank}</div>
+                            <div style={{
+                                fontSize: 10,
+                                fontWeight: 800,
+                                letterSpacing: '0.08em',
+                                color: 'var(--text-muted)',
+                                textTransform: 'uppercase',
+                            }}>Current</div>
+                        </div>
+                        <div style={{
+                            fontFamily: 'var(--font-display)',
+                            fontSize: 16,
+                            letterSpacing: '0.04em',
+                            color: 'var(--text-primary)',
+                            lineHeight: 1.1,
+                            marginBottom: 10,
+                        }}>{entry.team}</div>
+                        <div style={{
+                            fontSize: 11,
+                            fontFamily: 'var(--font-mono)',
+                            color: 'var(--accent)',
+                            letterSpacing: '0.04em',
+                        }}>{entry.record}</div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function GifAdSlot({ src, alt, label, tall = false }) {
+    return (
+        <div className={`dashboard-ad-slot ${tall ? 'tall' : 'small'}`}>
+            <div style={{
+                position: 'relative',
+                width: '100%',
+                height: '100%',
+                minHeight: tall ? 610 : 230,
+                background: '#111318',
+            }}>
+                <img
+                    src={src}
+                    alt={alt}
+                    style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        display: 'block',
+                    }}
+                />
+                <div style={{
+                    position: 'absolute',
+                    left: 10,
+                    top: 10,
+                    background: 'rgba(0,0,0,0.78)',
+                    color: '#fff',
+                    fontSize: 10,
+                    fontWeight: 800,
+                    letterSpacing: '0.08em',
+                    padding: '4px 8px',
+                    borderRadius: 999,
+                }}>{label}</div>
+            </div>
+        </div>
+    );
+}
+
 // Betting feature: shared heading + grid wrapper for grouped picks sections.
 function PicksSection({ title, children }) {
     return (
@@ -1045,36 +1584,113 @@ function YourPicksTab({playerPicks, teamPicks, gamePicks}){
         <div style={{
             display: 'flex', flexDirection: 'column', gap: 24,
         }}>
-            {playerPickList.length > 0 && (
-                <PicksSection title="PLAYER PICKS">
-                    {playerPickList.map((p, i) => (
-                        <PlayerBetCard key={`player-${p.id || i}`} playerId={p.id} title={p.name} subtitle={`#${p.number}`} meta={p.pos} stake={p.stake} stat={p.stat} range={p.range} statNum={p.stat_num} payoutMult={p.payout_mult} animDelay={`${i*0.05}s`} confirmed />
-                    ))}
-                </PicksSection>
-            )}
-
-            {teamPickList.length > 0 && (
-                <PicksSection title="TEAM PICKS">
-                    {teamPickList.map((t, i) => (
-                        <TeamBetCard key={`team-${t.id || i}`} teamId={t.id} title={t.name} subtitle={t.record} stake={t.stake} outcome={t.outcome} range={t.range} points={t.points} payoutMult={t.payout_mult} animDelay={`${i * 0.05}s`} confirmed />
-                    ))}
-                </PicksSection>
-            )}
-
-            {gamePickList.length > 0 && (
+            <div className="dashboard-layout">
+                <aside className="dashboard-ad-rail">
+                    <GifAdSlot src="/bspin-bspin-casino.gif" alt="Casino promo gif" label="LIVE PROMO" tall />
+                </aside>
                 <div style={{
-                    display: 'flex', flexDirection: 'column', gap: 12,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 24,
                 }}>
-                    <h3 style={{
-                        margin: 0,
-                        fontFamily: 'var(--font-display)',
-                        fontSize: 18,
-                        letterSpacing: '0.06em',
-                        color: 'var(--text-primary)',
-                    }}>GAME PICKS</h3>
-                    <GamesTab games={gamePickList} confirmed />
+                    {playerPickList.length > 0 && (
+                        <PicksSection title="PLAYER PICKS">
+                            {playerPickList.map((p, i) => (
+                                <PlayerBetCard key={`player-${p.id || i}`} playerId={p.id} title={p.name} subtitle={`#${p.number}`} meta={p.pos} stake={p.stake} stat={p.stat} range={p.range} statNum={p.stat_num} payoutMult={p.payout_mult} animDelay={`${i*0.05}s`} confirmed />
+                            ))}
+                        </PicksSection>
+                    )}
+
+                    {teamPickList.length > 0 && (
+                        <PicksSection title="TEAM PICKS">
+                            {teamPickList.map((t, i) => (
+                                <TeamBetCard key={`team-${t.id || i}`} teamId={t.id} title={t.name} subtitle={t.record} stake={t.stake} outcome={t.outcome} range={t.range} points={t.points} payoutMult={t.payout_mult} animDelay={`${i * 0.05}s`} confirmed />
+                            ))}
+                        </PicksSection>
+                    )}
+
+                    {gamePickList.length > 0 && (
+                        <div style={{
+                            display: 'flex', flexDirection: 'column', gap: 12,
+                        }}>
+                            <h3 style={{
+                                margin: 0,
+                                fontFamily: 'var(--font-display)',
+                                fontSize: 18,
+                                letterSpacing: '0.06em',
+                                color: 'var(--text-primary)',
+                            }}>GAME PICKS</h3>
+                            <GamesTab games={gamePickList} confirmed />
+                        </div>
+                    )}
+
+                    <div style={{
+                        background: 'rgba(14, 18, 24, 0.9)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: 16,
+                        overflow: 'hidden',
+                        boxShadow: '0 16px 40px rgba(0,0,0,0.32)',
+                    }}>
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'minmax(220px, 320px) minmax(0, 1fr)',
+                            alignItems: 'stretch',
+                        }}>
+                            <div style={{
+                                minHeight: 150,
+                                background: '#111318',
+                            }}>
+                                <img
+                                    src="/ja%CC%88rvinen-jarvis.gif"
+                                    alt="Banner ad gif"
+                                    style={{
+                                        width: '100%',
+                                        height: '100%',
+                                        objectFit: 'cover',
+                                        display: 'block',
+                                    }}
+                                />
+                            </div>
+                            <div style={{
+                                padding: 18,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'center',
+                                gap: 8,
+                            }}>
+                                <div style={{
+                                    display: 'inline-flex',
+                                    alignSelf: 'flex-start',
+                                    background: '#ef4444',
+                                    color: '#fff',
+                                    fontSize: 10,
+                                    fontWeight: 800,
+                                    letterSpacing: '0.1em',
+                                    padding: '4px 8px',
+                                    borderRadius: 999,
+                                }}>BOTTOM BANNER</div>
+                                <div style={{
+                                    fontFamily: 'var(--font-display)',
+                                    fontSize: 28,
+                                    letterSpacing: '0.06em',
+                                    color: 'var(--text-primary)',
+                                    lineHeight: 1,
+                                }}>LOCK IN THE NEXT SLIP</div>
+                                <p style={{
+                                    margin: 0,
+                                    fontSize: 13,
+                                    color: 'var(--text-secondary)',
+                                    lineHeight: 1.5,
+                                }}>Extra banner placement for the picks board. Different gif, different slot, less dead space.</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            )}
+                <aside className="dashboard-ad-rail">
+                    <GifAdSlot src="/cat-gamble.gif" alt="Cat gambling gif" label="HOT SLOT" />
+                    <GifAdSlot src="/dodep2.gif" alt="Promo gif" label="ODDS BOOST" />
+                </aside>
+            </div>
         </div>
     );
 }
@@ -1082,23 +1698,35 @@ function YourPicksTab({playerPicks, teamPicks, gamePicks}){
 // Betting feature: available Player bets listing.
 function PlayersTab({players, availableCredits, onPlaceBet}){
     return(
-        <BetGrid>
-            {players.map((p, i) => (
-                <PlayerBetCard key={p.id} playerId={p.id} title={p.name} subtitle={`#${p.number}`} meta={p.pos} stake={p.stake} stat={p.stat} range={p.range} statNum={p.stat_num} payoutMult={p.payout_mult} animDelay={`${i*0.05}s`} availableCredits={availableCredits} onPlaceBet={onPlaceBet} />
- 
+        <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 18,
+        }}>
+            <BetGrid>
+                {players.map((p, i) => (
+                    <PlayerBetCard key={p.id} playerId={p.id} title={p.name} subtitle={`#${p.number}`} meta={p.pos} stake={p.stake} stat={p.stat} range={p.range} statNum={p.stat_num} payoutMult={p.payout_mult} animDelay={`${i*0.05}s`} availableCredits={availableCredits} onPlaceBet={onPlaceBet} />
                 ))}
-        </BetGrid>
+            </BetGrid>
+        </div>
     );
 }
 
 // Betting feature: available Team bets listing.
 function TeamsTab({teams, availableCredits, onPlaceBet}){
     return(
-        <BetGrid>
-            {teams.map((t, i) =>(
-                    <TeamBetCard key={t.id} teamId={t.id} title={t.name} subtitle={t.record} stake={t.stake} outcome={t.outcome} range={t.range} points={t.points} payoutMult={t.payout_mult} animDelay={`${i * 0.05}s`} availableCredits={availableCredits} onPlaceBet={onPlaceBet}/>
-            ))}
-        </BetGrid>
+        <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 18,
+        }}>
+            <Top25Rail title="TOP 25 TEAMS" />
+            <BetGrid>
+                {teams.map((t, i) =>(
+                        <TeamBetCard key={t.id} teamId={t.id} title={t.name} subtitle={t.record} stake={t.stake} outcome={t.outcome} range={t.range} points={t.points} payoutMult={t.payout_mult} animDelay={`${i * 0.05}s`} availableCredits={availableCredits} onPlaceBet={onPlaceBet}/>
+                ))}
+            </BetGrid>
+        </div>
     );
 }
 
@@ -1512,7 +2140,7 @@ function Dashboard({username, players, playerPicks, teams, teamPicks, games, gam
                     <h2 style={{
                         fontFamily: 'var(--font-display)', fontSize: 32, letterSpacing: '0.06em', color: 'var(--text-primary)',
                     }}>
-                        {TAB_CONFIG.find(t => t.key === activeTab)?.label.toUpperCase()}
+                            {TAB_CONFIG.find(t => t.key === activeTab)?.label.toUpperCase()}
                     </h2>
                     {activeTab !== TABS.PICKS && activeTab !== TABS.LIVE && (
                         <p style={{
