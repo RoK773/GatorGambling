@@ -3000,6 +3000,30 @@ export default function App(){
         }
     }, []);
 
+    const loadActiveBets = useCallback(async () => {
+        const [playerRes, teamRes, gameRes] = await Promise.all([
+            fetch('/api/player-bets', { method: 'GET' }),
+            fetch('/api/team-bets', { method: 'GET' }),
+            fetch('/api/game-bets', { method: 'GET' }),
+        ]);
+
+        const [playerData, teamData, gameData] = await Promise.all([
+            playerRes.json().catch(() => ({})),
+            teamRes.json().catch(() => ({})),
+            gameRes.json().catch(() => ({})),
+        ]);
+
+        if (!playerRes.ok || !teamRes.ok || !gameRes.ok) {
+            throw new Error(
+                playerData.error || teamData.error || gameData.error || 'Unable to load active bets right now.',
+            );
+        }
+
+        setPlayers(Array.isArray(playerData.players) ? playerData.players.map(mapPlayerBetToPlayerCard) : []);
+        setTeams(Array.isArray(teamData.teams) ? teamData.teams.map(mapTeamBetToTeamCard) : []);
+        setGames(Array.isArray(gameData.games) ? gameData.games.map(mapGameBetToGameRow) : []);
+    }, []);
+
     // Betting feature: shared success-banner trigger for Player/Team bet placement.
     const triggerBetSuccessBanner = useCallback(() => {
         setShowBetSuccessBanner(true);
@@ -3471,6 +3495,15 @@ export default function App(){
                 return;
             }
 
+            if (isModerator) {
+                try {
+                    await loadActiveBets();
+                } catch (error) {
+                    console.error('Failed to refresh active bets after approval:', error);
+                }
+                return;
+            }
+
             if (activeTab === TABS.PLAYERS){
                 setActiveTab(null);
                 setTimeout(() => setActiveTab(TABS.PLAYERS), 0);
@@ -3485,7 +3518,7 @@ export default function App(){
             console.error('Approval network error:', error);
             loadPendingProposals();
         }
-    }, [activeTab, loadPendingProposals]);
+    }, [activeTab, isModerator, loadActiveBets, loadPendingProposals]);
 
     const handleDeclineProposal = useCallback(async (id) => {
         setProposals(prev => prev.filter(p => p.id !== id));
@@ -3567,6 +3600,25 @@ export default function App(){
         }
         loadPendingProposals();
     }, [isModerator, screen, loadPendingProposals]);
+
+    // Moderator dashboard uses its own local tabs, so load all active bet pools on entry.
+    useEffect(() => {
+        if (screen !== SCREENS.DASHBOARD || !isModerator) {
+            return;
+        }
+
+        let isCancelled = false;
+
+        loadActiveBets().catch((error) => {
+            if (!isCancelled) {
+                console.error('Failed to refresh moderator bets:', error);
+            }
+        });
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [isModerator, loadActiveBets, screen]);
 
     useEffect(() => {
         const usernames = CHAT_USER_ROSTER;
