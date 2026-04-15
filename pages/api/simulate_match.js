@@ -1,7 +1,32 @@
 import fs from 'fs';
 import path from 'path';
+import dns from 'dns';
+import { MongoClient, ServerApiVersion } from 'mongodb';
 //const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434'; //  local Ollama server
 const OLLAMA_URL = process.env.OLLAMA_URL || 'https://lakia-semifuturistic-unbecomingly.ngrok-free.dev';
+
+dns.setServers(['8.8.8.8', '8.8.4.4']);
+
+const uri = process.env.MONGODB_URI || 'mongodb+srv://admin:admin1Password@cluster0.9uypigw.mongodb.net/?appName=Cluster0';
+const dbName = process.env.MONGODB_SOCCER_DB || 'Soccer_Data';
+const collectionName = process.env.MONGODB_CURRENT_GAME_DATA_COLLECTION || 'Current_game_data';
+
+const options = {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  },
+};
+
+let clientPromise;
+
+if (!global._mongoClientPromise) {
+  const client = new MongoClient(uri, options);
+  global._mongoClientPromise = client.connect();
+}
+
+clientPromise = global._mongoClientPromise;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -193,6 +218,21 @@ Rules:
     if (homeGoals > awayGoals) result.winner = 'home';
     else if (awayGoals > homeGoals) result.winner = 'away';
     else result.winner = 'draw';
+
+    // Add data from each completed simulation to Soccer_Data.Current_game_data.
+    const client = await clientPromise;
+    const currentGameData = client.db(dbName).collection(collectionName);
+
+    await currentGameData.insertOne({
+      homeTeam: home.name,
+      awayTeam: away.name,
+      score: result.score || null,
+      ball_possession: result.ball_possession || null,
+      fouls: result.fouls || null,
+      winner: result.winner || null,
+      match_events: Array.isArray(result.match_events) ? result.match_events : [],
+      createdAt: new Date(),
+    });
 
     return res.status(200).json(result);
   } catch (err) {
