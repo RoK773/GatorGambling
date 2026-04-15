@@ -1,5 +1,6 @@
 // A means for users to create proposal stakes to be sent to the moderator dashboard
 import {useState, useEffect, useRef, useCallback } from 'react';
+import worldcupData from '../data/worldcup2022.json';
 const PLAYER_STATS = ['Goals', 'Assists', 'Fouls', 'Shots on Target', 'Saves', 'Minutes Played'];
 const COMPARATORS = ['Over', 'Under', 'Exactly'];
 const TEAM_RESULTS = ['Wins', 'Losses', 'Draws'];
@@ -348,7 +349,7 @@ function ModalField({label, value, onChange, placeholder, type='text'}) {
 }
 
 // yippie main export (make it a thing)
-export default function ProposalForm({onSubmit}) {
+export default function ProposalForm({onSubmit, username}) {
     // define constants
     const [open, setOpen] = useState(false);
     const [category, setCategory] = useState('Player');
@@ -364,7 +365,7 @@ export default function ProposalForm({onSubmit}) {
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
-    // fetch player list from /api/player-bets
+    // load player list from bundled world cup data
     useEffect(() => {
         if (!open){
             return;
@@ -372,28 +373,31 @@ export default function ProposalForm({onSubmit}) {
         if (playerOptions.length > 0){
             return;
         }
-        let cancelled = false;
         setLoadingPlayers(true);
-        fetch('/api/player-bets')
-            .then(r => r.json())
-            .then(data => {
-                if (cancelled){
-                    return;
-                }
-                if (Array.isArray(data.players)){
-                    setPlayerOptions(data.players.map(p => ({
-                        id: p.id,
-                        label: p.name,
-                        hint: `#${p.number} · ${p.pos}`,
-                        number: p.number,
-                        team: p.pos,
-                        raw: p,
-                    })));
-                }
-            })
-    .catch(err => console.error('Failed to load player options:', err))
-    .finally(() => {if (!cancelled) setLoadingPlayers(false); });
-    return () => {cancelled = true;};
+        try {
+            const teams = Array.isArray(worldcupData?.teams) ? worldcupData.teams : [];
+            const players = teams.flatMap(team => {
+                const teamName = String(team?.name || '').trim() || 'Unknown Team';
+                const teamPlayers = Array.isArray(team?.players) ? team.players : [];
+                return teamPlayers.map((player, playerIndex) => {
+                    const playerName = String(player?.name || '').trim() || 'Unknown Player';
+                    const id = `${team?.id ?? 'team'}-${playerIndex}-${playerName}`;
+                    return {
+                        id,
+                        label: playerName,
+                        hint: `#1 · ${teamName}`,
+                        number: '1',
+                        team: teamName,
+                        raw: player,
+                    };
+                });
+            });
+            setPlayerOptions(players);
+        } catch (err) {
+            console.error('Failed to load player options from worldcup2022.json:', err);
+        } finally {
+            setLoadingPlayers(false);
+        }
 }, [open, playerOptions.length]);
 
 // fetch teams list 
@@ -404,27 +408,26 @@ useEffect(() => {
     if (teamOptions.length > 0){
         return;
     }
-    let cancelled = false;
     setLoadingTeams(true);
-    fetch('/api/team-bets')
-        .then(r => r.json())
-        .then(data => {
-            if (cancelled){
-                return;
-            }
-            if (Array.isArray(data.teams)){
-                setTeamOptions(data.teams.map(t => ({
-                    id: t.id, 
-                    label: t.name,
-                    hint: `Record: ${t.record}`,
-                    record: t.record,
-                    raw: t,
-                })));
-            }
-        })
-        .catch(err => console.error('Failed to load team options:', err))
-        .finally(() => { if (!cancelled) setLoadingTeams(false); });
-    return () => {cancelled = true;};
+    try {
+        const teams = Array.isArray(worldcupData?.teams) ? worldcupData.teams : [];
+        setTeamOptions(teams.map(team => {
+            const group = String(team?.group || '').trim() || '-';
+            const placement = Number.isFinite(Number(team?.placement)) ? Number(team.placement) : null;
+            const record = placement !== null ? `Group ${group} / Place ${placement}` : `Group ${group}`;
+            return {
+                id: String(team?.id ?? '').trim() || String(team?.name || '').trim(),
+                label: String(team?.name || '').trim() || 'Unknown Team',
+                hint: record,
+                record,
+                raw: team,
+            };
+        }));
+    } catch (err) {
+        console.error('Failed to load team options from worldcup2022.json:', err);
+    } finally {
+        setLoadingTeams(false);
+    }
     }, [open, teamOptions.length]);
 
     // helpers
@@ -477,7 +480,7 @@ useEffect(() => {
             playerData: category === 'Player' && selectedPlayer ? {
                 playerId: selectedPlayer.id,
                 name: selectedPlayer.label,
-                number: selectedPlayer.number,
+                number: '1',
                 team: selectedPlayer.team,
             } : undefined,
             teamData: category === 'Team' && selectedTeam ? {

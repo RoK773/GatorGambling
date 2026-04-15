@@ -2,6 +2,7 @@
 // this document will sit until either moderator approval or declination - no credits are deducted at proposal time
 import dns from 'dns';
 import {MongoClient, ServerApiVersion} from 'mongodb';
+import worldcupData from '../../data/worldcup2022.json';
 
 // force node's dns resolver to use google's public servers 
 dns.setServers(['8.8.8.8', '8.8.4.4']);
@@ -27,6 +28,18 @@ if (!global._mongoClientPromise){
 }
 
 clientPromise = global._mongoClientPromise;
+
+function getWorldCupTeamMeta(teamData) {
+    const teams = Array.isArray(worldcupData?.teams) ? worldcupData.teams : [];
+    const incomingId = String(teamData?.teamId || '').trim();
+    const incomingCountry = String(teamData?.country || '').trim().toLowerCase();
+
+    return teams.find(team => {
+        const teamId = String(team?.id ?? '').trim();
+        const teamName = String(team?.name || '').trim().toLowerCase();
+        return (incomingId && incomingId === teamId) || (incomingCountry && incomingCountry === teamName);
+    }) || null;
+}
 
 export default async function handler(req, res){
     // only accept POST - proposals are write operations
@@ -62,7 +75,7 @@ export default async function handler(req, res){
         document.playerData={
             playerId: String(playerData.playerId).trim(),
             name: String(playerData.name || '').trim() || 'Unknown Player',
-            number: String(playerData.number || '').trim() || '--',
+            number: '1',
             team: String(playerData.team || '').trim() || 'N/A',
             stat: String(condition?.statType || '').trim() || '--',
             range: String(condition?.comparator || '').trim() || '--',
@@ -74,10 +87,17 @@ export default async function handler(req, res){
         if (!teamData?.teamId){
             return res.status(400).json({error: 'A team must be selected from the dropdown.'});
         }
+        const matchedTeam = getWorldCupTeamMeta(teamData);
+        const group = String(matchedTeam?.group || '').trim();
+        const placement = Number.isFinite(Number(matchedTeam?.placement)) ? Number(matchedTeam.placement) : null;
+        const normalizedRecord = placement !== null
+            ? `Group ${group || '-'} / Place ${placement}`
+            : (group ? `Group ${group}` : (String(teamData.record || '').trim() || '--'));
+
         document.teamData ={
             teamId: String(teamData.teamId || '').trim(),
-            country: String(teamData.country || '').trim() || 'Unknown Team',
-            record: String(teamData.record || '').trim() || '--',
+            country: String(matchedTeam?.name || teamData.country || '').trim() || 'Unknown Team',
+            record: normalizedRecord,
             outcome: String(condition?.result || '' ).trim() || '--',
             range: String(condition?.marginType || '').trim() || '--',
             points: condition?.condVal ?? null,

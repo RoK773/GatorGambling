@@ -2901,7 +2901,7 @@ export default function App(){
             const response = await fetch('/api/cancel-bet', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/JSON'},
-                body: JSON.stringify({type, betId: id}),
+                body: JSON.stringify({type, betId: id, canceledBy: username}),
             });
 
             if (!response.ok){
@@ -2911,7 +2911,7 @@ export default function App(){
         } catch (error){
             console.error('Cancel stake network error:', error);
         }
-    }, []);
+    }, [username]);
 
     const handleNewMessage = useCallback((msg) =>{
         if (!msg || typeof msg !== 'object') {
