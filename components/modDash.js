@@ -418,10 +418,10 @@ function ModItemCard({title, subtitle, meta, stake, index, onCancel}) {
                 <button onClick={onCancel} style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', padding: '10px',
                     borderRadius: 8, border: '1px solid rgba(255, 71, 87, 0.3)', color: 'var(--danger)', fontSize: 12,
-                    fontWeight: 700, letterSpacing: '0.06em', cursor: 'pointer', transition: 'all 0.2s',
+                    fontWeight: 700, letterSpacing: '0.06em', cursor: 'pointer', transition: 'all 0.2s', background: 'transparent',
                 }}
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(255, 71, 87, 0.18)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 71, 87, 0.08)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
                 <Icon.Ban/>CANCEL STAKE 
             </button>
