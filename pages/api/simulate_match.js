@@ -219,9 +219,11 @@ Rules:
     else if (awayGoals > homeGoals) result.winner = 'away';
     else result.winner = 'draw';
 
-    // Add data from each completed simulation to Soccer_Data.Current_game_data.
+    // Replace stored game data: clear Current_game_data, then store only this latest simulation.
     const client = await clientPromise;
     const currentGameData = client.db(dbName).collection(collectionName);
+
+    await currentGameData.deleteMany({});
 
     await currentGameData.insertOne({
       homeTeam: home.name,
