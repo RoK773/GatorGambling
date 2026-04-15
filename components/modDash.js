@@ -1,6 +1,7 @@
 // sets up the moderator dashboard - will be rendered in place of the standard dashboard when the user role is set to moderator
 import {useState} from 'react';
 import ConfirmModal from './confirmModal';
+import MatchSimulationPanel from './matchSimulationPanel';
 
 // drawing icons - style only 
 const Icon = {
@@ -455,26 +456,16 @@ function ModLiveTab({chatMessages, onDeleteMessage, onNewMessage, username}) {
     };
 
     return (
-        // general page setup for mod (adds header)
+        // general page setup for mod (simulation + global chat moderation)
         <div style={{
             display: 'flex',  flexDirection: 'row', gap: 16, alignItems: 'flex-start', animation: 'fadeIn 0.4s ease',
         }}>
             <div style={{
                 flex: '0 0 72%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                minHeight: 520, gap: 16, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: 32,
+                minHeight: 520, gap: 16, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14,
+                padding: 24, overflowY: 'auto',
             }}>
-                <div style={{
-                    width: 72, height: 72, borderRadius: '50%', background: 'rgba(198, 241, 53, 0.08)',
-                    border: '1px solid rgba(198, 241, 53, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                    <Icon.Shield />
-                </div>
-                <h3 style={{
-                    fontFamily: 'var(--font-display)', fontSize: 24, letterSpacing: '0.06em', color: 'var(--text-primary)',
-                }}>MODERATION VIEW</h3>
-                <p style={{
-                    fontSize: 14, color: 'var(--text-secondary)', textAlign: 'center', maxWidth: 300,
-                }}>Monitor the global chat and remove any inappropriate messages.</p>
+                <MatchSimulationPanel />
             </div>
             <div style={{
                 flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg-card)', border: '1px solid var(--border)',
