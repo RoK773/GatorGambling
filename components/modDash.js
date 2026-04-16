@@ -121,6 +121,20 @@ function saveBracketSession(session) {
     }
 }
 
+async function replaceStoredBracket(bracketState) {
+    try {
+        await fetch('/api/bracket', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ bracketState }),
+        });
+    } catch {
+        // ignore persistence errors so moderator flow keeps working
+    }
+}
+
 function createBracketMatch(roundIndex, matchIndex, home = null, away = null) {
     return {
         id: `${roundIndex}-${matchIndex}`,
@@ -1043,15 +1057,41 @@ export default function ModDash({
     const {confirm, modal} = useConfirm();
 
     useEffect(() => {
-        const session = loadBracketSession();
-        if (session) {
-            if (session.bracketState) {
+        let isMounted = true;
+
+        const initializeBracket = async () => {
+            const session = loadBracketSession();
+
+            if (session?.bracketState) {
+                if (!isMounted) {
+                    return;
+                }
+
                 setBracketState(session.bracketState);
+                setSelectedMatch(session.selectedMatch || null);
+                setSimulationState(session.simulationState || null);
+                setHasLoadedBracketSession(true);
+                return;
             }
-            setSelectedMatch(session.selectedMatch || null);
-            setSimulationState(session.simulationState || null);
-        }
-        setHasLoadedBracketSession(true);
+
+            const generatedBracket = createBracketState(BRACKET_TEAMS);
+            if (!isMounted) {
+                return;
+            }
+
+            setBracketState(generatedBracket);
+            void replaceStoredBracket(generatedBracket);
+
+            setSelectedMatch(session?.selectedMatch || null);
+            setSimulationState(session?.simulationState || null);
+            setHasLoadedBracketSession(true);
+        };
+
+        void initializeBracket();
+
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     useEffect(() => {
@@ -1067,10 +1107,12 @@ export default function ModDash({
     }, [bracketState, hasLoadedBracketSession, selectedMatch, simulationState]);
 
     const handleShuffleBracket = () => {
-        setBracketState(createBracketState(BRACKET_TEAMS));
+        const generatedBracket = createBracketState(BRACKET_TEAMS);
+        setBracketState(generatedBracket);
         setSelectedMatch(null);
         setSimulationState(null);
         setActiveTab(MOD_TABS.BRACKET);
+        void replaceStoredBracket(generatedBracket);
     };
 
     const handleSelectBracketMatch = ({roundIndex, matchIndex, match}) => {
@@ -1094,7 +1136,13 @@ export default function ModDash({
             return;
         }
 
-        setBracketState(prev => advanceBracketState(prev, selectedMatch, result));
+        setBracketState(prev => {
+            const nextBracketState = advanceBracketState(prev, selectedMatch, result);
+            if (nextBracketState !== prev) {
+                void replaceStoredBracket(nextBracketState);
+            }
+            return nextBracketState;
+        });
         setSimulationState({
             matchId: selectedMatch.matchId,
             homeTeam,
