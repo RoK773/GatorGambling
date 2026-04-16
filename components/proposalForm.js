@@ -7,6 +7,26 @@ const TEAM_RESULTS = ['Wins', 'Losses', 'Draws'];
 const MARGIN_TYPES = ['By More Than', 'By Less Than', 'By Exactly'];
 const CATEGORIES = ['Player', 'Team', 'Game'];
 
+function getNextBracketMatch(bracketState) {
+    const rounds = Array.isArray(bracketState?.rounds) ? bracketState.rounds : [];
+    for (let roundIndex = 0; roundIndex < rounds.length; roundIndex += 1) {
+        const matches = Array.isArray(rounds[roundIndex]?.matches) ? rounds[roundIndex].matches : [];
+        for (let matchIndex = 0; matchIndex < matches.length; matchIndex += 1) {
+            const match = matches[matchIndex];
+            if (match?.home && match?.away && !match?.winner) {
+                return {
+                    roundIndex,
+                    matchIndex,
+                    matchId: match.id,
+                    home: match.home,
+                    away: match.away,
+                };
+            }
+        }
+    }
+    return null;
+}
+
 // tiny selection - allows for dropdown selection
 function PillSelect({value, onChange, options, minWidth = 100, disabled = false}) {
     return (
@@ -56,8 +76,7 @@ function SearchableDropdown({items, onSelect, placeholder = 'Search...', loading
 
     // filter item list to whose label contains the input string
     const filtered = items
-        .filter(item => item.label.toLowerCase().includes(query.toLowerCase()))
-        .slice(0, 8);
+        .filter(item => item.label.toLowerCase().includes(query.toLowerCase()));
 
     // close dropdown when user clicks outside of the component
     useEffect(() => {
@@ -326,7 +345,7 @@ function GameConditionBuilder({value, onChange, homeTeam, awayTeam}) {
 }
 
 // sub components (formatting)
-function ModalField({label, value, onChange, placeholder, type='text'}) {
+function ModalField({label, value, onChange, placeholder, type='text', disabled = false}) {
     return (
         <div style={{
             marginBottom: 14,
@@ -334,10 +353,15 @@ function ModalField({label, value, onChange, placeholder, type='text'}) {
             <label style={{
                 display: 'block', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6,
             }}>{label}</label>
-            <input type={type} value={value} onChange={onChange} placeholder={placeholder} style={{
-                width: '100%', boxSizing: 'border-box', background: 'var(--bg-secondary)', borderRadius: 9,
+            <input type={type} value={value} onChange={onChange} placeholder={placeholder} disabled={disabled} style={{
+                width: '100%', boxSizing: 'border-box', background: disabled ? 'var(--bg-primary)' : 'var(--bg-secondary)', borderRadius: 9,
                 padding: '11px 14px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', transition: 'border-color 0.2s, box-shadow 0.2s',
+                opacity: disabled ? 0.7 : 1,
+                cursor: disabled ? 'not-allowed' : 'text',
             }} onFocus={e => {
+                if (disabled) {
+                    return;
+                }
                 e.target.style.borderColor = 'var(--accent)';
                 e.target.style.boxShadow = '0 0 0 3px var(--accent-glow)';
             }} onBlur ={e => {
@@ -364,19 +388,70 @@ export default function ProposalForm({onSubmit, username}) {
     const [submitted, setSubmitted] = useState(false);
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [nextMatch, setNextMatch] = useState(null);
+    const [loadingNextMatch, setLoadingNextMatch] = useState(false);
+
+    const allowedTeamNames = new Set(
+        [nextMatch?.home?.name, nextMatch?.away?.name]
+            .map(name => String(name || '').trim())
+            .filter(Boolean),
+    );
+
+    // load next bracket match so proposals are limited to the current game.
+    useEffect(() => {
+        if (!open) {
+            return;
+        }
+
+        let cancelled = false;
+
+        const loadNextMatch = async () => {
+            setLoadingNextMatch(true);
+            try {
+                const response = await fetch('/api/bracket');
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || cancelled) {
+                    return;
+                }
+
+                const upcomingMatch = getNextBracketMatch(data?.bracket?.bracketState);
+                if (!cancelled) {
+                    setNextMatch(upcomingMatch);
+                }
+            } catch {
+                if (!cancelled) {
+                    setNextMatch(null);
+                }
+            } finally {
+                if (!cancelled) {
+                    setLoadingNextMatch(false);
+                }
+            }
+        };
+
+        void loadNextMatch();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [open]);
 
     // load player list from bundled world cup data
     useEffect(() => {
-        if (!open){
+        if (!open || !nextMatch){
             return;
         }
-        if (playerOptions.length > 0){
-            return;
-        }
+
         setLoadingPlayers(true);
         try {
             const teams = Array.isArray(worldcupData?.teams) ? worldcupData.teams : [];
-            const players = teams.flatMap(team => {
+            const playableTeamNames = new Set(
+                [nextMatch?.home?.name, nextMatch?.away?.name]
+                    .map(name => String(name || '').trim())
+                    .filter(Boolean),
+            );
+            const eligibleTeams = teams.filter(team => playableTeamNames.has(String(team?.name || '').trim()));
+            const filteredPlayers = eligibleTeams.flatMap(team => {
                 const teamName = String(team?.name || '').trim() || 'Unknown Team';
                 const teamPlayers = Array.isArray(team?.players) ? team.players : [];
                 return teamPlayers.map((player, playerIndex) => {
@@ -392,26 +467,28 @@ export default function ProposalForm({onSubmit, username}) {
                     };
                 });
             });
-            setPlayerOptions(players);
+            setPlayerOptions(filteredPlayers);
         } catch (err) {
             console.error('Failed to load player options from worldcup2022.json:', err);
         } finally {
             setLoadingPlayers(false);
         }
-}, [open, playerOptions.length]);
+    }, [open, nextMatch]);
 
 // fetch teams list 
 useEffect(() => {
-    if (!open) {
-        return;
-    }
-    if (teamOptions.length > 0){
+    if (!open || !nextMatch) {
         return;
     }
     setLoadingTeams(true);
     try {
         const teams = Array.isArray(worldcupData?.teams) ? worldcupData.teams : [];
-        setTeamOptions(teams.map(team => {
+        const playableTeamNames = new Set(
+            [nextMatch?.home?.name, nextMatch?.away?.name]
+                .map(name => String(name || '').trim())
+                .filter(Boolean),
+        );
+        setTeamOptions(teams.filter(team => playableTeamNames.has(String(team?.name || '').trim())).map(team => {
             const group = String(team?.group || '').trim() || '-';
             const placement = Number.isFinite(Number(team?.placement)) ? Number(team.placement) : null;
             const record = placement !== null ? `Group ${group} / Place ${placement}` : `Group ${group}`;
@@ -428,7 +505,19 @@ useEffect(() => {
     } finally {
         setLoadingTeams(false);
     }
-    }, [open, teamOptions.length]);
+    }, [open, nextMatch]);
+
+    useEffect(() => {
+        if (!nextMatch) {
+            return;
+        }
+
+        setGameFields(prev => ({
+            ...prev,
+            homeTeam: String(nextMatch?.home?.name || '').trim(),
+            awayTeam: String(nextMatch?.away?.name || '').trim(),
+        }));
+    }, [nextMatch]);
 
     // helpers
 
@@ -452,11 +541,29 @@ useEffect(() => {
         setSelectedTeam(null);
         setCondition({});
         setError('');
+        if (cat === 'Game') {
+            setGameFields(prev => ({
+                ...prev,
+                homeTeam: String(nextMatch?.home?.name || '').trim(),
+                awayTeam: String(nextMatch?.away?.name || '').trim(),
+            }));
+        }
     };
 
     // submission
     const handleSubmit = async () => {
         setError('');
+
+        if (loadingNextMatch) {
+            setError('Loading current bracket matchup. Please wait a moment.');
+            return;
+        }
+
+        if (!nextMatch) {
+            setError('No current bracket matchup is available for proposals right now.');
+            return;
+        }
+
         if (category === 'Player' && !selectedPlayer){
             setError('Please select a player from the dropdown before submitting.');
             return;
@@ -466,10 +573,26 @@ useEffect(() => {
             return;
         }
         if (category === 'Game'){
-            if (!gameFields.homeTeam.trim() || !gameFields.awayTeam.trim()){
-                setError('Please fill in both the Home Team and the Away Team fields.');
+            const normalizedHome = gameFields.homeTeam.trim();
+            const normalizedAway = gameFields.awayTeam.trim();
+            if (!normalizedHome || !normalizedAway){
+                setError('Current game matchup is not available yet.');
                 return;
             }
+            if (!allowedTeamNames.has(normalizedHome) || !allowedTeamNames.has(normalizedAway)) {
+                setError('Game proposals must use the current bracket matchup teams only.');
+                return;
+            }
+        }
+
+        if (category === 'Player' && selectedPlayer && !allowedTeamNames.has(String(selectedPlayer.team || '').trim())) {
+            setError('Player proposals are limited to players in the current bracket matchup.');
+            return;
+        }
+
+        if (category === 'Team' && selectedTeam && !allowedTeamNames.has(String(selectedTeam.label || '').trim())) {
+            setError('Team proposals are limited to teams in the current bracket matchup.');
+            return;
         }
         
         // proposal payload
@@ -558,6 +681,23 @@ useEffect(() => {
                     fontSize: 13, color: 'var(--text-secondary)', marginBottom: 22, lineHeight: 1.5,
                 }}>Submit your idea to GatorGambling for moderator approval.</p>
                 <div style={{
+                    marginBottom: 14,
+                    padding: '10px 12px',
+                    borderRadius: 8,
+                    border: '1px solid var(--border)',
+                    background: 'var(--bg-secondary)',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 11,
+                    letterSpacing: '0.06em',
+                    color: 'var(--text-secondary)',
+                }}>
+                    {loadingNextMatch
+                        ? 'CURRENT MATCHUP: LOADING...'
+                        : nextMatch
+                        ? `CURRENT MATCHUP: ${nextMatch.home?.name || 'HOME'} VS ${nextMatch.away?.name || 'AWAY'}`
+                        : 'CURRENT MATCHUP: NOT AVAILABLE'}
+                </div>
+                <div style={{
                     marginBottom: 18,
                 }}>
                     {/*Define categories for betting / betCat <-- for ctrl+F scrubbing */}
@@ -590,7 +730,7 @@ useEffect(() => {
                                 display: 'block', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6,
                             }}>Player Name</label>
                             <SearchableDropdown items={playerOptions} onSelect={item => {setSelectedPlayer(item); setCondition({});}}
-                            placeholder="Search players..." loading={loadingPlayers} disabled={loadingPlayers} />
+                            placeholder="Search players..." loading={loadingPlayers} disabled={loadingPlayers || !nextMatch} />
                             </div>
                             {selectedPlayer && (
                                 <div style={{
@@ -618,7 +758,7 @@ useEffect(() => {
                                         display: 'block', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6,
                                     }}>Team Name</label>
                                     <SearchableDropdown items={teamOptions} onSelect={item => {setSelectedTeam(item); setCondition({});}}
-                                    placeholder="Search teams..." loading={loadingTeams} disabled={loadingTeams} />
+                                    placeholder="Search teams..." loading={loadingTeams} disabled={loadingTeams || !nextMatch} />
                                     </div>
                                     {selectedTeam && (
                                         <div style={{
@@ -638,8 +778,8 @@ useEffect(() => {
                             <div style={{
                                 background: 'var(--bg-secondary)', borderRadius: 12, padding: '18px 16px', marginBottom: 14, border: '1px solid var(--border)',
                             }}>
-                                <ModalField label="Home Team" value={gameFields.homeTeam} onChange={e => setGameFields(p => ({ ...p, homeTeam: e.target.value}))} placeholder="e.g. Canada" />
-                                <ModalField label="Away Team" value={gameFields.awayTeam} onChange={e => setGameFields(p => ({ ...p, awayTeam: e.target.value}))} placeholder="e.g. Sweden" />
+                                <ModalField label="Home Team" value={gameFields.homeTeam} onChange={e => setGameFields(p => ({ ...p, homeTeam: e.target.value}))} placeholder="e.g. Canada" disabled />
+                                <ModalField label="Away Team" value={gameFields.awayTeam} onChange={e => setGameFields(p => ({ ...p, awayTeam: e.target.value}))} placeholder="e.g. Sweden" disabled />
                                 <ModalField label="Game Time" value={gameFields.gameTime} onChange={e => setGameFields(p => ({...p, gameTime: e.target.value}))} placeholder="e.g. 6:00 PM" />
                                 <ModalField label="Spread" value={gameFields.spread} onChange={e => setGameFields(p => ({...p, spread: e.target.value }))} placeholder="e.g. -3.5" />
                             </div>
@@ -662,10 +802,10 @@ useEffect(() => {
                     }}>{error}</p>
                 )}
                 {/* submit button */}
-                <button onClick={handleSubmit} disabled={submitted} style={{
+                <button onClick={handleSubmit} disabled={submitted || loadingNextMatch || !nextMatch} style={{
                     width: '100%', padding: '14px', borderRadius: 11, fontWeight: 700, fontSize: 14, letterSpacing: '0.08em',
                     background: submitted ? 'var(--success)' : 'var(--accent)', color: '#080A0F', border: 'none', 
-                    cursor: submitted ? 'default' : 'pointer', transition: 'background 0.3s', opacity: submitting ? 0.7 : 1,
+                    cursor: submitted || loadingNextMatch || !nextMatch ? 'not-allowed' : 'pointer', transition: 'background 0.3s', opacity: submitting || loadingNextMatch || !nextMatch ? 0.7 : 1,
                 }}
                 >
                 {submitted ? '✓ PROPOSAL SUBMITTED' : 'SUBMIT PROPOSAL'}
