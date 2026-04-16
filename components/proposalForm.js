@@ -1,7 +1,7 @@
 // A means for users to create proposal stakes to be sent to the moderator dashboard
 import {useState, useEffect, useRef, useCallback } from 'react';
 import worldcupData from '../data/worldcup2022.json';
-const PLAYER_STATS = ['Goals', 'Assists', 'Fouls', 'Shots on Target', 'Saves', 'Minutes Played'];
+const PLAYER_STATS = ['Goals', 'Fouls'];
 const COMPARATORS = ['Over', 'Under', 'Exactly'];
 const TEAM_RESULTS = ['Wins', 'Losses', 'Draws'];
 const MARGIN_TYPES = ['By More Than', 'By Less Than', 'By Exactly'];

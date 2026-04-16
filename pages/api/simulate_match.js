@@ -259,6 +259,25 @@ Rules:
 
     await currentGameData.deleteMany({});
 
+    const dbMatchEvents = Array.isArray(result.match_events)
+      ? result.match_events.map(event => {
+          const eventType = String(event?.event || '').trim().toLowerCase();
+          if (eventType === 'penalty_scored') {
+            return {
+              ...event,
+              event: 'goal',
+            };
+          }
+          if (eventType === 'yellow_card' || eventType === 'red_card') {
+            return {
+              ...event,
+              event: 'foul',
+            };
+          }
+          return event;
+        })
+      : [];
+
     await currentGameData.insertOne({
       homeTeam: home.name,
       awayTeam: away.name,
@@ -266,7 +285,7 @@ Rules:
       ball_possession: result.ball_possession || null,
       fouls: result.fouls || null,
       winner: result.winner || null,
-      match_events: Array.isArray(result.match_events) ? result.match_events : [],
+      match_events: dbMatchEvents,
       createdAt: new Date(),
     });
 
