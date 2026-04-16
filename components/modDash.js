@@ -1,7 +1,8 @@
 // sets up the moderator dashboard - will be rendered in place of the standard dashboard when the user role is set to moderator
-import {useState} from 'react';
+import {useEffect, useState} from 'react';
 import ConfirmModal from './confirmModal';
 import MatchSimulationPanel from './matchSimulationPanel';
+import worldcupData from '../data/worldcup2022.json';
 
 // drawing icons - style only 
 const Icon = {
@@ -49,6 +50,7 @@ const MOD_TABS = {
     PLAYERS: 'players',
     TEAMS: 'teams',
     GAMES: 'games',
+    BRACKET: 'bracket',
     LIVE: 'live',
 };
 
@@ -58,8 +60,181 @@ const MOD_TAB_CONFIG = [
     {key: MOD_TABS.PLAYERS, label: 'Players'},
     {key: MOD_TABS.TEAMS, label: 'Teams'},
     {key: MOD_TABS.GAMES, label: 'Games'},
+    {key: MOD_TABS.BRACKET, label: 'Bracket'},
     {key: MOD_TABS.LIVE, label: 'Live', live: true},
 ];
+
+const BRACKET_ROUND_LABELS = ['Round of 16', 'Quarterfinals', 'Semifinals', 'Final'];
+const BRACKET_SESSION_STORAGE_KEY = 'gatorgambling:moderator-bracket-session:v1';
+const BRACKET_TEAMS = Array.isArray(worldcupData?.teams)
+    ? worldcupData.teams
+        .slice(0, 16)
+        .map((team, index) => ({
+            id: String(team?.id ?? team?.name ?? index).trim() || `team-${index}`,
+            name: String(team?.name || '').trim() || 'Unknown Team',
+            code: String(team?.fifa_code || '').trim() || '---',
+            group: String(team?.group || '').trim() || '-',
+            placement: Number.isFinite(Number(team?.placement)) ? Number(team.placement) : null,
+        }))
+    : [];
+
+function shuffleItems(items) {
+    const next = [...items];
+    for (let index = next.length - 1; index > 0; index -= 1) {
+        const swapIndex = Math.floor(Math.random() * (index + 1));
+        [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
+    }
+    return next;
+}
+
+function loadBracketSession() {
+    if (typeof window === 'undefined') {
+        return null;
+    }
+
+    try {
+        const rawSession = window.localStorage.getItem(BRACKET_SESSION_STORAGE_KEY);
+        if (!rawSession) {
+            return null;
+        }
+
+        const parsedSession = JSON.parse(rawSession);
+        if (!parsedSession || typeof parsedSession !== 'object') {
+            return null;
+        }
+
+        return parsedSession;
+    } catch {
+        return null;
+    }
+}
+
+function saveBracketSession(session) {
+    if (typeof window === 'undefined') {
+        return;
+    }
+
+    try {
+        window.localStorage.setItem(BRACKET_SESSION_STORAGE_KEY, JSON.stringify(session));
+    } catch {
+        // ignore storage errors
+    }
+}
+
+function createBracketMatch(roundIndex, matchIndex, home = null, away = null) {
+    return {
+        id: `${roundIndex}-${matchIndex}`,
+        roundIndex,
+        matchIndex,
+        home,
+        away,
+        winner: null,
+        result: null,
+        played: false,
+    };
+}
+
+function createBracketState(teams) {
+    const seededTeams = shuffleItems(teams).slice(0, 16);
+    const rounds = BRACKET_ROUND_LABELS.map((label, roundIndex) => {
+        const matchCount = 2 ** (3 - roundIndex);
+        const matches = Array.from({length: matchCount}, (_, matchIndex) => {
+            if (roundIndex !== 0) {
+                return createBracketMatch(roundIndex, matchIndex);
+            }
+
+            const home = seededTeams[matchIndex * 2] || null;
+            const away = seededTeams[matchIndex * 2 + 1] || null;
+            return createBracketMatch(roundIndex, matchIndex, home, away);
+        });
+
+        return {label, matches};
+    });
+
+    return {
+        seededTeams,
+        rounds,
+    };
+}
+
+function cloneBracketState(bracketState) {
+    return {
+        seededTeams: Array.isArray(bracketState?.seededTeams) ? bracketState.seededTeams.map(team => ({...team})) : [],
+        rounds: Array.isArray(bracketState?.rounds)
+            ? bracketState.rounds.map(round => ({
+                label: round.label,
+                matches: Array.isArray(round.matches)
+                    ? round.matches.map(match => ({
+                        ...match,
+                        home: match.home ? {...match.home} : null,
+                        away: match.away ? {...match.away} : null,
+                        winner: match.winner ? {...match.winner} : null,
+                        result: match.result ? {...match.result, match_events: Array.isArray(match.result.match_events) ? match.result.match_events.map(event => ({...event})) : []} : null,
+                    }))
+                    : [],
+            }))
+            : [],
+    };
+}
+
+function resolveBracketWinner(home, away, result) {
+    const winner = String(result?.winner || '').trim().toLowerCase();
+    if (winner === 'home') {
+        return home;
+    }
+    if (winner === 'away') {
+        return away;
+    }
+
+    const homeGoals = Number(home?.total_goals ?? 0);
+    const awayGoals = Number(away?.total_goals ?? 0);
+    if (homeGoals !== awayGoals) {
+        return homeGoals > awayGoals ? home : away;
+    }
+
+    const homePlacement = Number(home?.placement ?? Number.POSITIVE_INFINITY);
+    const awayPlacement = Number(away?.placement ?? Number.POSITIVE_INFINITY);
+    if (homePlacement !== awayPlacement) {
+        return homePlacement < awayPlacement ? home : away;
+    }
+
+    return home;
+}
+
+function advanceBracketState(bracketState, selection, result) {
+    if (!selection || !result) {
+        return bracketState;
+    }
+
+    const next = cloneBracketState(bracketState);
+    const currentRound = next.rounds[selection.roundIndex];
+    const currentMatch = currentRound?.matches?.[selection.matchIndex];
+    if (!currentMatch || !currentMatch.home || !currentMatch.away) {
+        return bracketState;
+    }
+
+    const winner = resolveBracketWinner(currentMatch.home, currentMatch.away, result);
+    currentMatch.result = result;
+    currentMatch.winner = winner;
+    currentMatch.played = true;
+
+    const nextRound = next.rounds[selection.roundIndex + 1];
+    if (nextRound) {
+        const nextMatchIndex = Math.floor(selection.matchIndex / 2);
+        const nextSlot = selection.matchIndex % 2 === 0 ? 'home' : 'away';
+        const nextMatch = nextRound.matches[nextMatchIndex];
+        if (nextMatch) {
+            nextMatch[nextSlot] = winner;
+        }
+    }
+
+    return next;
+}
+
+function getBracketChampion(bracketState) {
+    const finalRound = bracketState?.rounds?.[BRACKET_ROUND_LABELS.length - 1];
+    return finalRound?.matches?.[0]?.winner || null;
+}
 
 // triggers the confirmmodal and resolves to true or false for the action
 function useConfirm() {
@@ -317,6 +492,275 @@ function ModGamesTab({games, onCancelStake}) {
     );
 }
 
+// bracket tab for mod
+function ModBracketTab({bracket, selectedMatch, onSelectMatch}) {
+    const champion = getBracketChampion(bracket);
+
+    return (
+        <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 18,
+            animation: 'fadeIn 0.4s ease',
+        }}>
+            {champion && (
+                <div style={{
+                    background: 'linear-gradient(135deg, rgba(198, 241, 53, 0.16), rgba(20, 24, 32, 0.92))',
+                    border: '1px solid rgba(198, 241, 53, 0.28)',
+                    borderRadius: 14,
+                    padding: '18px 20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 16,
+                    flexWrap: 'wrap',
+                }}>
+                    <div>
+                        <div style={{
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: 10,
+                            color: 'var(--accent)',
+                            letterSpacing: '0.12em',
+                            marginBottom: 4,
+                        }}>
+                            ULTIMATE WINNER
+                        </div>
+                        <div style={{
+                            fontFamily: 'var(--font-display)',
+                            fontSize: 28,
+                            letterSpacing: '0.06em',
+                            color: 'var(--text-primary)',
+                        }}>
+                            {champion.name}
+                        </div>
+                        <div style={{
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: 11,
+                            color: 'var(--text-secondary)',
+                            letterSpacing: '0.08em',
+                        }}>
+                            {champion.code} · GROUP {champion.group}
+                        </div>
+                    </div>
+                    <div style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: 11,
+                        fontWeight: 700,
+                        letterSpacing: '0.08em',
+                        color: '#080A0F',
+                        background: 'var(--accent)',
+                        padding: '8px 12px',
+                        borderRadius: 999,
+                    }}>
+                        CHAMPION
+                    </div>
+                </div>
+            )}
+
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                gap: 16,
+            }}>
+                {bracket.rounds.map((round, roundIndex) => (
+                    <div key={round.label} style={{
+                        background: 'var(--bg-card)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 14,
+                        padding: 16,
+                        minHeight: 240,
+                    }}>
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: 10,
+                            marginBottom: 14,
+                            flexWrap: 'wrap',
+                        }}>
+                            <div style={{
+                                fontFamily: 'var(--font-display)',
+                                fontSize: 18,
+                                letterSpacing: '0.06em',
+                                color: 'var(--text-primary)',
+                            }}>
+                                {round.label}
+                            </div>
+                            <div style={{
+                                fontFamily: 'var(--font-mono)',
+                                fontSize: 10,
+                                color: 'var(--text-muted)',
+                                letterSpacing: '0.08em',
+                            }}>
+                                {round.matches.length} {round.matches.length === 1 ? 'MATCH' : 'MATCHES'}
+                            </div>
+                        </div>
+
+                        <div style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 12,
+                        }}>
+                            {round.matches.map((match, matchIndex) => (
+                                <div key={match.id} style={{
+                                    border: '1px solid var(--border)',
+                                    borderRadius: 12,
+                                    overflow: 'hidden',
+                                    background: selectedMatch?.matchId === match.id ? 'rgba(198, 241, 53, 0.06)' : 'var(--bg-secondary)',
+                                }}>
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        gap: 10,
+                                        padding: '10px 12px',
+                                        borderBottom: '1px solid var(--border)',
+                                        background: 'rgba(255, 255, 255, 0.02)',
+                                    }}>
+                                        <div style={{
+                                            fontFamily: 'var(--font-mono)',
+                                            fontSize: 10,
+                                            color: 'var(--text-muted)',
+                                            letterSpacing: '0.08em',
+                                        }}>
+                                            MATCH {matchIndex + 1}
+                                        </div>
+                                        <div style={{
+                                            fontFamily: 'var(--font-mono)',
+                                            fontSize: 10,
+                                            color: match.played ? 'var(--accent)' : 'var(--danger)',
+                                            letterSpacing: '0.08em',
+                                        }}>
+                                            {match.played ? `RESULT: ${match.result?.score || `${match.result?.home_score ?? 0} - ${match.result?.away_score ?? 0}`}` : 'Not Played'}
+                                        </div>
+                                    </div>
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        gap: 12,
+                                        padding: '11px 12px',
+                                        background: match.home && match.winner?.id === match.home.id ? 'rgba(198, 241, 53, 0.10)' : 'transparent',
+                                        borderLeft: match.home && match.winner?.id === match.home.id ? '3px solid var(--accent)' : '3px solid transparent',
+                                    }}>
+                                        {match.home ? (
+                                            <div>
+                                                <div style={{
+                                                    fontFamily: 'var(--font-display)',
+                                                    fontSize: 16,
+                                                    letterSpacing: '0.04em',
+                                                    color: 'var(--text-primary)',
+                                                }}>
+                                                    {match.home.name}
+                                                </div>
+                                                <div style={{
+                                                    fontFamily: 'var(--font-mono)',
+                                                    fontSize: 10,
+                                                    color: 'var(--text-muted)',
+                                                    letterSpacing: '0.08em',
+                                                }}>
+                                                    {match.home.code} · GROUP {match.home.group}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div style={{
+                                                fontFamily: 'var(--font-mono)',
+                                                fontSize: 10,
+                                                color: 'var(--text-muted)',
+                                                letterSpacing: '0.08em',
+                                            }}>
+                                                HOME SLOT PENDING
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        gap: 12,
+                                        padding: '11px 12px',
+                                        background: match.away && match.winner?.id === match.away.id ? 'rgba(198, 241, 53, 0.10)' : 'transparent',
+                                        borderTop: '1px solid var(--border)',
+                                        borderLeft: match.away && match.winner?.id === match.away.id ? '3px solid var(--accent)' : '3px solid transparent',
+                                    }}>
+                                        {match.away ? (
+                                            <div>
+                                                <div style={{
+                                                    fontFamily: 'var(--font-display)',
+                                                    fontSize: 16,
+                                                    letterSpacing: '0.04em',
+                                                    color: 'var(--text-primary)',
+                                                }}>
+                                                    {match.away.name}
+                                                </div>
+                                                <div style={{
+                                                    fontFamily: 'var(--font-mono)',
+                                                    fontSize: 10,
+                                                    color: 'var(--text-muted)',
+                                                    letterSpacing: '0.08em',
+                                                }}>
+                                                    {match.away.code} · GROUP {match.away.group}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div style={{
+                                                fontFamily: 'var(--font-mono)',
+                                                fontSize: 10,
+                                                color: 'var(--text-muted)',
+                                                letterSpacing: '0.08em',
+                                            }}>
+                                                AWAY SLOT PENDING
+                                            </div>
+                                        )}
+                                    </div>
+                                    {!match.home || !match.away ? (
+                                        <div style={{
+                                            padding: '12px',
+                                            fontSize: 11,
+                                            color: 'var(--text-muted)',
+                                            fontFamily: 'var(--font-mono)',
+                                            letterSpacing: '0.06em',
+                                        }}>
+                                            Waiting for prior winners.
+                                        </div>
+                                    ) : !match.winner ? (
+                                        <button onClick={() => onSelectMatch({roundIndex, matchIndex, match})} style={{
+                                            width: '100%',
+                                            background: 'rgba(198, 241, 53, 0.10)',
+                                            borderTop: '1px solid var(--border)',
+                                            color: 'var(--accent)',
+                                            fontSize: 11,
+                                            fontWeight: 800,
+                                            letterSpacing: '0.08em',
+                                            padding: '11px 12px',
+                                            cursor: 'pointer',
+                                        }}>
+                                            SIMULATE THIS MATCH
+                                        </button>
+                                    ) : (
+                                        <div style={{
+                                            padding: '12px',
+                                            fontSize: 11,
+                                            color: 'var(--accent)',
+                                            fontFamily: 'var(--font-mono)',
+                                            letterSpacing: '0.06em',
+                                            borderTop: '1px solid var(--border)',
+                                        }}>
+                                            {match.winner.name} {roundIndex === bracket.rounds.length - 1 ? 'WINS' : 'ADVANCES'}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+        </div>
+    );
+}
+
 // game row for mod and cancellation
 function ModGameRow({g, i, onCancel}) {
     const [hover, setHover] = useState(false);
@@ -430,7 +874,7 @@ function ModItemCard({title, subtitle, meta, stake, index, onCancel}) {
 }
 
 // live tab for mod **global chat
-function ModLiveTab({chatMessages, onDeleteMessage, onNewMessage, username}) {
+function ModLiveTab({chatMessages, onDeleteMessage, onNewMessage, username, selectedMatch, simulationState, onSimulationComplete}) {
     // general constants for global chat
     const [inputText, setInputText] = useState('');
     const [userSearch, setUserSearch] = useState('');
@@ -443,9 +887,10 @@ function ModLiveTab({chatMessages, onDeleteMessage, onNewMessage, username}) {
     // handle sending 
     const handleSend = () => {
         const trimmed = inputText.trim();
-        if (!trimmed || typeof onNewMessage !== 'function'){
+        if (!trimmed || typeof onNewMessage !== 'function') {
             return;
         }
+
         onNewMessage({
             user: username || 'MOD',
             initials: (username || 'MD').slice(0, 2).toUpperCase(),
@@ -465,7 +910,13 @@ function ModLiveTab({chatMessages, onDeleteMessage, onNewMessage, username}) {
                 minHeight: 520, gap: 16, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14,
                 padding: 24, overflowY: 'auto',
             }}>
-                <MatchSimulationPanel />
+                <MatchSimulationPanel
+                    key={selectedMatch?.matchId || simulationState?.matchId || 'manual-sim'}
+                    homeTeam={selectedMatch?.homeTeam || simulationState?.homeTeam || ''}
+                    awayTeam={selectedMatch?.awayTeam || simulationState?.awayTeam || ''}
+                    initialResult={selectedMatch ? null : simulationState?.result || null}
+                    onSimulated={onSimulationComplete}
+                />
             </div>
             <div style={{
                 flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg-card)', border: '1px solid var(--border)',
@@ -585,7 +1036,73 @@ export default function ModDash({
 }) {
     // constants
     const [activeTab, setActiveTab] = useState(MOD_TABS.PROPOSALS);
+    const [bracketState, setBracketState] = useState(() => createBracketState(BRACKET_TEAMS));
+    const [selectedMatch, setSelectedMatch] = useState(null);
+    const [simulationState, setSimulationState] = useState(null);
+    const [hasLoadedBracketSession, setHasLoadedBracketSession] = useState(false);
     const {confirm, modal} = useConfirm();
+
+    useEffect(() => {
+        const session = loadBracketSession();
+        if (session) {
+            if (session.bracketState) {
+                setBracketState(session.bracketState);
+            }
+            setSelectedMatch(session.selectedMatch || null);
+            setSimulationState(session.simulationState || null);
+        }
+        setHasLoadedBracketSession(true);
+    }, []);
+
+    useEffect(() => {
+        if (!hasLoadedBracketSession) {
+            return;
+        }
+
+        saveBracketSession({
+            bracketState,
+            selectedMatch,
+            simulationState,
+        });
+    }, [bracketState, hasLoadedBracketSession, selectedMatch, simulationState]);
+
+    const handleShuffleBracket = () => {
+        setBracketState(createBracketState(BRACKET_TEAMS));
+        setSelectedMatch(null);
+        setSimulationState(null);
+        setActiveTab(MOD_TABS.BRACKET);
+    };
+
+    const handleSelectBracketMatch = ({roundIndex, matchIndex, match}) => {
+        if (!match?.home || !match?.away || match.winner) {
+            return;
+        }
+
+        setSelectedMatch({
+            matchId: match.id,
+            roundIndex,
+            matchIndex,
+            homeTeam: match.home.name,
+            awayTeam: match.away.name,
+        });
+        setSimulationState(null);
+        setActiveTab(MOD_TABS.LIVE);
+    };
+
+    const handleBracketSimulationComplete = ({homeTeam, awayTeam, result}) => {
+        if (!selectedMatch || !result) {
+            return;
+        }
+
+        setBracketState(prev => advanceBracketState(prev, selectedMatch, result));
+        setSimulationState({
+            matchId: selectedMatch.matchId,
+            homeTeam,
+            awayTeam,
+            result,
+        });
+        setSelectedMatch(null);
+    };
 
     // handle stake approval
     const handleApprove = async (id) => {
@@ -647,9 +1164,13 @@ export default function ModDash({
                 return(
                     <ModGamesTab games={games} onCancelStake={handleCancelStake} />
                 );
+            case MOD_TABS.BRACKET:
+                return(
+                    <ModBracketTab bracket={bracketState} selectedMatch={selectedMatch} onSelectMatch={handleSelectBracketMatch} />
+                );
             case MOD_TABS.LIVE: 
                 return(
-                    <ModLiveTab chatMessages={chatMessages} onDeleteMessage={handleDeleteMessage} onNewMessage={onNewMessage} username={username} />
+                    <ModLiveTab chatMessages={chatMessages} onDeleteMessage={handleDeleteMessage} onNewMessage={onNewMessage} username={username} selectedMatch={selectedMatch} simulationState={simulationState} onSimulationComplete={handleBracketSimulationComplete} />
                 );
             default: 
                 return null;
@@ -718,11 +1239,37 @@ export default function ModDash({
                     <div style={{
                         marginBottom: 24,
                     }}>
-                        <h2 style={{
-                            fontFamily: 'var(--font-display)', fontSize: 32, letterSpacing: '0.06em', color: 'var(--text-primary)',
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: 16,
+                            flexWrap: 'wrap',
                         }}>
-                            {currentTabLabel.toUpperCase()}
-                        </h2>
+                            <h2 style={{
+                                fontFamily: 'var(--font-display)', fontSize: 32, letterSpacing: '0.06em', color: 'var(--text-primary)',
+                            }}>
+                                {currentTabLabel.toUpperCase()}
+                            </h2>
+                            {activeTab === MOD_TABS.BRACKET && (
+                                <button onClick={handleShuffleBracket} style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 8,
+                                    padding: '11px 16px',
+                                    borderRadius: 10,
+                                    background: 'var(--accent)',
+                                    color: '#080A0F',
+                                    fontSize: 12,
+                                    fontWeight: 800,
+                                    letterSpacing: '0.08em',
+                                    cursor: 'pointer',
+                                    border: 'none',
+                                }}>
+                                    SHUFFLE BRACKET
+                                </button>
+                            )}
+                        </div>
                         {/* instruction text for tabs + display */}
                         {activeTab === MOD_TABS.PROPOSALS && ( <p style={{
                             fontSize: 13, color: 'var(--text-secondary)', marginTop: 4,
@@ -732,6 +1279,11 @@ export default function ModDash({
                             <p style={{
                             fontSize: 13, color: 'var(--text-secondary)', marginTop: 4,
                         }}>Cancel active stakes to remove them from the board.</p>
+                        )}
+                        {activeTab === MOD_TABS.BRACKET && (
+                            <p style={{
+                                fontSize: 13, color: 'var(--text-secondary)', marginTop: 4,
+                            }}>Moderator view of brackets - shuffle beginning placements and simulate matches.</p>
                         )}
                     </div>
                     {renderContent()}

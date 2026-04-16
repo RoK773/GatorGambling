@@ -1,12 +1,24 @@
-import { useState } from 'react';
-import { Zap } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
-export default function MatchSimulationPanel() {
-    const [team1, setTeam1] = useState('');
-    const [team2, setTeam2] = useState('');
-    const [result, setResult] = useState('');
+export default function MatchSimulationPanel({homeTeam = '', awayTeam = '', initialResult = null, onSimulated}) {
+    const [team1, setTeam1] = useState(homeTeam);
+    const [team2, setTeam2] = useState(awayTeam);
+    const [result, setResult] = useState(initialResult || '');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+
+    useEffect(() => {
+        setTeam1(homeTeam || '');
+        setTeam2(awayTeam || '');
+        setResult(initialResult || '');
+        setError('');
+    }, [awayTeam, homeTeam, initialResult]);
+
+    const formatMinuteLabel = (minute) => {
+        const raw = String(minute ?? '').trim();
+        const base = raw.endsWith("'") ? raw.slice(0, -1).trim() : raw;
+        return `${base}'`;
+    };
 
     const handleSimulate = async () => {
         if (!team1 || !team2) return;
@@ -24,6 +36,9 @@ export default function MatchSimulationPanel() {
             if (!response.ok) throw new Error(data.error);
 
             setResult(data);
+            if (typeof onSimulated === 'function') {
+                onSimulated({homeTeam: team1, awayTeam: team2, result: data});
+            }
         } catch (err) {
             setError(err.message || 'Simulation failed');
         } finally {
@@ -34,19 +49,6 @@ export default function MatchSimulationPanel() {
     return (
         <div style={{ maxWidth: 480, width: '100%' }}>
             <div style={{ textAlign: 'center', marginBottom: 32 }}>
-                <div style={{
-                    width: 64,
-                    height: 64,
-                    borderRadius: 18,
-                    background: 'var(--accent)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto 16px',
-                    boxShadow: '0 0 32px var(--accent-glow)',
-                }}>
-                    <Zap size={30} color="#080A0F" strokeWidth={2.5} />
-                </div>
                 <h1 style={{
                     fontFamily: 'var(--font-display)',
                     fontSize: 30,
@@ -54,11 +56,8 @@ export default function MatchSimulationPanel() {
                     color: 'var(--text-primary)',
                     marginBottom: 8,
                 }}>
-                    2026 WC MATCH SIMULATOR
+                    2026 World Cup MATCH SIMULATOR
                 </h1>
-                <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                    Enter two teams below:
-                </p>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
@@ -66,6 +65,7 @@ export default function MatchSimulationPanel() {
                     value={team1}
                     onChange={e => setTeam1(e.target.value)}
                     placeholder="Team 1 (e.g. Brazil)"
+                    readOnly={Boolean(homeTeam)}
                     style={{
                         background: 'var(--bg-secondary)',
                         border: '1px solid var(--border)',
@@ -82,6 +82,7 @@ export default function MatchSimulationPanel() {
                     value={team2}
                     onChange={e => setTeam2(e.target.value)}
                     placeholder="Team 2 (e.g. France)"
+                    readOnly={Boolean(awayTeam)}
                     style={{
                         background: 'var(--bg-secondary)',
                         border: '1px solid var(--border)',
@@ -188,7 +189,7 @@ export default function MatchSimulationPanel() {
                                                 color: 'var(--accent)',
                                                 marginRight: 10,
                                             }}>
-                                                {event.minute}'
+                                                {formatMinuteLabel(event.minute)}
                                             </span>
 
                                             <span style={{ color: 'var(--text-primary)' }}>

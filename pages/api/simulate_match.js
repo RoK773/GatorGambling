@@ -105,6 +105,39 @@ export default async function handler(req, res) {
     return 'home';
   };
 
+  const normalizeEventMinute = (rawMinute, fallbackIndex) => {
+    const cleaned = String(rawMinute ?? '')
+      .trim()
+      .replace(/["']/g, '')
+      .replace(/\s+/g, '');
+
+    const match = cleaned.match(/^(\d{1,2})(?:\+(\d{1,2}))?$/);
+    if (!match) {
+      const fallbackMinute = Math.min(90, Math.max(1, (fallbackIndex + 1) * 10));
+      return String(fallbackMinute);
+    }
+
+    const base = Math.min(90, Math.max(1, Number(match[1])));
+    const extra = match[2] ? Math.min(9, Math.max(1, Number(match[2]))) : null;
+
+    if (base === 45 && extra !== null) {
+      return `45+${extra}`;
+    }
+    if (base === 90 && extra !== null) {
+      return `90+${extra}`;
+    }
+    return String(base);
+  };
+
+  const minuteSortValue = (minute) => {
+    const text = String(minute || '').trim();
+    const plus = text.match(/^(\d{1,2})\+(\d{1,2})$/);
+    if (plus) {
+      return Number(plus[1]) + (Number(plus[2]) / 100);
+    }
+    return Number(text) || 0;
+  };
+
   const prompt = `
 You are a football match predictor.
 Home: ${home.name}, Players: ${homePlayerNames.join(', ')}, Total Goals: ${home.total_goals}, Possession: ${home.ball_possession}, Placement: ${home.placement}
@@ -144,21 +177,16 @@ Return JSON ONLY, exactly like this format, but fill in the numbers realisticall
 }
 
 Rules:
-- ball possession percentages must add to 100
-- Include between 3 and 8 match_events
-- Use the real team names instead of "home team" and "away team"
-- Use players of the provided teams from the data provided ('worldcup2022.json')
-- event can be: goal, yellow_card, red_card, substitution, penalty_missed, penalty_scored, injury
-- The number of goal events NEEDS to be the same as the number of goals in the score,(ex: if the score is 2-1, there should be 3 goal events)
-- team must be: home or away
-- player must be from the listed players for the event's team
-- minute must be a football match minute string in one of these formats only: "N" or "45+X" or "90+X" (examples: "12", "45+1", "88", "90+3")
-- minute values must be in strict chronological order from first event to last event (never place a later minute before an earlier minute)
-- additional-time minutes can ONLY appear at the end of a half:
-  - "45+X" is allowed only as the final minute(s) of the first half, after all first-half regular minutes (1-45)
-  - after any "45+X" event, the next minute must be 46 or higher (never 44/45)
-  - "90+X" is allowed only as the final minute(s) of the match, after all second-half regular minutes (46-90)
-  - after any "90+X" event, there must be no later non-stoppage event
+- Return at least 8 match_events.
+- There MUST be a winner for bracket matches.
+- Possession must use percentage signs and add up to 100%.
+- Use the real team names and players from worldcup2022.json.
+- Allowed events: goal, yellow_card, red_card, substitution, penalty_missed, penalty_scored, injury.
+- Goal events must match the score exactly.
+- team must be home or away.
+- player must belong to the correct team.
+- minute must be "N", "45+X", or "90+X" and stay in strict chronological order.
+- "45+X" only belongs at the end of the first half; "90+X" only belongs at the end of the match.
 - Do NOT include any extra text or explanation.
 `;
 
@@ -182,7 +210,7 @@ Rules:
       result.match_events = [];
     }
 
-    result.match_events = result.match_events.map(event => {
+    result.match_events = result.match_events.map((event, index) => {
       const eventType = String(event?.event || '').trim().toLowerCase();
       const rawPlayerName = String(event?.player || '').trim();
       const normalizedTeam = normalizeEventTeam(event?.team, rawPlayerName);
@@ -194,11 +222,17 @@ Rules:
 
       return {
         ...event,
+        minute: normalizeEventMinute(event?.minute, index),
         team: normalizedTeam,
         player: playerName,
         description: buildEventDescription(eventType, playerName, teamName),
       };
     });
+
+    result.match_events = result.match_events
+      .map(event => ({ ...event, __sort: minuteSortValue(event.minute) }))
+      .sort((a, b) => a.__sort - b.__sort)
+      .map(({ __sort, ...event }) => event);
 
     // Count actual goal events per team
     const homeGoals = result.match_events.filter(
@@ -217,7 +251,7 @@ Rules:
     // Fix winner based on corrected score
     if (homeGoals > awayGoals) result.winner = 'home';
     else if (awayGoals > homeGoals) result.winner = 'away';
-    else result.winner = 'draw';
+    // Ollama is instructed to always provide a winner, so use its result for ties
 
     // Replace stored game data: clear Current_game_data, then store only this latest simulation.
     const client = await clientPromise;
