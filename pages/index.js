@@ -26,6 +26,7 @@ const TABS = {
     PLAYERS: 'players',
     TEAMS: 'teams',
     GAMES: 'games',
+    BRACKET: 'bracket',
     LIVE: 'live',
 };
 
@@ -2037,16 +2038,361 @@ function LiveTab({chatMessages, onNewMessage, username}){
     );
 }
 
+function getBracketChampion(bracketState) {
+    const rounds = Array.isArray(bracketState?.rounds) ? bracketState.rounds : [];
+    const finalRound = rounds[rounds.length - 1];
+    return finalRound?.matches?.[0]?.winner || null;
+}
+
+function UserBracketTab({bracket, isLoading = false}) {
+    if (isLoading) {
+        return (
+            <div style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: 14,
+                padding: 18,
+                fontSize: 12,
+                color: 'var(--text-secondary)',
+                fontFamily: 'var(--font-mono)',
+                letterSpacing: '0.06em',
+            }}>
+                LOADING LIVE BRACKET...
+            </div>
+        );
+    }
+
+    if (!bracket || !Array.isArray(bracket.rounds) || bracket.rounds.length === 0) {
+        return (
+            <div style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: 14,
+                padding: 18,
+                fontSize: 12,
+                color: 'var(--text-secondary)',
+                fontFamily: 'var(--font-mono)',
+                letterSpacing: '0.06em',
+            }}>
+                LIVE BRACKET HAS NOT BEEN GENERATED YET.
+            </div>
+        );
+    }
+
+    const champion = getBracketChampion(bracket);
+
+    return (
+        <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 18,
+            animation: 'fadeIn 0.4s ease',
+        }}>
+            {champion && (
+                <div style={{
+                    background: 'linear-gradient(135deg, rgba(198, 241, 53, 0.16), rgba(20, 24, 32, 0.92))',
+                    border: '1px solid rgba(198, 241, 53, 0.28)',
+                    borderRadius: 14,
+                    padding: '18px 20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 16,
+                    flexWrap: 'wrap',
+                }}>
+                    <div>
+                        <div style={{
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: 10,
+                            color: 'var(--accent)',
+                            letterSpacing: '0.12em',
+                            marginBottom: 4,
+                        }}>
+                            ULTIMATE WINNER
+                        </div>
+                        <div style={{
+                            fontFamily: 'var(--font-display)',
+                            fontSize: 28,
+                            letterSpacing: '0.06em',
+                            color: 'var(--text-primary)',
+                        }}>
+                            {champion.name}
+                        </div>
+                        <div style={{
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: 11,
+                            color: 'var(--text-secondary)',
+                            letterSpacing: '0.08em',
+                        }}>
+                            {champion.code} · GROUP {champion.group}
+                        </div>
+                    </div>
+                    <div style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: 11,
+                        fontWeight: 700,
+                        letterSpacing: '0.08em',
+                        color: '#080A0F',
+                        background: 'var(--accent)',
+                        padding: '8px 12px',
+                        borderRadius: 999,
+                    }}>
+                        CHAMPION
+                    </div>
+                </div>
+            )}
+
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                gap: 16,
+            }}>
+                {bracket.rounds.map((round, roundIndex) => (
+                    <div key={round.label} style={{
+                        background: 'var(--bg-card)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 14,
+                        padding: 16,
+                        minHeight: 240,
+                    }}>
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: 10,
+                            marginBottom: 14,
+                            flexWrap: 'wrap',
+                        }}>
+                            <div style={{
+                                fontFamily: 'var(--font-display)',
+                                fontSize: 18,
+                                letterSpacing: '0.06em',
+                                color: 'var(--text-primary)',
+                            }}>
+                                {round.label}
+                            </div>
+                            <div style={{
+                                fontFamily: 'var(--font-mono)',
+                                fontSize: 10,
+                                color: 'var(--text-muted)',
+                                letterSpacing: '0.08em',
+                            }}>
+                                {round.matches.length} {round.matches.length === 1 ? 'MATCH' : 'MATCHES'}
+                            </div>
+                        </div>
+
+                        <div style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 12,
+                        }}>
+                            {round.matches.map((match, matchIndex) => (
+                                <div key={match.id} style={{
+                                    border: '1px solid var(--border)',
+                                    borderRadius: 12,
+                                    overflow: 'hidden',
+                                    background: 'var(--bg-secondary)',
+                                }}>
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        gap: 10,
+                                        padding: '10px 12px',
+                                        borderBottom: '1px solid var(--border)',
+                                        background: 'rgba(255, 255, 255, 0.02)',
+                                    }}>
+                                        <div style={{
+                                            fontFamily: 'var(--font-mono)',
+                                            fontSize: 10,
+                                            color: 'var(--text-muted)',
+                                            letterSpacing: '0.08em',
+                                        }}>
+                                            MATCH {matchIndex + 1}
+                                        </div>
+                                        <div style={{
+                                            fontFamily: 'var(--font-mono)',
+                                            fontSize: 10,
+                                            color: match.played ? 'var(--accent)' : 'var(--danger)',
+                                            letterSpacing: '0.08em',
+                                        }}>
+                                            {match.played ? `RESULT: ${match.result?.score || `${match.result?.home_score ?? 0} - ${match.result?.away_score ?? 0}`}` : 'Not Played'}
+                                        </div>
+                                    </div>
+
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        gap: 12,
+                                        padding: '11px 12px',
+                                        background: match.home && match.winner?.id === match.home.id ? 'rgba(198, 241, 53, 0.10)' : 'transparent',
+                                        borderLeft: match.home && match.winner?.id === match.home.id ? '3px solid var(--accent)' : '3px solid transparent',
+                                    }}>
+                                        {match.home ? (
+                                            <div>
+                                                <div style={{
+                                                    fontFamily: 'var(--font-display)',
+                                                    fontSize: 16,
+                                                    letterSpacing: '0.04em',
+                                                    color: 'var(--text-primary)',
+                                                }}>
+                                                    {match.home.name}
+                                                </div>
+                                                <div style={{
+                                                    fontFamily: 'var(--font-mono)',
+                                                    fontSize: 10,
+                                                    color: 'var(--text-muted)',
+                                                    letterSpacing: '0.08em',
+                                                }}>
+                                                    {match.home.code} · GROUP {match.home.group}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div style={{
+                                                fontFamily: 'var(--font-mono)',
+                                                fontSize: 10,
+                                                color: 'var(--text-muted)',
+                                                letterSpacing: '0.08em',
+                                            }}>
+                                                HOME SLOT PENDING
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        gap: 12,
+                                        padding: '11px 12px',
+                                        background: match.away && match.winner?.id === match.away.id ? 'rgba(198, 241, 53, 0.10)' : 'transparent',
+                                        borderTop: '1px solid var(--border)',
+                                        borderLeft: match.away && match.winner?.id === match.away.id ? '3px solid var(--accent)' : '3px solid transparent',
+                                    }}>
+                                        {match.away ? (
+                                            <div>
+                                                <div style={{
+                                                    fontFamily: 'var(--font-display)',
+                                                    fontSize: 16,
+                                                    letterSpacing: '0.04em',
+                                                    color: 'var(--text-primary)',
+                                                }}>
+                                                    {match.away.name}
+                                                </div>
+                                                <div style={{
+                                                    fontFamily: 'var(--font-mono)',
+                                                    fontSize: 10,
+                                                    color: 'var(--text-muted)',
+                                                    letterSpacing: '0.08em',
+                                                }}>
+                                                    {match.away.code} · GROUP {match.away.group}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div style={{
+                                                fontFamily: 'var(--font-mono)',
+                                                fontSize: 10,
+                                                color: 'var(--text-muted)',
+                                                letterSpacing: '0.08em',
+                                            }}>
+                                                AWAY SLOT PENDING
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {!match.home || !match.away ? (
+                                        <div style={{
+                                            padding: '12px',
+                                            fontSize: 11,
+                                            color: 'var(--text-muted)',
+                                            fontFamily: 'var(--font-mono)',
+                                            letterSpacing: '0.06em',
+                                        }}>
+                                            Waiting for prior winners.
+                                        </div>
+                                    ) : match.winner ? (
+                                        <div style={{
+                                            padding: '12px',
+                                            fontSize: 11,
+                                            color: 'var(--accent)',
+                                            fontFamily: 'var(--font-mono)',
+                                            letterSpacing: '0.06em',
+                                            borderTop: '1px solid var(--border)',
+                                        }}>
+                                            {match.winner.name} {roundIndex === bracket.rounds.length - 1 ? 'WINS' : 'ADVANCES'}
+                                        </div>
+                                    ) : (
+                                        <div style={{
+                                            padding: '12px',
+                                            fontSize: 11,
+                                            color: 'var(--text-muted)',
+                                            fontFamily: 'var(--font-mono)',
+                                            letterSpacing: '0.06em',
+                                            borderTop: '1px solid var(--border)',
+                                        }}>
+                                            Awaiting simulation.
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 // main dashboard!
 const TAB_CONFIG = [
     {key: TABS.PICKS, label: 'Your Picks', icon: <Star size={15} /> },
     {key: TABS.PLAYERS, label: 'Players', icon: <User size={15} /> },
     {key: TABS.TEAMS, label: 'Teams', icon: <Shield size={15} /> },
     {key: TABS.GAMES, label: "Games", icon: <Trophy size={15} /> },
+    {key: TABS.BRACKET, label: 'Bracket', icon: <BarChart2 size={15} /> },
     {key: TABS.LIVE, label: "Live", icon: <Radio size={15} />, live:true},
 ];
 
 function Dashboard({username, players, playerPicks, teams, teamPicks, games, gamePicks, chatMessages, onNewMessage, activeTab, setActiveTab, userCredits, onPlacePlayerBet, onPlaceTeamBet, onPlaceGameBet, showBetSuccessBanner = false}){
+    const [bracketState, setBracketState] = useState(null);
+    const [isBracketLoading, setIsBracketLoading] = useState(true);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadBracket = async () => {
+            try {
+                const response = await fetch('/api/bracket');
+                const data = await response.json().catch(() => ({}));
+
+                if (!response.ok) {
+                    return;
+                }
+
+                if (isMounted) {
+                    setBracketState(data?.bracket?.bracketState || null);
+                }
+            } catch {
+                // keep latest local bracket view if fetch fails
+            } finally {
+                if (isMounted) {
+                    setIsBracketLoading(false);
+                }
+            }
+        };
+
+        void loadBracket();
+        const intervalId = setInterval(() => {
+            void loadBracket();
+        }, 5000);
+
+        return () => {
+            isMounted = false;
+            clearInterval(intervalId);
+        };
+    }, []);
+
     // Betting feature: hide already-confirmed bets from available tabs.
     const playerPickKeySet = new Set((playerPicks || []).map(getPlayerBetMatchKey).filter(Boolean));
     const availablePlayers = (players || []).filter(player => !playerPickKeySet.has(getPlayerBetMatchKey(player)));
@@ -2061,6 +2407,7 @@ function Dashboard({username, players, playerPicks, teams, teamPicks, games, gam
             case TABS.PLAYERS: return <PlayersTab players={availablePlayers} availableCredits={userCredits} onPlaceBet={onPlacePlayerBet} />;
             case TABS.TEAMS: return <TeamsTab teams={availableTeams} availableCredits={userCredits} onPlaceBet={onPlaceTeamBet}/>;
             case TABS.GAMES: return <GamesTab games={availableGames} availableCredits={userCredits} onPlaceBet={onPlaceGameBet} />;
+            case TABS.BRACKET: return <UserBracketTab bracket={bracketState} isLoading={isBracketLoading} />;
             case TABS.LIVE: return <LiveTab chatMessages={chatMessages} onNewMessage={onNewMessage} username={username}/>;
             default: return null;
         }
@@ -2129,7 +2476,7 @@ function Dashboard({username, players, playerPicks, teams, teamPicks, games, gam
                     }}>
                             {TAB_CONFIG.find(t => t.key === activeTab)?.label.toUpperCase()}
                     </h2>
-                    {activeTab !== TABS.PICKS && activeTab !== TABS.LIVE && (
+                    {activeTab !== TABS.PICKS && activeTab !== TABS.LIVE && activeTab !== TABS.BRACKET && (
                         <p style={{
                             fontSize: 13, color: 'var(--text-secondary)', marginTop: 4,
                         }}>Select an option and place your bet.
