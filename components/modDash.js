@@ -250,6 +250,30 @@ function getBracketChampion(bracketState) {
     return finalRound?.matches?.[0]?.winner || null;
 }
 
+function getNextPlayableBracketMatch(bracketState) {
+    if (!Array.isArray(bracketState?.rounds)) {
+        return null;
+    }
+
+    for (let roundIndex = 0; roundIndex < bracketState.rounds.length; roundIndex += 1) {
+        const round = bracketState.rounds[roundIndex];
+        const matches = Array.isArray(round?.matches) ? round.matches : [];
+
+        for (let matchIndex = 0; matchIndex < matches.length; matchIndex += 1) {
+            const match = matches[matchIndex];
+            if (match?.home && match?.away && !match?.winner) {
+                return {
+                    roundIndex,
+                    matchIndex,
+                    matchId: match.id,
+                };
+            }
+        }
+    }
+
+    return null;
+}
+
 // triggers the confirmmodal and resolves to true or false for the action
 function useConfirm() {
     const [state, setState] = useState(null);
@@ -507,7 +531,7 @@ function ModGamesTab({games, onCancelStake}) {
 }
 
 // bracket tab for mod
-function ModBracketTab({bracket, selectedMatch, onSelectMatch}) {
+function ModBracketTab({bracket, selectedMatch, nextPlayableMatch, onSelectMatch}) {
     const champion = getBracketChampion(bracket);
 
     return (
@@ -616,6 +640,14 @@ function ModBracketTab({bracket, selectedMatch, onSelectMatch}) {
                             gap: 12,
                         }}>
                             {round.matches.map((match, matchIndex) => (
+                                (() => {
+                                    const isNextPlayable = Boolean(
+                                        nextPlayableMatch
+                                        && nextPlayableMatch.roundIndex === roundIndex
+                                        && nextPlayableMatch.matchIndex === matchIndex,
+                                    );
+
+                                    return (
                                 <div key={match.id} style={{
                                     border: '1px solid var(--border)',
                                     borderRadius: 12,
@@ -739,18 +771,18 @@ function ModBracketTab({bracket, selectedMatch, onSelectMatch}) {
                                             Waiting for prior winners.
                                         </div>
                                     ) : !match.winner ? (
-                                        <button onClick={() => onSelectMatch({roundIndex, matchIndex, match})} style={{
+                                        <button onClick={() => onSelectMatch({roundIndex, matchIndex, match})} disabled={!isNextPlayable} style={{
                                             width: '100%',
-                                            background: 'rgba(198, 241, 53, 0.10)',
+                                            background: isNextPlayable ? 'rgba(198, 241, 53, 0.10)' : 'rgba(255, 255, 255, 0.04)',
                                             borderTop: '1px solid var(--border)',
-                                            color: 'var(--accent)',
+                                            color: isNextPlayable ? 'var(--accent)' : 'var(--text-muted)',
                                             fontSize: 11,
                                             fontWeight: 800,
                                             letterSpacing: '0.08em',
                                             padding: '11px 12px',
-                                            cursor: 'pointer',
+                                            cursor: isNextPlayable ? 'pointer' : 'not-allowed',
                                         }}>
-                                            SIMULATE THIS MATCH
+                                            {isNextPlayable ? 'SIMULATE THIS MATCH' : 'PLAY PREVIOUS MATCHES FIRST'}
                                         </button>
                                     ) : (
                                         <div style={{
@@ -765,6 +797,8 @@ function ModBracketTab({bracket, selectedMatch, onSelectMatch}) {
                                         </div>
                                     )}
                                 </div>
+                                    );
+                                })()
                             ))}
                         </div>
                     </div>
@@ -1055,6 +1089,7 @@ export default function ModDash({
     const [simulationState, setSimulationState] = useState(null);
     const [hasLoadedBracketSession, setHasLoadedBracketSession] = useState(false);
     const {confirm, modal} = useConfirm();
+    const nextPlayableMatch = getNextPlayableBracketMatch(bracketState);
 
     useEffect(() => {
         let isMounted = true;
@@ -1117,6 +1152,12 @@ export default function ModDash({
 
     const handleSelectBracketMatch = ({roundIndex, matchIndex, match}) => {
         if (!match?.home || !match?.away || match.winner) {
+            return;
+        }
+
+        if (!nextPlayableMatch
+            || nextPlayableMatch.roundIndex !== roundIndex
+            || nextPlayableMatch.matchIndex !== matchIndex) {
             return;
         }
 
@@ -1214,7 +1255,12 @@ export default function ModDash({
                 );
             case MOD_TABS.BRACKET:
                 return(
-                    <ModBracketTab bracket={bracketState} selectedMatch={selectedMatch} onSelectMatch={handleSelectBracketMatch} />
+                    <ModBracketTab
+                        bracket={bracketState}
+                        selectedMatch={selectedMatch}
+                        nextPlayableMatch={nextPlayableMatch}
+                        onSelectMatch={handleSelectBracketMatch}
+                    />
                 );
             case MOD_TABS.LIVE: 
                 return(
