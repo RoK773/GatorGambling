@@ -121,14 +121,14 @@ function saveBracketSession(session) {
     }
 }
 
-async function replaceStoredBracket(bracketState) {
+async function replaceStoredBracket(bracketState, completedMatch = null) {
     try {
         await fetch('/api/bracket', {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ bracketState }),
+            body: JSON.stringify({ bracketState, completedMatch }),
         });
     } catch {
         // ignore persistence errors so moderator flow keeps working
@@ -1180,7 +1180,12 @@ export default function ModDash({
         setBracketState(prev => {
             const nextBracketState = advanceBracketState(prev, selectedMatch, result);
             if (nextBracketState !== prev) {
-                void replaceStoredBracket(nextBracketState);
+                void replaceStoredBracket(nextBracketState, {
+                    matchId: selectedMatch.matchId,
+                    homeTeam,
+                    awayTeam,
+                    result,
+                });
             }
             return nextBracketState;
         });

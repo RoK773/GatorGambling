@@ -6,6 +6,10 @@ dns.setServers(['8.8.8.8', '8.8.4.4']);
 const uri = process.env.MONGODB_URI || 'mongodb+srv://admin:admin1Password@cluster0.9uypigw.mongodb.net/?appName=Cluster0';
 const dbName = process.env.MONGODB_SOCCER_DB || 'Soccer_Data';
 const collectionName = process.env.MONGODB_BRACKET_COLLECTION || 'Bracket';
+const gameBetsCollectionName = process.env.MONGODB_GAME_BETS_COLLECTION || 'Game_bets';
+const userDbName = process.env.MONGODB_DB || 'User_Data';
+const usersCollectionName = process.env.MONGODB_COLLECTION || 'Users';
+const completedBetsCollectionName = process.env.MONGODB_COMPLETED_BETS_COLLECTION || 'Completed-bets';
 
 const options = {
     serverApi: {
@@ -24,10 +28,275 @@ if (!global._mongoClientPromise) {
 
 clientPromise = global._mongoClientPromise;
 
+function getNextPlayableBracketMatch(bracketState) {
+    const rounds = Array.isArray(bracketState?.rounds) ? bracketState.rounds : [];
+    for (let roundIndex = 0; roundIndex < rounds.length; roundIndex += 1) {
+        const round = rounds[roundIndex];
+        const matches = Array.isArray(round?.matches) ? round.matches : [];
+
+        for (let matchIndex = 0; matchIndex < matches.length; matchIndex += 1) {
+            const match = matches[matchIndex];
+            if (match?.home && match?.away && !match?.winner) {
+                return {
+                    roundIndex,
+                    matchIndex,
+                    roundLabel: String(round?.label || `Round ${roundIndex + 1}`),
+                    match,
+                };
+            }
+        }
+    }
+
+    return null;
+}
+
+function buildCurrentMatchGameBets(nextPlayable) {
+    if (!nextPlayable?.match?.home?.name || !nextPlayable?.match?.away?.name) {
+        return [];
+    }
+
+    const homeTeam = String(nextPlayable.match.home.name).trim();
+    const awayTeam = String(nextPlayable.match.away.name).trim();
+    const timeLabel = `${nextPlayable.roundLabel} · Match ${nextPlayable.matchIndex + 1}`;
+    const optionsLabel = `${homeTeam} or ${awayTeam}`;
+    const bracketMatchId = String(nextPlayable.match?.id || `${nextPlayable.roundIndex}-${nextPlayable.matchIndex}`);
+
+    const markets = [
+        { winner: 'Match Winner', odds: optionsLabel, payout_mult: 2.0 },
+        { winner: 'More Ball Possession', odds: optionsLabel, payout_mult: 1.8 },
+        { winner: 'More Fouls', odds: optionsLabel, payout_mult: 1.8 },
+    ];
+
+    return markets.map(market => ({
+        away_team: awayTeam,
+        home_team: homeTeam,
+        time: timeLabel,
+        winner: market.winner,
+        odds: market.odds,
+        payout_mult: market.payout_mult,
+        bracketMatchId,
+        roundIndex: nextPlayable.roundIndex,
+        matchIndex: nextPlayable.matchIndex,
+        createdAt: new Date(),
+    }));
+}
+
+function normalizeKey(value) {
+    return String(value || '').trim().toLowerCase();
+}
+
+function toFiniteNumber(value) {
+    const parsed = Number(String(value ?? '').replace(/[^\d.+-]/g, ''));
+    return Number.isFinite(parsed) ? parsed : null;
+}
+
+function roundMoney(value) {
+    return Number((Number.isFinite(Number(value)) ? Number(value) : 0).toFixed(2));
+}
+
+function parseScorePair(scoreText) {
+    const score = String(scoreText || '');
+    const match = score.match(/(-?\d+(?:\.\d+)?)\s*-\s*(-?\d+(?:\.\d+)?)/);
+    if (!match) {
+        return null;
+    }
+
+    return {
+        home: Number(match[1]),
+        away: Number(match[2]),
+    };
+}
+
+function parseMetricPair(metricText) {
+    const parts = String(metricText || '').split('-').map(part => part.trim());
+    if (parts.length !== 2) {
+        return null;
+    }
+
+    const home = toFiniteNumber(parts[0]);
+    const away = toFiniteNumber(parts[1]);
+    if (!Number.isFinite(home) || !Number.isFinite(away)) {
+        return null;
+    }
+
+    return { home, away };
+}
+
+function resolveTeamFromMetricPair(pair, homeTeam, awayTeam) {
+    if (!pair) {
+        return null;
+    }
+    if (pair.home > pair.away) {
+        return homeTeam;
+    }
+    if (pair.away > pair.home) {
+        return awayTeam;
+    }
+    return null;
+}
+
+function resolveCompletedMatchOutcomes(completedMatch) {
+    const homeTeam = String(completedMatch?.homeTeam || '').trim();
+    const awayTeam = String(completedMatch?.awayTeam || '').trim();
+    const result = completedMatch?.result || {};
+
+    let matchWinnerTeam = null;
+    const winnerKey = normalizeKey(result?.winner);
+    if (winnerKey === 'home') {
+        matchWinnerTeam = homeTeam;
+    } else if (winnerKey === 'away') {
+        matchWinnerTeam = awayTeam;
+    } else {
+        const scorePair = parseScorePair(result?.score);
+        matchWinnerTeam = resolveTeamFromMetricPair(scorePair, homeTeam, awayTeam);
+    }
+
+    const possessionPair = parseMetricPair(result?.ball_possession);
+    const foulsPair = parseMetricPair(result?.fouls);
+
+    return {
+        homeTeam,
+        awayTeam,
+        matchWinnerTeam,
+        possessionWinnerTeam: resolveTeamFromMetricPair(possessionPair, homeTeam, awayTeam),
+        foulsWinnerTeam: resolveTeamFromMetricPair(foulsPair, homeTeam, awayTeam),
+    };
+}
+
+function resolveExpectedTeamForMarket(marketName, outcomes) {
+    const normalizedMarket = normalizeKey(marketName);
+    if (normalizedMarket === 'match winner') {
+        return outcomes.matchWinnerTeam;
+    }
+    if (normalizedMarket === 'more ball possession') {
+        return outcomes.possessionWinnerTeam;
+    }
+    if (normalizedMarket === 'more fouls') {
+        return outcomes.foulsWinnerTeam;
+    }
+    return null;
+}
+
+function isGamePickForCompletedMatch(pick, outcomes) {
+    return normalizeKey(pick?.home_team) === normalizeKey(outcomes.homeTeam)
+        && normalizeKey(pick?.away_team) === normalizeKey(outcomes.awayTeam)
+        && ['match winner', 'more ball possession', 'more fouls'].includes(normalizeKey(pick?.winner));
+}
+
+async function settleCompletedMatchGameBets(client, completedMatch) {
+    const outcomes = resolveCompletedMatchOutcomes(completedMatch);
+    if (!outcomes.homeTeam || !outcomes.awayTeam) {
+        return { settledPicks: 0, totalPayout: 0 };
+    }
+
+    const usersCollection = client.db(userDbName).collection(usersCollectionName);
+    const completedBetsCollection = client.db(userDbName).collection(completedBetsCollectionName);
+
+    const candidateUsers = await usersCollection.find(
+        { game_picks: { $exists: true, $ne: [] } },
+        { projection: { username: 1, credits: 1, total_bets: 1, wins: 1, losses: 1, profit: 1, player_picks: 1, team_picks: 1, game_picks: 1 } },
+    ).toArray();
+
+    let settledPicks = 0;
+    let totalPayout = 0;
+
+    for (const user of candidateUsers) {
+        const gamePicks = Array.isArray(user.game_picks) ? user.game_picks : [];
+        const picksToSettle = gamePicks.filter(pick => isGamePickForCompletedMatch(pick, outcomes));
+        if (picksToSettle.length === 0) {
+            continue;
+        }
+
+        const remainingGamePicks = gamePicks.filter(pick => !isGamePickForCompletedMatch(pick, outcomes));
+        const settledAt = new Date();
+
+        let userPayout = 0;
+        let userWins = 0;
+        let userLosses = 0;
+        let userProfitDelta = 0;
+
+        const completedRecords = picksToSettle.map(pick => {
+            const expectedTeam = resolveExpectedTeamForMarket(pick?.winner, outcomes);
+            const selectedTeam = String(pick?.selected_team || '').trim();
+            const didWin = Boolean(expectedTeam) && normalizeKey(selectedTeam) === normalizeKey(expectedTeam);
+            const amount = roundMoney(pick?.amount);
+            const payoutMult = Number.isFinite(Number(pick?.payout_mult)) ? Number(pick.payout_mult) : 0;
+            const payout = didWin ? roundMoney(amount * payoutMult) : 0;
+            const net = roundMoney(payout - amount);
+
+            userPayout += payout;
+            userProfitDelta += net;
+            if (didWin) {
+                userWins += 1;
+            } else {
+                userLosses += 1;
+            }
+
+            return {
+                username: user.username,
+                category: 'Game',
+                status: didWin ? 'won' : 'lost',
+                amount,
+                payout_mult: payoutMult,
+                payout,
+                net,
+                selected_team: selectedTeam || null,
+                expected_team: expectedTeam,
+                market: String(pick?.winner || '').trim() || '--',
+                settledAt,
+                pick,
+                completedMatch: {
+                    matchId: String(completedMatch?.matchId || '').trim() || null,
+                    homeTeam: outcomes.homeTeam,
+                    awayTeam: outcomes.awayTeam,
+                },
+            };
+        });
+
+        const currentCredits = Number.isFinite(Number(user.credits)) ? Number(user.credits) : 0;
+        const currentWins = Number.isFinite(Number(user.wins)) ? Number(user.wins) : 0;
+        const currentLosses = Number.isFinite(Number(user.losses)) ? Number(user.losses) : 0;
+        const currentProfit = Number.isFinite(Number(user.profit)) ? Number(user.profit) : 0;
+        const fallbackTotalBets =
+            (Array.isArray(user.player_picks) ? user.player_picks.length : 0) +
+            (Array.isArray(user.team_picks) ? user.team_picks.length : 0) +
+            (Array.isArray(user.game_picks) ? user.game_picks.length : 0);
+        const currentTotalBets = Number.isFinite(Number(user.total_bets)) ? Number(user.total_bets) : fallbackTotalBets;
+
+        await usersCollection.updateOne(
+            { _id: user._id },
+            {
+                $set: {
+                    game_picks: remainingGamePicks,
+                    credits: roundMoney(currentCredits + userPayout),
+                    wins: currentWins + userWins,
+                    losses: currentLosses + userLosses,
+                    profit: roundMoney(currentProfit + userProfitDelta),
+                    // Keep total_bets cumulative; resolved picks should only affect wins/losses.
+                    total_bets: currentTotalBets,
+                },
+            },
+        );
+
+        if (completedRecords.length > 0) {
+            await completedBetsCollection.insertMany(completedRecords);
+        }
+
+        settledPicks += picksToSettle.length;
+        totalPayout += userPayout;
+    }
+
+    return {
+        settledPicks,
+        totalPayout: roundMoney(totalPayout),
+    };
+}
+
 export default async function handler(req, res) {
     try {
         const client = await clientPromise;
         const bracketCollection = client.db(dbName).collection(collectionName);
+        const gameBetsCollection = client.db(dbName).collection(gameBetsCollectionName);
 
         if (req.method === 'GET') {
             const latestBracket = await bracketCollection
@@ -41,6 +310,7 @@ export default async function handler(req, res) {
 
         if (req.method === 'PUT') {
             const bracketState = req.body?.bracketState;
+            const completedMatch = req.body?.completedMatch;
 
             if (!bracketState || typeof bracketState !== 'object') {
                 return res.status(400).json({ error: 'A valid bracketState object is required.' });
@@ -54,9 +324,24 @@ export default async function handler(req, res) {
                 updatedAt: new Date(),
             });
 
+            let settlementSummary = null;
+            if (completedMatch && typeof completedMatch === 'object') {
+                settlementSummary = await settleCompletedMatchGameBets(client, completedMatch);
+            }
+
+            // Keep Game_bets aligned to the current (next playable) bracket match.
+            const nextPlayable = getNextPlayableBracketMatch(bracketState);
+            const nextGameBets = buildCurrentMatchGameBets(nextPlayable);
+            await gameBetsCollection.deleteMany({});
+            if (nextGameBets.length > 0) {
+                await gameBetsCollection.insertMany(nextGameBets);
+            }
+
             return res.status(200).json({
                 ok: true,
                 insertedId: insertResult.insertedId,
+                gameBetsCreated: nextGameBets.length,
+                settlement: settlementSummary,
             });
         }
 

@@ -82,6 +82,7 @@ export default async function handler(req, res) {
             home_team: String(incomingPick.home_team || incomingPick.home || '').trim() || 'Home Team',
             time: String(incomingPick.time || '').trim() || '--:--',
             winner: String(incomingPick.winner || '').trim() || '--',
+            selected_team: String(incomingPick.selected_team || '').trim() || null,
             odds: String(incomingPick.odds || incomingPick.spread || '').trim() || '--',
             payout_mult: normalizePayoutMultiplier(incomingPick.payout_mult),
             amount,

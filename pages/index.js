@@ -178,6 +178,7 @@ function mapGameBetToGameRow(gameBet, index) {
     const homeTeam = String(gameBet?.home_team || gameBet?.home || '').trim() || 'Home Team';
     const time = String(gameBet?.time || '').trim() || '--:--';
     const winner = String(gameBet?.winner || '').trim() || '--';
+    const selectedTeam = String(gameBet?.selected_team || gameBet?.selectedTeam || '').trim() || '';
     const odds = String(gameBet?.odds || gameBet?.spread || '').trim() || '--';
     const payoutMultRaw = gameBet?.payout_mult;
     const payoutMultNum = Number(payoutMultRaw);
@@ -191,6 +192,7 @@ function mapGameBetToGameRow(gameBet, index) {
         home: homeTeam,
         time,
         winner,
+        selected_team: selectedTeam,
         odds,
         spread: odds,
         payout_mult: gameBet?.payout_mult,
@@ -1537,37 +1539,6 @@ function YourPicksTab({playerPicks, teamPicks, gamePicks}){
     const gamePickList = Array.isArray(gamePicks) ? gamePicks : [];
     const hasAnyPicks = playerPickList.length > 0 || teamPickList.length > 0 || gamePickList.length > 0;
 
-    if (!hasAnyPicks) {
-        return(
-            <div style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                minHeight: 400, gap: 16, animation: 'fadeIn 0.4s ease',
-            }}>
-                <div style={{
-                    width: 80, height: 80, borderRadius: 20, background: 'var(--bg-card)',
-                    border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                    <Star size={32} color="var(--accent)"/>
-                </div>
-                <h3 style={{
-                    fontFamily: 'var(--font-display)', fontSize: 28, letterSpacing: '0.06em',
-                }}>YOUR PICKS</h3>
-                <p style={{
-                    fontSize: 14, color: 'var(--text-secondary)', textAlign: 'center', maxWidth: 280, lineHeight: 1.7,
-                }}>Your saved picks and active bets will appear here. Start browsing to build your lineup.</p>
-                <div style={{
-                    background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, 
-                    padding: '16px 24px', display: 'flex', alignItems: 'center', gap: 12,
-                }}>
-                    <Activity size={18} color="var(--accent)"/>
-                    <span style={{
-                        fontSize: 13, color: 'var(--text-secondary)'
-                    }}>No active picks yet</span>
-                </div>
-            </div>
-        );
-    }
-
     return (
         <div style={{
             display: 'flex', flexDirection: 'column', gap: 24,
@@ -1581,34 +1552,65 @@ function YourPicksTab({playerPicks, teamPicks, gamePicks}){
                     flexDirection: 'column',
                     gap: 24,
                 }}>
-                    {playerPickList.length > 0 && (
-                        <PicksSection title="PLAYER PICKS">
-                            {playerPickList.map((p, i) => (
-                                <PlayerBetCard key={`player-${p.id || i}`} playerId={p.id} title={p.name} subtitle={`#${p.number}`} meta={p.pos} stake={p.stake} stat={p.stat} range={p.range} statNum={p.stat_num} payoutMult={p.payout_mult} animDelay={`${i*0.05}s`} confirmed />
-                            ))}
-                        </PicksSection>
-                    )}
+                    {hasAnyPicks ? (
+                        <>
+                            {playerPickList.length > 0 && (
+                                <PicksSection title="PLAYER PICKS">
+                                    {playerPickList.map((p, i) => (
+                                        <PlayerBetCard key={`player-${p.id || i}`} playerId={p.id} title={p.name} subtitle={`#${p.number}`} meta={p.pos} stake={p.stake} stat={p.stat} range={p.range} statNum={p.stat_num} payoutMult={p.payout_mult} animDelay={`${i*0.05}s`} confirmed />
+                                    ))}
+                                </PicksSection>
+                            )}
 
-                    {teamPickList.length > 0 && (
-                        <PicksSection title="TEAM PICKS">
-                            {teamPickList.map((t, i) => (
-                                <TeamBetCard key={`team-${t.id || i}`} teamId={t.id} title={t.name} subtitle={t.record} stake={t.stake} outcome={t.outcome} range={t.range} points={t.points} payoutMult={t.payout_mult} animDelay={`${i * 0.05}s`} confirmed />
-                            ))}
-                        </PicksSection>
-                    )}
+                            {teamPickList.length > 0 && (
+                                <PicksSection title="TEAM PICKS">
+                                    {teamPickList.map((t, i) => (
+                                        <TeamBetCard key={`team-${t.id || i}`} teamId={t.id} title={t.name} subtitle={t.record} stake={t.stake} outcome={t.outcome} range={t.range} points={t.points} payoutMult={t.payout_mult} animDelay={`${i * 0.05}s`} confirmed />
+                                    ))}
+                                </PicksSection>
+                            )}
 
-                    {gamePickList.length > 0 && (
+                            {gamePickList.length > 0 && (
+                                <div style={{
+                                    display: 'flex', flexDirection: 'column', gap: 12,
+                                }}>
+                                    <h3 style={{
+                                        margin: 0,
+                                        fontFamily: 'var(--font-display)',
+                                        fontSize: 18,
+                                        letterSpacing: '0.06em',
+                                        color: 'var(--text-primary)',
+                                    }}>GAME PICKS</h3>
+                                    <GamesTab games={gamePickList} confirmed />
+                                </div>
+                            )}
+                        </>
+                    ) : (
                         <div style={{
-                            display: 'flex', flexDirection: 'column', gap: 12,
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                            minHeight: 400, gap: 16, animation: 'fadeIn 0.4s ease',
                         }}>
+                            <div style={{
+                                width: 80, height: 80, borderRadius: 20, background: 'var(--bg-card)',
+                                border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}>
+                                <Star size={32} color="var(--accent)"/>
+                            </div>
                             <h3 style={{
-                                margin: 0,
-                                fontFamily: 'var(--font-display)',
-                                fontSize: 18,
-                                letterSpacing: '0.06em',
-                                color: 'var(--text-primary)',
-                            }}>GAME PICKS</h3>
-                            <GamesTab games={gamePickList} confirmed />
+                                fontFamily: 'var(--font-display)', fontSize: 28, letterSpacing: '0.06em',
+                            }}>YOUR PICKS</h3>
+                            <p style={{
+                                fontSize: 14, color: 'var(--text-secondary)', textAlign: 'center', maxWidth: 280, lineHeight: 1.7,
+                            }}>Your saved picks and active bets will appear here. Start browsing to build your lineup.</p>
+                            <div style={{
+                                background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12,
+                                padding: '16px 24px', display: 'flex', alignItems: 'center', gap: 12,
+                            }}>
+                                <Activity size={18} color="var(--accent)"/>
+                                <span style={{
+                                    fontSize: 13, color: 'var(--text-secondary)'
+                                }}>No active picks yet</span>
+                            </div>
                         </div>
                     )}
 
@@ -1726,14 +1728,32 @@ function GamesRow({g, i, availableCredits = 0, onPlaceBet, confirmed = false}) {
     const [betAmountInput, setBetAmountInput] = useState('');
     const [betAmountError, setBetAmountError] = useState('');
     const [betBanner, setBetBanner] = useState(null);
+    const [selectedTeamChoice, setSelectedTeamChoice] = useState(String(g?.selected_team || '').trim());
 
     const lockedWinner = String(g?.winner || '').trim() || '--';
     const lockedOdds = String(g?.odds || g?.spread || '').trim() || '--';
-    const hasCondition = lockedWinner !== '--' && lockedOdds !== '--';
-    const conditionText = hasCondition ? lockedWinner : 'Condition unavailable';
+    const hasCondition = lockedWinner !== '--';
+    const hasSelectedTeam = Boolean(selectedTeamChoice);
+    const conditionText = hasCondition
+        ? `${lockedWinner}${hasSelectedTeam ? ` · ${selectedTeamChoice}` : ''}`
+        : 'Condition unavailable';
+
+    useEffect(() => {
+        setSelectedTeamChoice(String(g?.selected_team || '').trim());
+        setBetBanner(null);
+        setBetAmountError('');
+    }, [g?.id, g?.selected_team]);
 
     const handleBet = () => {
         if (!hasCondition || confirmed) {
+            return;
+        }
+
+        if (!hasSelectedTeam) {
+            setBetBanner({
+                type: 'error',
+                message: 'Choose one team for this game bet before placing it.',
+            });
             return;
         }
 
@@ -1771,6 +1791,7 @@ function GamesRow({g, i, availableCredits = 0, onPlaceBet, confirmed = false}) {
                     home_team: g.home,
                     time: g.time,
                     winner: g.winner,
+                    selected_team: selectedTeamChoice,
                     odds: g.odds || g.spread,
                     payout_mult: g.payout_mult,
                 });
@@ -1849,12 +1870,57 @@ function GamesRow({g, i, availableCredits = 0, onPlaceBet, confirmed = false}) {
                     <div style={{
                         display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
                     }}>
-                        <ConditionLabel>Winner</ConditionLabel>
+                        <ConditionLabel>Condition</ConditionLabel>
                         <div style={{
                             minWidth: 160, background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 7,
                             padding: '6px 10px', fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', color: 'var(--text-primary)',
                         }}>{lockedWinner}</div>
                     </div>
+                    {confirmed ? (
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+                        }}>
+                            <ConditionLabel>Selected Team</ConditionLabel>
+                            <div style={{
+                                minWidth: 180, background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 7,
+                                padding: '6px 10px', fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', color: 'var(--text-primary)',
+                            }}>
+                                {selectedTeamChoice || '--'}
+                            </div>
+                        </div>
+                    ) : (
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+                        }}>
+                            <ConditionLabel>Pick Team</ConditionLabel>
+                            <select
+                                value={selectedTeamChoice}
+                                disabled={!hasCondition}
+                                onChange={event => {
+                                    setSelectedTeamChoice(event.target.value);
+                                    setBetBanner(null);
+                                    setBetAmountError('');
+                                }}
+                                style={{
+                                    minWidth: 180,
+                                    background: 'var(--bg-primary)',
+                                    border: '1px solid var(--border)',
+                                    borderRadius: 7,
+                                    padding: '6px 10px',
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    letterSpacing: '0.05em',
+                                    color: 'var(--text-primary)',
+                                    outline: 'none',
+                                    cursor: !hasCondition ? 'not-allowed' : 'pointer',
+                                }}
+                            >
+                                <option value="">Select team...</option>
+                                <option value={g.home}>{g.home}</option>
+                                <option value={g.away}>{g.away}</option>
+                            </select>
+                        </div>
+                    )}
                     <div style={{
                         fontSize: 10, color: 'var(--accent)', fontFamily: 'var(--font-mono)', fontWeight: 700, letterSpacing: '0.06em', paddingTop: 2,
                     }}>
@@ -4026,6 +4092,53 @@ export default function App(){
             isCancelled = true;
         };
     }, [activeTab, isModerator, screen]);
+
+    // Keep user credits and picks in sync without requiring a full page refresh.
+    useEffect(() => {
+        if (screen !== SCREENS.DASHBOARD || isModerator || !username) {
+            return;
+        }
+
+        let isCancelled = false;
+
+        const syncUserState = async () => {
+            try {
+                const response = await fetch('/api/user-state', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username }),
+                });
+
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || isCancelled) {
+                    return;
+                }
+
+                setUserCredits(Number.isFinite(Number(data.credits)) ? Number(data.credits) : 0);
+                setUserTotalBets(Number.isFinite(Number(data.total_bets)) ? Number(data.total_bets) : 0);
+                setUserWins(Number.isFinite(Number(data.wins)) ? Number(data.wins) : 0);
+                setUserLosses(Number.isFinite(Number(data.losses)) ? Number(data.losses) : 0);
+                setUserProfit(Number.isFinite(Number(data.profit)) ? Number(data.profit) : 0);
+                setPlayerPicks(Array.isArray(data.player_picks) ? data.player_picks.map(mapPlayerBetToPlayerCard) : []);
+                setTeamPicks(Array.isArray(data.team_picks) ? data.team_picks.map(mapTeamBetToTeamCard) : []);
+                setGamePicks(Array.isArray(data.game_picks) ? data.game_picks.map(mapGameBetToGameRow) : []);
+            } catch (error) {
+                if (!isCancelled) {
+                    console.error('Failed to sync user state:', error);
+                }
+            }
+        };
+
+        void syncUserState();
+        const intervalId = setInterval(() => {
+            void syncUserState();
+        }, 1500);
+
+        return () => {
+            isCancelled = true;
+            clearInterval(intervalId);
+        };
+    }, [isModerator, screen, username]);
 
     // Betting feature: refresh available Team bets from Mongo when Teams tab opens.
     useEffect(() => {
