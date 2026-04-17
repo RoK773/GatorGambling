@@ -753,7 +753,7 @@ function LandingScreen({ onSignUp, onLogin }) {
                                     letterSpacing: '0.08em',
                                     padding: '2px 6px',
                                     borderRadius: 999,
-                                }}>LIVE AD</div>
+                                }}>PROMO</div>
                             </div>
                         </div>
                     </div>
@@ -1414,10 +1414,8 @@ function Top25Rail({ title }) {
             }}>{title}</h3>
             <div style={{
                 display: 'grid',
-                gridAutoFlow: 'column',
-                gridAutoColumns: '178px',
+                gridTemplateColumns: 'repeat(5, 1fr)',
                 gap: 10,
-                overflowX: 'auto',
                 paddingBottom: 4,
             }}>
                 {FIFA_TOP_25.map((entry, index) => (
@@ -1479,23 +1477,18 @@ function Top25Rail({ title }) {
     );
 }
 
-function GifAdSlot({ src, alt, label, tall = false }) {
+function GifAdSlot({ src, alt, label }) {
     return (
-        <div className={`dashboard-ad-slot ${tall ? 'tall' : 'small'}`}>
+        <div className="dashboard-ad-slot">
             <div style={{
                 position: 'relative',
                 width: '100%',
-                height: '100%',
-                minHeight: tall ? 610 : 230,
-                background: '#111318',
             }}>
                 <img
                     src={src}
                     alt={alt}
                     style={{
                         width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
                         display: 'block',
                     }}
                 />
@@ -1545,7 +1538,8 @@ function YourPicksTab({playerPicks, teamPicks, gamePicks}){
         }}>
             <div className="dashboard-layout">
                 <aside className="dashboard-ad-rail">
-                    <GifAdSlot src="/bspin-bspin-casino.gif" alt="Casino promo gif" label="LIVE PROMO" tall />
+                    <GifAdSlot src="/place-your-bets-sports-betting.gif" alt="Place your bets gif" label="PLACE BETS" />
+                    <GifAdSlot src="/dodep2.gif" alt="Promo gif" label="ODDS BOOST" />
                 </aside>
                 <div style={{
                     display: 'flex',
@@ -1658,7 +1652,7 @@ function YourPicksTab({playerPicks, teamPicks, gamePicks}){
                                     letterSpacing: '0.1em',
                                     padding: '4px 8px',
                                     borderRadius: 999,
-                                }}>BOTTOM BANNER</div>
+                                }}>FEATURED</div>
                                 <div style={{
                                     fontFamily: 'var(--font-display)',
                                     fontSize: 28,
@@ -1671,14 +1665,14 @@ function YourPicksTab({playerPicks, teamPicks, gamePicks}){
                                     fontSize: 13,
                                     color: 'var(--text-secondary)',
                                     lineHeight: 1.5,
-                                }}>Extra banner placement for the picks board. Different gif, different slot, less dead space.</p>
+                                }}>Stack your picks and lock in before the whistle. Don't sleep on it.</p>
                             </div>
                         </div>
                     </div>
                 </div>
                 <aside className="dashboard-ad-rail">
                     <GifAdSlot src="/cat-gamble.gif" alt="Cat gambling gif" label="HOT SLOT" />
-                    <GifAdSlot src="/dodep2.gif" alt="Promo gif" label="ODDS BOOST" />
+                    <GifAdSlot src="/dyd-betting-the-betting-king.gif" alt="Betting king gif" label="BET KING" />
                 </aside>
             </div>
         </div>
@@ -1964,9 +1958,13 @@ function GamesTab({games, availableCredits = 0, onPlaceBet, confirmed = false}){
 function GlobalChat({messages, onNewMessage, username}){
     const [inputText, setInputText] = useState('');
     const messagesEndRef = useRef(null);
+    const chatContainerRef = useRef(null);
 
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        const container = chatContainerRef.current;
+        if (container) {
+            container.scrollTop = container.scrollHeight;
+        }
     }, [messages]);
 
     const handleSubmit = () => {
@@ -1991,8 +1989,9 @@ function GlobalChat({messages, onNewMessage, username}){
 
     return(
         <div style={{
-            width: '25%', flexShrink: 0, display: 'flex', flexDirection: 'column', background: 'var(--bg-card)',
+            flex: 1, flexShrink: 0, display: 'flex', flexDirection: 'column', background: 'var(--bg-card)',
             border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden', height: 520,
+            position: 'sticky', top: 'calc(var(--header-height) + var(--tab-height) + 12px)',
         }}>
             <div style={{
                 padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex',
@@ -2009,7 +2008,7 @@ function GlobalChat({messages, onNewMessage, username}){
                     marginLeft: 'auto', fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)',
                 }}>1,204 online</span>
             </div>
-            <div style={{
+            <div ref={chatContainerRef} style={{
                 flex: 1, overflowY: 'auto', padding: '12px 12px 8px', display: 'flex', flexDirection: 'column', gap: 10,
             }}>
                 {messages.map(msg => (
@@ -2061,42 +2060,236 @@ function GlobalChat({messages, onNewMessage, username}){
     );
 }
 
-function LiveTab({chatMessages, onNewMessage, username}){
+function getLastPlayedMatch(bracketState) {
+    if (!bracketState || !Array.isArray(bracketState.rounds)) return null;
+    let lastPlayed = null;
+    for (const round of bracketState.rounds) {
+        for (const match of (round.matches || [])) {
+            if (match.played && match.result) {
+                lastPlayed = match;
+            }
+        }
+    }
+    return lastPlayed;
+}
+
+function getNextPlayableMatch(bracketState) {
+    if (!bracketState || !Array.isArray(bracketState.rounds)) return null;
+    for (const round of bracketState.rounds) {
+        for (const match of (round.matches || [])) {
+            if (match.home && match.away && !match.winner) {
+                return match;
+            }
+        }
+    }
+    return null;
+}
+
+function TeamSquare({ teamName, score, cards }) {
+    const yellowCards = cards.filter(c => c.event === 'yellow_card');
+    const redCards = cards.filter(c => c.event === 'red_card');
+    return (
+        <div style={{
+            position: 'relative',
+            flex: 1,
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            borderRadius: 12,
+            padding: '16px 18px',
+        }}>
+            <div style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 22,
+                letterSpacing: '0.06em',
+                color: 'var(--text-primary)',
+                marginBottom: 4,
+            }}>{teamName || 'TBD'}</div>
+            <div style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 32,
+                fontWeight: 700,
+                color: 'var(--accent)',
+            }}>{score ?? '-'}</div>
+            {(yellowCards.length > 0 || redCards.length > 0) && (
+                <div style={{
+                    position: 'absolute',
+                    bottom: 10,
+                    right: 10,
+                    display: 'flex',
+                    gap: 3,
+                }}>
+                    {yellowCards.map((c, i) => (
+                        <div key={`y-${i}`} style={{
+                            width: 10, height: 14, borderRadius: 2,
+                            background: '#FACC15',
+                        }} />
+                    ))}
+                    {redCards.map((c, i) => (
+                        <div key={`r-${i}`} style={{
+                            width: 10, height: 14, borderRadius: 2,
+                            background: '#EF4444',
+                        }} />
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function LiveTab({chatMessages, onNewMessage, username, bracketState}){
+    const lastMatch = getLastPlayedMatch(bracketState);
+    const nextMatch = getNextPlayableMatch(bracketState);
+    const events = lastMatch?.result?.match_events || [];
+    const homeYellows = events.filter(e => e.event === 'yellow_card' && e.team === 'home').length;
+    const homeReds = events.filter(e => e.event === 'red_card' && e.team === 'home').length;
+    const awayYellows = events.filter(e => e.event === 'yellow_card' && e.team === 'away').length;
+    const awayReds = events.filter(e => e.event === 'red_card' && e.team === 'away').length;
+
+    // Show last result scores if available, otherwise 0-0 for upcoming match
+    const scoreParts = (lastMatch?.result?.score || '0 - 0').split('-').map(s => s.trim());
+    const homeScore = scoreParts[0] || '0';
+    const awayScore = scoreParts[1] || '0';
+    // Prefer: last played match teams > next upcoming match teams > placeholder
+    const homeName = lastMatch?.home?.name || nextMatch?.home?.name || 'HOME TEAM';
+    const awayName = lastMatch?.away?.name || nextMatch?.away?.name || 'AWAY TEAM';
+
     return(
         <div style={{
             display: 'flex', flexDirection: 'row', gap: 16, alignItems: 'flex-start', animation: 'fadeIn 0.4s ease',
         }}>
             <div style={{
-                flex: '0 0 75%', display: 'flex', flexDirection: 'column', alignItems: 'center',
-                justifyContent: 'center', minHeight: 520, gap: 16, background: 'var(--bg-card)', 
-                border: '1px solid var(--border)', borderRadius: 14, padding: 32
+                flex: '0 0 68%', display: 'flex', flexDirection: 'column', gap: 0,
             }}>
+                {/* Scoreboard bar */}
                 <div style={{
-                    width: 80, height: 80, borderRadius: '50%', background: 'rgba(255, 71, 87, 0.1)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0,
+                    padding: '10px 0', marginBottom: 8,
                 }}>
-                    <Radio size={32} color="var(--danger)"/>
-                    <div style={{
-                        position: 'absolute', top: 12, right: 12, width: 10, height: 10, borderRadius: '50%',
-                        background: 'var(--danger)', animation: 'live-dot 1.2s ease-in-out infinite',
-                    }} />
-                </div>
-                <h3 style={{
-                    fontFamily: 'var(--font-display)', fontSize: 28, letterSpacing: '0.06em',
-                }}>LIVE GAME</h3>
-                <p style={{
-                    fontSize: 14, color: 'var(--text-secondary)', textAlign: 'center', maxWidth: 300, lineHeight: 1.7,
-                }}>Real-time updates and live global chat.</p>
-                <div style={{
-                    display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255, 71, 87, 0.08)',
-                    border: '1px solid rgba(255, 71, 87, 0.2)', borderRadius: 10, padding: '10px 18px',
-                }}>
-                    <div style={{
-                        width: 8, height: 8, borderRadius: '50%', background: 'var(--danger)', animation: 'live-dot 1.2s ease-in-out infinite',
-                    }}/>
                     <span style={{
-                        fontSize: 13, color: 'var(--danger)', fontWeight: 600, fontFamily: 'var(--font-mono)',
-                    }}>LIVE FEED LOADING...</span>
+                        fontFamily: 'var(--font-display)', fontSize: 16, letterSpacing: '0.06em',
+                        color: 'var(--text-primary)',
+                    }}>{homeName}</span>
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: 4, margin: '0 14px',
+                    }}>
+                        <div style={{
+                            background: 'var(--bg-card)', border: '1px solid var(--border)',
+                            borderRadius: 6, padding: '6px 14px',
+                            fontFamily: 'var(--font-mono)', fontSize: 18, fontWeight: 700,
+                            color: 'var(--text-primary)', textAlign: 'center', minWidth: 40,
+                        }}>{homeScore}</div>
+                        <div style={{
+                            background: 'var(--bg-card)', border: '1px solid var(--border)',
+                            borderRadius: 6, padding: '6px 14px',
+                            fontFamily: 'var(--font-mono)', fontSize: 18, fontWeight: 700,
+                            color: 'var(--text-primary)', textAlign: 'center', minWidth: 40,
+                        }}>{awayScore}</div>
+                    </div>
+                    <span style={{
+                        fontFamily: 'var(--font-display)', fontSize: 16, letterSpacing: '0.06em',
+                        color: 'var(--text-primary)',
+                    }}>{awayName}</span>
+                </div>
+
+                {/* Field image */}
+                <div style={{
+                    position: 'relative',
+                    borderRadius: 14,
+                    overflow: 'hidden',
+                    border: '1px solid var(--border)',
+                    height: 380,
+                }}>
+                    <img
+                        src="/free-soccer-field-vector.jpg"
+                        alt="Soccer field"
+                        style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            display: 'block',
+                        }}
+                    />
+
+                    {/* Live badge */}
+                    <div style={{
+                        position: 'absolute', top: 10, right: 10,
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        background: 'rgba(0,0,0,0.7)', padding: '5px 10px', borderRadius: 999,
+                    }}>
+                        <div style={{
+                            width: 7, height: 7, borderRadius: '50%',
+                            background: lastMatch ? 'var(--accent)' : 'var(--danger)',
+                            animation: 'live-dot 1.2s ease-in-out infinite',
+                        }}/>
+                        <span style={{
+                            fontSize: 10, fontWeight: 800, letterSpacing: '0.1em',
+                            color: lastMatch ? 'var(--accent)' : 'var(--danger)',
+                            fontFamily: 'var(--font-mono)',
+                        }}>{lastMatch ? 'FULL TIME' : 'PRE-MATCH'}</span>
+                    </div>
+
+                    {/* Pre-match state */}
+                    {!lastMatch && (
+                        <div style={{
+                            position: 'absolute', inset: 0,
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                            background: 'rgba(8, 10, 15, 0.5)',
+                            gap: 10,
+                        }}>
+                            <Radio size={28} color="var(--danger)"/>
+                            <span style={{
+                                fontFamily: 'var(--font-display)', fontSize: 20, letterSpacing: '0.06em',
+                                color: 'var(--text-primary)',
+                            }}>WAITING FOR KICKOFF</span>
+                            <span style={{
+                                fontSize: 11, color: 'var(--text-secondary)',
+                            }}>Live match data will show up here once the game begins.</span>
+                        </div>
+                    )}
+                </div>
+
+                {/* Card boxes */}
+                <div style={{
+                    display: 'flex', flexDirection: 'row', gap: 16, marginTop: 10,
+                }}>
+                    <div style={{
+                        flex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)',
+                        borderRadius: 12, padding: '12px 16px',
+                    }}>
+                        <div style={{
+                            fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.08em',
+                            color: 'var(--text-secondary)', marginBottom: 8,
+                        }}>HOME CARDS</div>
+                        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <div style={{ width: 14, height: 20, borderRadius: 2, background: '#FACC15' }} />
+                                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{homeYellows}</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <div style={{ width: 14, height: 20, borderRadius: 2, background: '#EF4444' }} />
+                                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{homeReds}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div style={{
+                        flex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)',
+                        borderRadius: 12, padding: '12px 16px',
+                    }}>
+                        <div style={{
+                            fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.08em',
+                            color: 'var(--text-secondary)', marginBottom: 8,
+                        }}>AWAY CARDS</div>
+                        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <div style={{ width: 14, height: 20, borderRadius: 2, background: '#FACC15' }} />
+                                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{awayYellows}</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <div style={{ width: 14, height: 20, borderRadius: 2, background: '#EF4444' }} />
+                                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{awayReds}</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <GlobalChat messages={chatMessages} onNewMessage={onNewMessage} username={username}/>
@@ -2474,7 +2667,7 @@ function Dashboard({username, players, playerPicks, teams, teamPicks, games, gam
             case TABS.TEAMS: return <TeamsTab teams={availableTeams} availableCredits={userCredits} onPlaceBet={onPlaceTeamBet}/>;
             case TABS.GAMES: return <GamesTab games={availableGames} availableCredits={userCredits} onPlaceBet={onPlaceGameBet} />;
             case TABS.BRACKET: return <UserBracketTab bracket={bracketState} isLoading={isBracketLoading} />;
-            case TABS.LIVE: return <LiveTab chatMessages={chatMessages} onNewMessage={onNewMessage} username={username}/>;
+            case TABS.LIVE: return <LiveTab chatMessages={chatMessages} onNewMessage={onNewMessage} username={username} bracketState={bracketState}/>;
             default: return null;
         }
     };

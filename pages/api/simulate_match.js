@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import dns from 'dns';
 import { MongoClient, ServerApiVersion } from 'mongodb';
-//const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434'; //  local Ollama server
+//const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
 const OLLAMA_URL = process.env.OLLAMA_URL || 'https://lakia-semifuturistic-unbecomingly.ngrok-free.dev';
 
 dns.setServers(['8.8.8.8', '8.8.4.4']);
@@ -203,7 +203,7 @@ Rules:
     const text = await response.text();
     //console.log('RAW RESPONSE:', text);
     const rawResponse = JSON.parse(text);
-    const result = JSON.parse(rawResponse.response); // Ollama puts output in `response`
+    const result = JSON.parse(rawResponse.response);
     console.log('RAW RESULT:', JSON.stringify(result, null, 2));
 
     if (!Array.isArray(result.match_events)) {
