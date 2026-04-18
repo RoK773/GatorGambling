@@ -66,7 +66,7 @@ function calculateTeamPayoutMultiplier(rangeType, points) {
         return Number(rawMultiplier.toFixed(2));
     }
 
-    if (normalizedRangeType === 'exactly') {
+    if (normalizedRangeType === 'by exactly' || normalizedRangeType === 'exactly') {
         const effectiveThreshold = Math.max(1, threshold);
         const rawMultiplier = 1.8 + ((effectiveThreshold - 1) * 0.3);
         return Number(rawMultiplier.toFixed(2));

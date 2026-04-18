@@ -8,6 +8,9 @@ const uri = process.env.MONGODB_URI || 'mongodb+srv://admin:admin1Password@clust
 const dbName = process.env.MONGODB_SOCCER_DB || 'Soccer_Data';
 const collectionName = process.env.MONGODB_BRACKET_COLLECTION || 'Bracket';
 const gameBetsCollectionName = process.env.MONGODB_GAME_BETS_COLLECTION || 'Game_bets';
+const playerBetsCollectionName = process.env.MONGODB_PLAYER_BETS_COLLECTION || 'Player_bets';
+const teamBetsCollectionName = process.env.MONGODB_TEAM_BETS_COLLECTION || 'Team_bets';
+const currentGameDataCollectionName = process.env.MONGODB_CURRENT_GAME_DATA_COLLECTION || 'Current_game_data';
 const pendingBetsCollectionName = process.env.MONGODB_PENDING_BETS_COLLECTION || 'Pending_Bets';
 const userDbName = process.env.MONGODB_DB || 'User_Data';
 const usersCollectionName = process.env.MONGODB_COLLECTION || 'Users';
@@ -217,17 +220,270 @@ function isGamePickForCompletedMatch(pick, outcomes) {
         && ['match winner', 'more ball possession', 'more fouls'].includes(normalizeKey(pick?.winner));
 }
 
+function normalizeTeamReference(rawTeam, matchContext) {
+    const normalized = normalizeKey(rawTeam);
+    if (!normalized) {
+        return null;
+    }
+
+    if (normalized === 'home') {
+        return matchContext.homeTeam;
+    }
+
+    if (normalized === 'away') {
+        return matchContext.awayTeam;
+    }
+
+    if (normalized === normalizeKey(matchContext.homeTeam)) {
+        return matchContext.homeTeam;
+    }
+
+    if (normalized === normalizeKey(matchContext.awayTeam)) {
+        return matchContext.awayTeam;
+    }
+
+    return null;
+}
+
+function getPlayerStatCount(matchContext, pick) {
+    const playerName = String(pick?.name || '').trim();
+    const statName = normalizeKey(pick?.stat);
+    const betTeam = normalizeTeamReference(pick?.team, matchContext);
+
+    if (!playerName || !statName || !betTeam) {
+        return null;
+    }
+
+    const expectedEventType = statName === 'goals'
+        ? 'goal'
+        : (statName === 'fouls' ? 'foul' : null);
+
+    if (!expectedEventType) {
+        return null;
+    }
+
+    const events = Array.isArray(matchContext.match_events) ? matchContext.match_events : [];
+    const playerKey = normalizeKey(playerName);
+
+    return events.reduce((count, event) => {
+        const eventType = normalizeKey(event?.event);
+        if (eventType !== expectedEventType) {
+            return count;
+        }
+
+        const eventPlayerKey = normalizeKey(event?.player);
+        if (eventPlayerKey !== playerKey) {
+            return count;
+        }
+
+        const eventTeam = normalizeTeamReference(event?.team, matchContext);
+        if (eventTeam !== betTeam) {
+            return count;
+        }
+
+        return count + 1;
+    }, 0);
+}
+
+function doesPlayerPickWin(matchContext, pick) {
+    const actualCount = getPlayerStatCount(matchContext, pick);
+    if (!Number.isFinite(actualCount)) {
+        return { didWin: false, actualCount: null, threshold: null, comparator: null };
+    }
+
+    const thresholdRaw = toFiniteNumber(pick?.stat_num);
+    const threshold = Number.isFinite(thresholdRaw) ? thresholdRaw : null;
+    const comparator = normalizeKey(pick?.range);
+
+    if (!Number.isFinite(threshold) || !comparator) {
+        return { didWin: false, actualCount, threshold, comparator };
+    }
+
+    if (comparator === 'over') {
+        return { didWin: actualCount > threshold, actualCount, threshold, comparator };
+    }
+
+    if (comparator === 'under') {
+        return { didWin: actualCount < threshold, actualCount, threshold, comparator };
+    }
+
+    if (comparator === 'exactly') {
+        return { didWin: actualCount === threshold, actualCount, threshold, comparator };
+    }
+
+    return { didWin: false, actualCount, threshold, comparator };
+}
+
+function isPlayerPickForCompletedMatch(pick, matchContext) {
+    const pickTeam = normalizeTeamReference(pick?.team, matchContext);
+    return Boolean(pickTeam);
+}
+
+function getTeamMargin(matchContext, pick) {
+    const teamName = normalizeTeamReference(pick?.country, matchContext);
+    if (!teamName) {
+        return null;
+    }
+
+    const scorePair = parseScorePair(matchContext?.score);
+    if (!scorePair) {
+        return null;
+    }
+
+    const isHome = normalizeKey(teamName) === normalizeKey(matchContext.homeTeam);
+    const teamScore = isHome ? scorePair.home : scorePair.away;
+    const opponentScore = isHome ? scorePair.away : scorePair.home;
+
+    return {
+        teamName,
+        teamScore,
+        opponentScore,
+        winMargin: teamScore - opponentScore,
+        lossMargin: opponentScore - teamScore,
+    };
+}
+
+function doesTeamPickWin(matchContext, pick) {
+    const marginInfo = getTeamMargin(matchContext, pick);
+    if (!marginInfo) {
+        return {
+            didWin: false,
+            teamName: null,
+            outcome: null,
+            rangeType: null,
+            threshold: null,
+            marginValue: null,
+        };
+    }
+
+    const outcome = normalizeKey(pick?.outcome);
+    const rangeType = normalizeKey(pick?.range);
+    const thresholdRaw = toFiniteNumber(pick?.points);
+    const threshold = Number.isFinite(thresholdRaw) ? thresholdRaw : null;
+
+    if (!outcome || !rangeType || !Number.isFinite(threshold)) {
+        return {
+            didWin: false,
+            teamName: marginInfo.teamName,
+            outcome,
+            rangeType,
+            threshold,
+            marginValue: null,
+        };
+    }
+
+    const isWinsPick = outcome === 'wins';
+    const isLosesPick = outcome === 'loses';
+    if (!isWinsPick && !isLosesPick) {
+        return {
+            didWin: false,
+            teamName: marginInfo.teamName,
+            outcome,
+            rangeType,
+            threshold,
+            marginValue: null,
+        };
+    }
+
+    const baseMargin = isWinsPick ? marginInfo.winMargin : marginInfo.lossMargin;
+    if (!(baseMargin > 0)) {
+        return {
+            didWin: false,
+            teamName: marginInfo.teamName,
+            outcome,
+            rangeType,
+            threshold,
+            marginValue: baseMargin,
+        };
+    }
+
+    if (rangeType === 'by more than') {
+        return {
+            didWin: baseMargin > threshold,
+            teamName: marginInfo.teamName,
+            outcome,
+            rangeType,
+            threshold,
+            marginValue: baseMargin,
+        };
+    }
+
+    if (rangeType === 'by less than') {
+        return {
+            didWin: baseMargin < threshold,
+            teamName: marginInfo.teamName,
+            outcome,
+            rangeType,
+            threshold,
+            marginValue: baseMargin,
+        };
+    }
+
+    if (rangeType === 'by exactly') {
+        return {
+            didWin: baseMargin === threshold,
+            teamName: marginInfo.teamName,
+            outcome,
+            rangeType,
+            threshold,
+            marginValue: baseMargin,
+        };
+    }
+
+    return {
+        didWin: false,
+        teamName: marginInfo.teamName,
+        outcome,
+        rangeType,
+        threshold,
+        marginValue: baseMargin,
+    };
+}
+
+function isTeamPickForCompletedMatch(pick, matchContext) {
+    return Boolean(normalizeTeamReference(pick?.country, matchContext));
+}
+
 async function settleCompletedMatchGameBets(client, completedMatch) {
     const outcomes = resolveCompletedMatchOutcomes(completedMatch);
-    if (!outcomes.homeTeam || !outcomes.awayTeam) {
+
+    const currentGameDataCollection = client.db(dbName).collection(currentGameDataCollectionName);
+    const latestCurrentGameData = await currentGameDataCollection
+        .find({})
+        .sort({ createdAt: -1, _id: -1 })
+        .limit(1)
+        .next();
+
+    const currentMatchContext = {
+        homeTeam: String(latestCurrentGameData?.homeTeam || outcomes.homeTeam || '').trim(),
+        awayTeam: String(latestCurrentGameData?.awayTeam || outcomes.awayTeam || '').trim(),
+        score: latestCurrentGameData?.score || completedMatch?.result?.score || null,
+        match_events: Array.isArray(latestCurrentGameData?.match_events)
+            ? latestCurrentGameData.match_events
+            : [],
+    };
+
+    if (!currentMatchContext.homeTeam || !currentMatchContext.awayTeam) {
         return { settledPicks: 0, totalPayout: 0 };
     }
+
+    const gameOutcomes = {
+        ...outcomes,
+        homeTeam: currentMatchContext.homeTeam,
+        awayTeam: currentMatchContext.awayTeam,
+    };
 
     const usersCollection = client.db(userDbName).collection(usersCollectionName);
     const completedBetsCollection = client.db(userDbName).collection(completedBetsCollectionName);
 
     const candidateUsers = await usersCollection.find(
-        { game_picks: { $exists: true, $ne: [] } },
+        {
+            $or: [
+                { game_picks: { $exists: true, $ne: [] } },
+                { player_picks: { $exists: true, $ne: [] } },
+                { team_picks: { $exists: true, $ne: [] } },
+            ],
+        },
         { projection: { username: 1, credits: 1, total_bets: 1, wins: 1, losses: 1, profit: 1, player_picks: 1, team_picks: 1, game_picks: 1 } },
     ).toArray();
 
@@ -235,13 +491,22 @@ async function settleCompletedMatchGameBets(client, completedMatch) {
     let totalPayout = 0;
 
     for (const user of candidateUsers) {
+        const playerPicks = Array.isArray(user.player_picks) ? user.player_picks : [];
+        const teamPicks = Array.isArray(user.team_picks) ? user.team_picks : [];
         const gamePicks = Array.isArray(user.game_picks) ? user.game_picks : [];
-        const picksToSettle = gamePicks.filter(pick => isGamePickForCompletedMatch(pick, outcomes));
-        if (picksToSettle.length === 0) {
+
+        const playerPicksToSettle = playerPicks.filter(pick => isPlayerPickForCompletedMatch(pick, currentMatchContext));
+        const teamPicksToSettle = teamPicks.filter(pick => isTeamPickForCompletedMatch(pick, currentMatchContext));
+        const gamePicksToSettle = gamePicks.filter(pick => isGamePickForCompletedMatch(pick, gameOutcomes));
+
+        const totalUserPicksToSettle = playerPicksToSettle.length + teamPicksToSettle.length + gamePicksToSettle.length;
+        if (totalUserPicksToSettle === 0) {
             continue;
         }
 
-        const remainingGamePicks = gamePicks.filter(pick => !isGamePickForCompletedMatch(pick, outcomes));
+        const remainingPlayerPicks = playerPicks.filter(pick => !isPlayerPickForCompletedMatch(pick, currentMatchContext));
+        const remainingTeamPicks = teamPicks.filter(pick => !isTeamPickForCompletedMatch(pick, currentMatchContext));
+        const remainingGamePicks = gamePicks.filter(pick => !isGamePickForCompletedMatch(pick, gameOutcomes));
         const settledAt = new Date();
 
         let userPayout = 0;
@@ -249,8 +514,86 @@ async function settleCompletedMatchGameBets(client, completedMatch) {
         let userLosses = 0;
         let userProfitDelta = 0;
 
-        const completedRecords = picksToSettle.map(pick => {
-            const expectedTeam = resolveExpectedTeamForMarket(pick?.winner, outcomes);
+        const playerCompletedRecords = playerPicksToSettle.map(pick => {
+            const playerResult = doesPlayerPickWin(currentMatchContext, pick);
+            const didWin = playerResult.didWin;
+            const amount = roundMoney(pick?.amount);
+            const payoutMult = Number.isFinite(Number(pick?.payout_mult)) ? Number(pick.payout_mult) : 0;
+            const payout = didWin ? roundMoney(amount * payoutMult) : 0;
+            const net = roundMoney(payout - amount);
+
+            userPayout += payout;
+            userProfitDelta += net;
+            if (didWin) {
+                userWins += 1;
+            } else {
+                userLosses += 1;
+            }
+
+            return {
+                username: user.username,
+                category: 'Player',
+                status: didWin ? 'won' : 'lost',
+                amount,
+                payout_mult: payoutMult,
+                payout,
+                net,
+                player: String(pick?.name || '').trim() || null,
+                stat: String(pick?.stat || '').trim() || null,
+                comparator: playerResult.comparator,
+                threshold: playerResult.threshold,
+                actual: playerResult.actualCount,
+                settledAt,
+                pick,
+                completedMatch: {
+                    matchId: String(completedMatch?.matchId || '').trim() || null,
+                    homeTeam: currentMatchContext.homeTeam,
+                    awayTeam: currentMatchContext.awayTeam,
+                },
+            };
+        });
+
+        const teamCompletedRecords = teamPicksToSettle.map(pick => {
+            const teamResult = doesTeamPickWin(currentMatchContext, pick);
+            const didWin = teamResult.didWin;
+            const amount = roundMoney(pick?.amount);
+            const payoutMult = Number.isFinite(Number(pick?.payout_mult)) ? Number(pick.payout_mult) : 0;
+            const payout = didWin ? roundMoney(amount * payoutMult) : 0;
+            const net = roundMoney(payout - amount);
+
+            userPayout += payout;
+            userProfitDelta += net;
+            if (didWin) {
+                userWins += 1;
+            } else {
+                userLosses += 1;
+            }
+
+            return {
+                username: user.username,
+                category: 'Team',
+                status: didWin ? 'won' : 'lost',
+                amount,
+                payout_mult: payoutMult,
+                payout,
+                net,
+                team: teamResult.teamName || String(pick?.country || '').trim() || null,
+                outcome: teamResult.outcome,
+                range: teamResult.rangeType,
+                threshold: teamResult.threshold,
+                margin: teamResult.marginValue,
+                settledAt,
+                pick,
+                completedMatch: {
+                    matchId: String(completedMatch?.matchId || '').trim() || null,
+                    homeTeam: currentMatchContext.homeTeam,
+                    awayTeam: currentMatchContext.awayTeam,
+                },
+            };
+        });
+
+        const gameCompletedRecords = gamePicksToSettle.map(pick => {
+            const expectedTeam = resolveExpectedTeamForMarket(pick?.winner, gameOutcomes);
             const selectedTeam = String(pick?.selected_team || '').trim();
             const didWin = Boolean(expectedTeam) && normalizeKey(selectedTeam) === normalizeKey(expectedTeam);
             const amount = roundMoney(pick?.amount);
@@ -281,11 +624,17 @@ async function settleCompletedMatchGameBets(client, completedMatch) {
                 pick,
                 completedMatch: {
                     matchId: String(completedMatch?.matchId || '').trim() || null,
-                    homeTeam: outcomes.homeTeam,
-                    awayTeam: outcomes.awayTeam,
+                    homeTeam: gameOutcomes.homeTeam,
+                    awayTeam: gameOutcomes.awayTeam,
                 },
             };
         });
+
+        const completedRecords = [
+            ...playerCompletedRecords,
+            ...teamCompletedRecords,
+            ...gameCompletedRecords,
+        ];
 
         const currentCredits = Number.isFinite(Number(user.credits)) ? Number(user.credits) : 0;
         const currentWins = Number.isFinite(Number(user.wins)) ? Number(user.wins) : 0;
@@ -301,6 +650,8 @@ async function settleCompletedMatchGameBets(client, completedMatch) {
             { _id: user._id },
             {
                 $set: {
+                    player_picks: remainingPlayerPicks,
+                    team_picks: remainingTeamPicks,
                     game_picks: remainingGamePicks,
                     credits: roundMoney(currentCredits + userPayout),
                     wins: currentWins + userWins,
@@ -316,7 +667,7 @@ async function settleCompletedMatchGameBets(client, completedMatch) {
             await completedBetsCollection.insertMany(completedRecords);
         }
 
-        settledPicks += picksToSettle.length;
+        settledPicks += totalUserPicksToSettle;
         totalPayout += userPayout;
     }
 
@@ -390,6 +741,8 @@ export default async function handler(req, res) {
         const client = await clientPromise;
         const bracketCollection = client.db(dbName).collection(collectionName);
         const gameBetsCollection = client.db(dbName).collection(gameBetsCollectionName);
+        const playerBetsCollection = client.db(dbName).collection(playerBetsCollectionName);
+        const teamBetsCollection = client.db(dbName).collection(teamBetsCollectionName);
         const pendingBetsCollection = client.db(dbName).collection(pendingBetsCollectionName);
 
         if (req.method === 'GET') {
@@ -460,9 +813,19 @@ export default async function handler(req, res) {
 
             let settlementSummary = null;
             if (completedMatch && typeof completedMatch === 'object') {
-                await pendingBetsCollection.deleteMany({});
+                const [pendingClearResult, playerClearResult, teamClearResult] = await Promise.all([
+                    pendingBetsCollection.deleteMany({}),
+                    playerBetsCollection.deleteMany({}),
+                    teamBetsCollection.deleteMany({}),
+                ]);
+
                 settlementSummary = {
                     pendingBetsCleared: true,
+                    playerBetsCleared: true,
+                    teamBetsCleared: true,
+                    pendingBetsDeleted: pendingClearResult?.deletedCount || 0,
+                    playerBetsDeleted: playerClearResult?.deletedCount || 0,
+                    teamBetsDeleted: teamClearResult?.deletedCount || 0,
                     settledPicks: 0,
                     totalPayout: 0,
                 };
