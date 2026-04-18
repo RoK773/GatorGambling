@@ -241,17 +241,12 @@ export function LoginScreen({ onLogin, onBack, LogoComponent, isLoading = false,
                         </button>
                         <h3 style={{
                             margin: 0,
-                            marginBottom: 12,
+                            marginBottom: 14,
                             fontFamily: 'var(--font-display)',
                             fontSize: 26,
                             letterSpacing: '0.06em',
+                            textAlign: 'center',
                         }}>WHOMP WHOMP</h3>
-                        <p style={{
-                            margin: 0,
-                            marginBottom: 14,
-                            fontSize: 13,
-                            color: 'var(--text-secondary)',
-                        }}>Password recovery is not wired yet. For now, enjoy the GIF.</p>
                         <div style={{
                             borderRadius: 14,
                             overflow: 'hidden',

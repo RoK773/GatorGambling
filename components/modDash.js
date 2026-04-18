@@ -1004,7 +1004,7 @@ function ModLiveTab({chatMessages, onDeleteMessage, onBanUser, onNewMessage, use
                 />
             </div>
             <div style={{
-                flex: '0 0 42%', minWidth: 420, display: 'flex', flexDirection: 'column', background: 'var(--bg-card)', border: '1px solid var(--border)',
+                flex: '0 0 40%', minWidth: 400, display: 'flex', flexDirection: 'column', background: 'var(--bg-card)', border: '1px solid var(--border)',
                 borderRadius: 14, overflow: 'hidden', height: 520,
             }}>
                 <div style={{
