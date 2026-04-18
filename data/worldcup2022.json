@@ -9,17 +9,17 @@
       "ball_possession": "50%",
       "placement": 8,
       "players": [
-        {"name": "Andries Noppert", "position": "Goalkeeper", "goals": 0, "assists": 0},
-        {"name": "Virgil van Dijk", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Nathan Aké", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Jurriën Timber", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Denzel Dumfries", "position": "Defender", "goals": 1, "assists": 2},
-        {"name": "Frenkie de Jong", "position": "Midfielder", "goals": 0, "assists": 1},
-        {"name": "Marten de Roon", "position": "Midfielder", "goals": 0, "assists": 0},
-        {"name": "Daley Blind", "position": "Midfielder", "goals": 1, "assists": 1},
-        {"name": "Cody Gakpo", "position": "Forward", "goals": 3, "assists": 0},
-        {"name": "Memphis Depay", "position": "Forward", "goals": 2, "assists": 1},
-        {"name": "Steven Bergwijn", "position": "Forward", "goals": 0, "assists": 0}
+        {"name": "Andries Noppert", "position": "Goalkeeper", "goals": 0, "assists": 0, "jersey_number": 23},
+        {"name": "Virgil van Dijk", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 4},
+        {"name": "Nathan Aké", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 5},
+        {"name": "Jurriën Timber", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 2},
+        {"name": "Denzel Dumfries", "position": "Defender", "goals": 1, "assists": 2, "jersey_number": 22},
+        {"name": "Frenkie de Jong", "position": "Midfielder", "goals": 0, "assists": 1, "jersey_number": 21},
+        {"name": "Marten de Roon", "position": "Midfielder", "goals": 0, "assists": 0, "jersey_number": 15},
+        {"name": "Daley Blind", "position": "Midfielder", "goals": 1, "assists": 1, "jersey_number": 17},
+        {"name": "Cody Gakpo", "position": "Forward", "goals": 3, "assists": 0, "jersey_number": 8},
+        {"name": "Memphis Depay", "position": "Forward", "goals": 2, "assists": 1, "jersey_number": 10},
+        {"name": "Steven Bergwijn", "position": "Forward", "goals": 0, "assists": 0, "jersey_number": 7}
       ]
     },
     {
@@ -31,17 +31,17 @@
       "ball_possession": "52%",
       "placement": 14,
       "players": [
-        {"name": "Matt Turner", "position": "Goalkeeper", "goals": 0, "assists": 0},
-        {"name": "Sergiño Dest", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Walker Zimmerman", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Tim Ream", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Antonee Robinson", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Tyler Adams", "position": "Midfielder", "goals": 0, "assists": 0},
-        {"name": "Yunus Musah", "position": "Midfielder", "goals": 0, "assists": 0},
-        {"name": "Weston McKennie", "position": "Midfielder", "goals": 0, "assists": 0},
-        {"name": "Christian Pulisic", "position": "Forward", "goals": 1, "assists": 0},
-        {"name": "Tim Weah", "position": "Forward", "goals": 1, "assists": 0},
-        {"name": "Josh Sargent", "position": "Forward", "goals": 0, "assists": 0}
+        {"name": "Matt Turner", "position": "Goalkeeper", "goals": 0, "assists": 0, "jersey_number": 1},
+        {"name": "Sergiño Dest", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 8},
+        {"name": "Walker Zimmerman", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 3},
+        {"name": "Tim Ream", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 13},
+        {"name": "Antonee Robinson", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 5},
+        {"name": "Tyler Adams", "position": "Midfielder", "goals": 0, "assists": 0, "jersey_number": 4},
+        {"name": "Yunus Musah", "position": "Midfielder", "goals": 0, "assists": 0, "jersey_number": 6},
+        {"name": "Weston McKennie", "position": "Midfielder", "goals": 0, "assists": 0, "jersey_number": 8},
+        {"name": "Christian Pulisic", "position": "Forward", "goals": 1, "assists": 0, "jersey_number": 10},
+        {"name": "Timothy Weah", "position": "Forward", "goals": 1, "assists": 0, "jersey_number": 21},
+        {"name": "Josh Sargent", "position": "Forward", "goals": 0, "assists": 0, "jersey_number": 24}
       ]
     },
     {
@@ -53,17 +53,17 @@
       "ball_possession": "58%",
       "placement": 1,
       "players": [
-        {"name": "Emiliano Martínez", "position": "Goalkeeper", "goals": 0, "assists": 0},
-        {"name": "Nahuel Molina", "position": "Defender", "goals": 1, "assists": 1},
-        {"name": "Cristian Romero", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Nicolás Otamendi", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Nicolás Tagliafico", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Rodrigo De Paul", "position": "Midfielder", "goals": 0, "assists": 0},
-        {"name": "Enzo Fernández", "position": "Midfielder", "goals": 1, "assists": 1},
-        {"name": "Alexis Mac Allister", "position": "Midfielder", "goals": 1, "assists": 1},
-        {"name": "Lionel Messi", "position": "Forward", "goals": 7, "assists": 3},
-        {"name": "Ángel Di María", "position": "Forward", "goals": 1, "assists": 0},
-        {"name": "Julián Álvarez", "position": "Forward", "goals": 4, "assists": 0}
+        {"name": "Emiliano Martínez", "position": "Goalkeeper", "goals": 0, "assists": 0, "jersey_number": 23},
+        {"name": "Nahuel Molina", "position": "Defender", "goals": 1, "assists": 1, "jersey_number": 26},
+        {"name": "Cristian Romero", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 13},
+        {"name": "Nicolás Otamendi", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 19},
+        {"name": "Nicolás Tagliafico", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 3},
+        {"name": "Rodrigo De Paul", "position": "Midfielder", "goals": 0, "assists": 0, "jersey_number": 7},
+        {"name": "Enzo Fernández", "position": "Midfielder", "goals": 1, "assists": 1, "jersey_number": 24},
+        {"name": "Alexis Mac Allister", "position": "Midfielder", "goals": 1, "assists": 1, "jersey_number": 20},
+        {"name": "Lionel Messi", "position": "Forward", "goals": 7, "assists": 3, "jersey_number": 10},
+        {"name": "Ángel Di María", "position": "Forward", "goals": 1, "assists": 0, "jersey_number": 11},
+        {"name": "Julián Álvarez", "position": "Forward", "goals": 4, "assists": 0, "jersey_number": 9}
       ]
     },
     {
@@ -75,17 +75,17 @@
       "ball_possession": "36%",
       "placement": 11,
       "players": [
-        {"name": "Mathew Ryan", "position": "Goalkeeper", "goals": 0, "assists": 0},
-        {"name": "Aziz Behich", "position": "Defender", "goals": 1, "assists": 0},
-        {"name": "Harry Souttar", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Kye Rowles", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Milos Degenek", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Aaron Mooy", "position": "Midfielder", "goals": 0, "assists": 0},
-        {"name": "Jackson Irvine", "position": "Midfielder", "goals": 1, "assists": 0},
-        {"name": "Riley McGree", "position": "Midfielder", "goals": 0, "assists": 0},
-        {"name": "Mathew Leckie", "position": "Forward", "goals": 1, "assists": 0},
-        {"name": "Craig Goodwin", "position": "Forward", "goals": 1, "assists": 1},
-        {"name": "Mitchell Duke", "position": "Forward", "goals": 1, "assists": 0}
+        {"name": "Mathew Ryan", "position": "Goalkeeper", "goals": 0, "assists": 0, "jersey_number": 1},
+        {"name": "Aziz Behich", "position": "Defender", "goals": 1, "assists": 0, "jersey_number": 16},
+        {"name": "Harry Souttar", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 19},
+        {"name": "Kye Rowles", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 4},
+        {"name": "Milos Degenek", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 2},
+        {"name": "Aaron Mooy", "position": "Midfielder", "goals": 0, "assists": 0, "jersey_number": 13},
+        {"name": "Jackson Irvine", "position": "Midfielder", "goals": 1, "assists": 0, "jersey_number": 22},
+        {"name": "Riley McGree", "position": "Midfielder", "goals": 0, "assists": 0, "jersey_number": 14},
+        {"name": "Mathew Leckie", "position": "Forward", "goals": 1, "assists": 0, "jersey_number": 7},
+        {"name": "Craig Goodwin", "position": "Forward", "goals": 1, "assists": 1, "jersey_number": 23},
+        {"name": "Mitchell Duke", "position": "Forward", "goals": 1, "assists": 0, "jersey_number": 15}
       ]
     },
     {
@@ -97,17 +97,17 @@
       "ball_possession": "55%",
       "placement": 2,
       "players": [
-        {"name": "Hugo Lloris", "position": "Goalkeeper", "goals": 0, "assists": 0},
-        {"name": "Theo Hernández", "position": "Defender", "goals": 1, "assists": 2},
-        {"name": "Raphaël Varane", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Dayot Upamecano", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Jules Koundé", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Aurélien Tchouaméni", "position": "Midfielder", "goals": 1, "assists": 0},
-        {"name": "Adrien Rabiot", "position": "Midfielder", "goals": 1, "assists": 1},
-        {"name": "Antoine Griezmann", "position": "Midfielder", "goals": 2, "assists": 3},
-        {"name": "Kylian Mbappé", "position": "Forward", "goals": 8, "assists": 2},
-        {"name": "Olivier Giroud", "position": "Forward", "goals": 4, "assists": 0},
-        {"name": "Ousmane Dembélé", "position": "Forward", "goals": 0, "assists": 0}
+        {"name": "Hugo Lloris", "position": "Goalkeeper", "goals": 0, "assists": 0, "jersey_number": 1},
+        {"name": "Theo Hernández", "position": "Defender", "goals": 1, "assists": 2, "jersey_number": 22},
+        {"name": "Raphaël Varane", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 4},
+        {"name": "Dayot Upamecano", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 18},
+        {"name": "Jules Koundé", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 5},
+        {"name": "Aurélien Tchouaméni", "position": "Midfielder", "goals": 1, "assists": 0, "jersey_number": 8},
+        {"name": "Adrien Rabiot", "position": "Midfielder", "goals": 1, "assists": 1, "jersey_number": 14},
+        {"name": "Antoine Griezmann", "position": "Midfielder", "goals": 2, "assists": 3, "jersey_number": 7},
+        {"name": "Kylian Mbappé", "position": "Forward", "goals": 8, "assists": 2, "jersey_number": 10},
+        {"name": "Olivier Giroud", "position": "Forward", "goals": 4, "assists": 0, "jersey_number": 9},
+        {"name": "Ousmane Dembélé", "position": "Forward", "goals": 0, "assists": 0, "jersey_number": 11}
       ]
     },
     {
@@ -119,20 +119,19 @@
       "ball_possession": "38%",
       "placement": 15,
       "players": [
-        {"name": "Wojciech Szczęsny", "position": "Goalkeeper", "goals": 0, "assists": 0},
-        {"name": "Matty Cash", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Kamil Glik", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Jakub Kiwior", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Bartosz Bereszyński", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Grzegorz Krychowiak", "position": "Midfielder", "goals": 0, "assists": 0},
-        {"name": "Piotr Zieliński", "position": "Midfielder", "goals": 1, "assists": 1},
-        {"name": "Sebastian Szymański", "position": "Midfielder", "goals": 0, "assists": 0},
-        {"name": "Jakub Kamiński", "position": "Forward", "goals": 0, "assists": 0},
-        {"name": "Robert Lewandowski", "position": "Forward", "goals": 2, "assists": 0},
-        {"name": "Arkadiusz Milik", "position": "Forward", "goals": 0, "assists": 0}
+        {"name": "Wojciech Szczęsny", "position": "Goalkeeper", "goals": 0, "assists": 0, "jersey_number": 1},
+        {"name": "Matty Cash", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 2},
+        {"name": "Kamil Glik", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 15},
+        {"name": "Jakub Kiwior", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 14},
+        {"name": "Bartosz Bereszyński", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 18},
+        {"name": "Grzegorz Krychowiak", "position": "Midfielder", "goals": 0, "assists": 0, "jersey_number": 10},
+        {"name": "Piotr Zieliński", "position": "Midfielder", "goals": 1, "assists": 1, "jersey_number": 20},
+        {"name": "Sebastian Szymański", "position": "Midfielder", "goals": 0, "assists": 0, "jersey_number": 19},
+        {"name": "Jakub Kamiński", "position": "Forward", "goals": 0, "assists": 0, "jersey_number": 13},
+        {"name": "Robert Lewandowski", "position": "Forward", "goals": 2, "assists": 0, "jersey_number": 9},
+        {"name": "Arkadiusz Milik", "position": "Forward", "goals": 0, "assists": 0, "jersey_number": 7}
       ]
     },
-
     {
       "id": 7,
       "name": "England",
@@ -142,17 +141,17 @@
       "ball_possession": "53%",
       "placement": 7,
       "players": [
-        {"name": "Jordan Pickford", "position": "Goalkeeper", "goals": 0, "assists": 0},
-        {"name": "Kyle Walker", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "John Stones", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Harry Maguire", "position": "Defender", "goals": 1, "assists": 0},
-        {"name": "Luke Shaw", "position": "Defender", "goals": 0, "assists": 1},
-        {"name": "Declan Rice", "position": "Midfielder", "goals": 0, "assists": 0},
-        {"name": "Jude Bellingham", "position": "Midfielder", "goals": 1, "assists": 1},
-        {"name": "Jordan Henderson", "position": "Midfielder", "goals": 1, "assists": 0},
-        {"name": "Bukayo Saka", "position": "Forward", "goals": 3, "assists": 1},
-        {"name": "Harry Kane", "position": "Forward", "goals": 2, "assists": 3},
-        {"name": "Phil Foden", "position": "Forward", "goals": 1, "assists": 2}
+        {"name": "Jordan Pickford", "position": "Goalkeeper", "goals": 0, "assists": 0, "jersey_number": 1},
+        {"name": "Kyle Walker", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 2},
+        {"name": "John Stones", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 5},
+        {"name": "Harry Maguire", "position": "Defender", "goals": 1, "assists": 0, "jersey_number": 6},
+        {"name": "Luke Shaw", "position": "Defender", "goals": 0, "assists": 1, "jersey_number": 3},
+        {"name": "Declan Rice", "position": "Midfielder", "goals": 0, "assists": 0, "jersey_number": 4},
+        {"name": "Jude Bellingham", "position": "Midfielder", "goals": 1, "assists": 1, "jersey_number": 22},
+        {"name": "Jordan Henderson", "position": "Midfielder", "goals": 1, "assists": 0, "jersey_number": 8},
+        {"name": "Bukayo Saka", "position": "Forward", "goals": 3, "assists": 1, "jersey_number": 17},
+        {"name": "Harry Kane", "position": "Forward", "goals": 2, "assists": 3, "jersey_number": 9},
+        {"name": "Phil Foden", "position": "Forward", "goals": 1, "assists": 2, "jersey_number": 20}
       ]
     },
     {
@@ -164,20 +163,19 @@
       "ball_possession": "44%",
       "placement": 13,
       "players": [
-        {"name": "Édouard Mendy", "position": "Goalkeeper", "goals": 0, "assists": 0},
-        {"name": "Kalidou Koulibaly", "position": "Defender", "goals": 1, "assists": 0},
-        {"name": "Ismail Jakobs", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Abdou Diallo", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Youssouf Sabaly", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Idrissa Gueye", "position": "Midfielder", "goals": 0, "assists": 0},
-        {"name": "Pathé Ciss", "position": "Midfielder", "goals": 0, "assists": 0},
-        {"name": "Nampalys Mendy", "position": "Midfielder", "goals": 0, "assists": 0},
-        {"name": "Ismaïla Sarr", "position": "Forward", "goals": 2, "assists": 0},
-        {"name": "Boulaye Dia", "position": "Forward", "goals": 1, "assists": 0},
-        {"name": "Famara Diedhiou", "position": "Forward", "goals": 1, "assists": 0}
+        {"name": "Édouard Mendy", "position": "Goalkeeper", "goals": 0, "assists": 0, "jersey_number": 16},
+        {"name": "Kalidou Koulibaly", "position": "Defender", "goals": 1, "assists": 0, "jersey_number": 3},
+        {"name": "Ismail Jakobs", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 14},
+        {"name": "Abdou Diallo", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 22},
+        {"name": "Youssouf Sabaly", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 21},
+        {"name": "Idrissa Gueye", "position": "Midfielder", "goals": 0, "assists": 0, "jersey_number": 5},
+        {"name": "Pathé Ciss", "position": "Midfielder", "goals": 0, "assists": 0, "jersey_number": 11},
+        {"name": "Nampalys Mendy", "position": "Midfielder", "goals": 0, "assists": 0, "jersey_number": 6},
+        {"name": "Ismaïla Sarr", "position": "Forward", "goals": 2, "assists": 0, "jersey_number": 18},
+        {"name": "Boulaye Dia", "position": "Forward", "goals": 1, "assists": 0, "jersey_number": 9},
+        {"name": "Famara Diedhiou", "position": "Forward", "goals": 1, "assists": 0, "jersey_number": 19}
       ]
     },
-
     {
       "id": 9,
       "name": "Japan",
@@ -187,17 +185,17 @@
       "ball_possession": "45%",
       "placement": 13,
       "players": [
-        {"name": "Shuichi Gonda", "position": "Goalkeeper", "goals": 0, "assists": 0},
-        {"name": "Takehiro Tomiyasu", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Maya Yoshida", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Hiroki Sakai", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Yuto Nagatomo", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Hidemasa Morita", "position": "Midfielder", "goals": 0, "assists": 0},
-        {"name": "Daichi Kamada", "position": "Midfielder", "goals": 0, "assists": 0},
-        {"name": "Ao Tanaka", "position": "Midfielder", "goals": 1, "assists": 0},
-        {"name": "Ritsu Doan", "position": "Forward", "goals": 2, "assists": 0},
-        {"name": "Daizen Maeda", "position": "Forward", "goals": 1, "assists": 1},
-        {"name": "Takefusa Kubo", "position": "Forward", "goals": 0, "assists": 0}
+        {"name": "Shuichi Gonda", "position": "Goalkeeper", "goals": 0, "assists": 0, "jersey_number": 12},
+        {"name": "Takehiro Tomiyasu", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 16},
+        {"name": "Maya Yoshida", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 22},
+        {"name": "Hiroki Sakai", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 19},
+        {"name": "Yuto Nagatomo", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 5},
+        {"name": "Hidemasa Morita", "position": "Midfielder", "goals": 0, "assists": 0, "jersey_number": 13},
+        {"name": "Daichi Kamada", "position": "Midfielder", "goals": 0, "assists": 0, "jersey_number": 15},
+        {"name": "Ao Tanaka", "position": "Midfielder", "goals": 1, "assists": 0, "jersey_number": 17},
+        {"name": "Ritsu Doan", "position": "Forward", "goals": 2, "assists": 0, "jersey_number": 8},
+        {"name": "Daizen Maeda", "position": "Forward", "goals": 1, "assists": 1, "jersey_number": 25},
+        {"name": "Takefusa Kubo", "position": "Forward", "goals": 0, "assists": 0, "jersey_number": 11}
       ]
     },
 
@@ -210,20 +208,19 @@
       "ball_possession": "49%",
       "placement": 3,
       "players": [
-        {"name": "Dominik Livaković", "position": "Goalkeeper", "goals": 0, "assists": 0},
-        {"name": "Josip Juranović", "position": "Defender", "goals": 0, "assists": 1},
-        {"name": "Joško Gvardiol", "position": "Defender", "goals": 1, "assists": 0},
-        {"name": "Dejan Lovren", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Borna Sosa", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Luka Modrić", "position": "Midfielder", "goals": 1, "assists": 1},
-        {"name": "Mateo Kovačić", "position": "Midfielder", "goals": 0, "assists": 0},
-        {"name": "Marcelo Brozović", "position": "Midfielder", "goals": 0, "assists": 0},
-        {"name": "Ivan Perišić", "position": "Forward", "goals": 1, "assists": 3},
-        {"name": "Andrej Kramarić", "position": "Forward", "goals": 2, "assists": 0},
-        {"name": "Mario Pašalić", "position": "Forward", "goals": 0, "assists": 0}
+        {"name": "Dominik Livaković", "position": "Goalkeeper", "goals": 0, "assists": 0, "jersey_number": 1},
+        {"name": "Josip Juranović", "position": "Defender", "goals": 0, "assists": 1, "jersey_number": 22},
+        {"name": "Joško Gvardiol", "position": "Defender", "goals": 1, "assists": 0, "jersey_number": 20},
+        {"name": "Dejan Lovren", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 6},
+        {"name": "Borna Sosa", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 19},
+        {"name": "Luka Modrić", "position": "Midfielder", "goals": 1, "assists": 1, "jersey_number": 10},
+        {"name": "Mateo Kovačić", "position": "Midfielder", "goals": 0, "assists": 0, "jersey_number": 8},
+        {"name": "Marcelo Brozović", "position": "Midfielder", "goals": 0, "assists": 0, "jersey_number": 11},
+        {"name": "Ivan Perišić", "position": "Forward", "goals": 1, "assists": 3, "jersey_number": 4},
+        {"name": "Andrej Kramarić", "position": "Forward", "goals": 2, "assists": 0, "jersey_number": 9},
+        {"name": "Mario Pašalić", "position": "Forward", "goals": 0, "assists": 0, "jersey_number": 15}
       ]
     },
-
     {
       "id": 11,
       "name": "Brazil",
@@ -233,20 +230,19 @@
       "ball_possession": "57%",
       "placement": 5,
       "players": [
-        {"name": "Alisson Becker", "position": "Goalkeeper", "goals": 0, "assists": 0},
-        {"name": "Danilo", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Thiago Silva", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Marquinhos", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Alex Sandro", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Casemiro", "position": "Midfielder", "goals": 1, "assists": 0},
-        {"name": "Lucas Paquetá", "position": "Midfielder", "goals": 1, "assists": 1},
-        {"name": "Neymar", "position": "Forward", "goals": 2, "assists": 1},
-        {"name": "Vinícius Júnior", "position": "Forward", "goals": 1, "assists": 1},
-        {"name": "Raphinha", "position": "Forward", "goals": 0, "assists": 0},
-        {"name": "Richarlison", "position": "Forward", "goals": 3, "assists": 0}
+        {"name": "Alisson Becker", "position": "Goalkeeper", "goals": 0, "assists": 0, "jersey_number": 1},
+        {"name": "Danilo", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 2},
+        {"name": "Thiago Silva", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 3},
+        {"name": "Marquinhos", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 4},
+        {"name": "Alex Sandro", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 6},
+        {"name": "Casemiro", "position": "Midfielder", "goals": 1, "assists": 0, "jersey_number": 5},
+        {"name": "Lucas Paquetá", "position": "Midfielder", "goals": 1, "assists": 1, "jersey_number": 7},
+        {"name": "Neymar", "position": "Forward", "goals": 2, "assists": 1, "jersey_number": 10},
+        {"name": "Vinícius Júnior", "position": "Forward", "goals": 1, "assists": 1, "jersey_number": 20},
+        {"name": "Raphinha", "position": "Forward", "goals": 0, "assists": 0, "jersey_number": 11},
+        {"name": "Richarlison", "position": "Forward", "goals": 3, "assists": 0, "jersey_number": 9}
       ]
     },
-
     {
       "id": 12,
       "name": "South Korea",
@@ -256,20 +252,19 @@
       "ball_possession": "48%",
       "placement": 16,
       "players": [
-        {"name": "Kim Seung-gyu", "position": "Goalkeeper", "goals": 0, "assists": 0},
-        {"name": "Kim Min-jae", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Kim Young-gwon", "position": "Defender", "goals": 1, "assists": 0},
-        {"name": "Kim Jin-su", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Kim Moon-hwan", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Hwang In-beom", "position": "Midfielder", "goals": 0, "assists": 0},
-        {"name": "Jung Woo-young", "position": "Midfielder", "goals": 0, "assists": 0},
-        {"name": "Lee Jae-sung", "position": "Midfielder", "goals": 0, "assists": 0},
-        {"name": "Son Heung-min", "position": "Forward", "goals": 0, "assists": 1},
-        {"name": "Hwang Hee-chan", "position": "Forward", "goals": 1, "assists": 0},
-        {"name": "Cho Gue-sung", "position": "Forward", "goals": 2, "assists": 0}
+        {"name": "Kim Seung-gyu", "position": "Goalkeeper", "goals": 0, "assists": 0, "jersey_number": 1},
+        {"name": "Kim Min-jae", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 4},
+        {"name": "Kim Young-gwon", "position": "Defender", "goals": 1, "assists": 0, "jersey_number": 19},
+        {"name": "Kim Jin-su", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 3},
+        {"name": "Kim Moon-hwan", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 15},
+        {"name": "Hwang In-beom", "position": "Midfielder", "goals": 0, "assists": 0, "jersey_number": 6},
+        {"name": "Jung Woo-young", "position": "Midfielder", "goals": 0, "assists": 0, "jersey_number": 5},
+        {"name": "Lee Jae-sung", "position": "Midfielder", "goals": 0, "assists": 0, "jersey_number": 10},
+        {"name": "Son Heung-min", "position": "Forward", "goals": 0, "assists": 1, "jersey_number": 7},
+        {"name": "Hwang Hee-chan", "position": "Forward", "goals": 1, "assists": 0, "jersey_number": 11},
+        {"name": "Cho Gue-sung", "position": "Forward", "goals": 2, "assists": 0, "jersey_number": 9}
       ]
     },
-
     {
       "id": 13,
       "name": "Morocco",
@@ -279,20 +274,19 @@
       "ball_possession": "39%",
       "placement": 4,
       "players": [
-        {"name": "Yassine Bounou", "position": "Goalkeeper", "goals": 0, "assists": 0},
-        {"name": "Achraf Hakimi", "position": "Defender", "goals": 0, "assists": 1},
-        {"name": "Romain Saïss", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Nayef Aguerd", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Noussair Mazraoui", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Sofyan Amrabat", "position": "Midfielder", "goals": 0, "assists": 0},
-        {"name": "Azzedine Ounahi", "position": "Midfielder", "goals": 0, "assists": 0},
-        {"name": "Selim Amallah", "position": "Midfielder", "goals": 0, "assists": 0},
-        {"name": "Hakim Ziyech", "position": "Forward", "goals": 1, "assists": 1},
-        {"name": "Youssef En-Nesyri", "position": "Forward", "goals": 2, "assists": 0},
-        {"name": "Sofiane Boufal", "position": "Forward", "goals": 0, "assists": 0}
+        {"name": "Yassine Bounou", "position": "Goalkeeper", "goals": 0, "assists": 0, "jersey_number": 1},
+        {"name": "Achraf Hakimi", "position": "Defender", "goals": 0, "assists": 1, "jersey_number": 2},
+        {"name": "Romain Saïss", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 6},
+        {"name": "Nayef Aguerd", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 5},
+        {"name": "Noussair Mazraoui", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 3},
+        {"name": "Sofyan Amrabat", "position": "Midfielder", "goals": 0, "assists": 0, "jersey_number": 4},
+        {"name": "Azzedine Ounahi", "position": "Midfielder", "goals": 0, "assists": 0, "jersey_number": 8},
+        {"name": "Selim Amallah", "position": "Midfielder", "goals": 0, "assists": 0, "jersey_number": 15},
+        {"name": "Hakim Ziyech", "position": "Forward", "goals": 1, "assists": 1, "jersey_number": 7},
+        {"name": "Youssef En-Nesyri", "position": "Forward", "goals": 2, "assists": 0, "jersey_number": 19},
+        {"name": "Sofiane Boufal", "position": "Forward", "goals": 0, "assists": 0, "jersey_number": 17}
       ]
     },
-
     {
       "id": 14,
       "name": "Spain",
@@ -302,20 +296,19 @@
       "ball_possession": "56%",
       "placement": 9,
       "players": [
-        {"name": "Unai Simón", "position": "Goalkeeper", "goals": 0, "assists": 0},
-        {"name": "Dani Carvajal", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Rodri", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Aymeric Laporte", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Jordi Alba", "position": "Defender", "goals": 0, "assists": 1},
-        {"name": "Sergio Busquets", "position": "Midfielder", "goals": 0, "assists": 0},
-        {"name": "Pedri", "position": "Midfielder", "goals": 0, "assists": 0},
-        {"name": "Gavi", "position": "Midfielder", "goals": 1, "assists": 1},
-        {"name": "Ferran Torres", "position": "Forward", "goals": 2, "assists": 1},
-        {"name": "Dani Olmo", "position": "Forward", "goals": 1, "assists": 1},
-        {"name": "Álvaro Morata", "position": "Forward", "goals": 3, "assists": 0}
+        {"name": "Unai Simón", "position": "Goalkeeper", "goals": 0, "assists": 0, "jersey_number": 23},
+        {"name": "Dani Carvajal", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 20},
+        {"name": "Rodri", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 16},
+        {"name": "Aymeric Laporte", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 24},
+        {"name": "Jordi Alba", "position": "Defender", "goals": 0, "assists": 1, "jersey_number": 18},
+        {"name": "Sergio Busquets", "position": "Midfielder", "goals": 0, "assists": 0, "jersey_number": 5},
+        {"name": "Pedri", "position": "Midfielder", "goals": 0, "assists": 0, "jersey_number": 26},
+        {"name": "Gavi", "position": "Midfielder", "goals": 1, "assists": 1, "jersey_number": 9},
+        {"name": "Ferran Torres", "position": "Forward", "goals": 2, "assists": 1, "jersey_number": 11},
+        {"name": "Dani Olmo", "position": "Forward", "goals": 1, "assists": 1, "jersey_number": 21},
+        {"name": "Álvaro Morata", "position": "Forward", "goals": 3, "assists": 0, "jersey_number": 7}
       ]
     },
-
     {
       "id": 15,
       "name": "Portugal",
@@ -325,20 +318,19 @@
       "ball_possession": "54%",
       "placement": 6,
       "players": [
-        {"name": "Diogo Costa", "position": "Goalkeeper", "goals": 0, "assists": 0},
-        {"name": "João Cancelo", "position": "Defender", "goals": 0, "assists": 1},
-        {"name": "Rúben Dias", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Pepe", "position": "Defender", "goals": 1, "assists": 0},
-        {"name": "Raphaël Guerreiro", "position": "Defender", "goals": 1, "assists": 2},
-        {"name": "Bruno Fernandes", "position": "Midfielder", "goals": 2, "assists": 1},
-        {"name": "Bernardo Silva", "position": "Midfielder", "goals": 0, "assists": 1},
-        {"name": "William Carvalho", "position": "Midfielder", "goals": 0, "assists": 0},
-        {"name": "Gonçalo Ramos", "position": "Forward", "goals": 3, "assists": 0},
-        {"name": "Rafael Leão", "position": "Forward", "goals": 2, "assists": 1},
-        {"name": "Cristiano Ronaldo", "position": "Forward", "goals": 1, "assists": 0}
+        {"name": "Diogo Costa", "position": "Goalkeeper", "goals": 0, "assists": 0, "jersey_number": 22},
+        {"name": "João Cancelo", "position": "Defender", "goals": 0, "assists": 1, "jersey_number": 20},
+        {"name": "Rúben Dias", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 4},
+        {"name": "Pepe", "position": "Defender", "goals": 1, "assists": 0, "jersey_number": 3},
+        {"name": "Raphaël Guerreiro", "position": "Defender", "goals": 1, "assists": 2, "jersey_number": 5},
+        {"name": "Bruno Fernandes", "position": "Midfielder", "goals": 2, "assists": 1, "jersey_number": 8},
+        {"name": "Bernardo Silva", "position": "Midfielder", "goals": 0, "assists": 1, "jersey_number": 10},
+        {"name": "William Carvalho", "position": "Midfielder", "goals": 0, "assists": 0, "jersey_number": 14},
+        {"name": "Gonçalo Ramos", "position": "Forward", "goals": 3, "assists": 0, "jersey_number": 26},
+        {"name": "Rafael Leão", "position": "Forward", "goals": 2, "assists": 1, "jersey_number": 15},
+        {"name": "Cristiano Ronaldo", "position": "Forward", "goals": 1, "assists": 0, "jersey_number": 7}
       ]
     },
-
     {
       "id": 16,
       "name": "Switzerland",
@@ -348,17 +340,17 @@
       "ball_possession": "49%",
       "placement": 10,
       "players": [
-        {"name": "Yann Sommer", "position": "Goalkeeper", "goals": 0, "assists": 0},
-        {"name": "Silvan Widmer", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Manuel Akanji", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Nico Elvedi", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Ricardo Rodríguez", "position": "Defender", "goals": 0, "assists": 0},
-        {"name": "Granit Xhaka", "position": "Midfielder", "goals": 1, "assists": 0},
-        {"name": "Remo Freuler", "position": "Midfielder", "goals": 1, "assists": 0},
-        {"name": "Djibril Sow", "position": "Midfielder", "goals": 0, "assists": 0},
-        {"name": "Xherdan Shaqiri", "position": "Forward", "goals": 1, "assists": 0},
-        {"name": "Breel Embolo", "position": "Forward", "goals": 2, "assists": 0},
-        {"name": "Ruben Vargas", "position": "Forward", "goals": 0, "assists": 0}
+        {"name": "Yann Sommer", "position": "Goalkeeper", "goals": 0, "assists": 0, "jersey_number": 1},
+        {"name": "Silvan Widmer", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 3},
+        {"name": "Manuel Akanji", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 5},
+        {"name": "Nico Elvedi", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 4},
+        {"name": "Ricardo Rodríguez", "position": "Defender", "goals": 0, "assists": 0, "jersey_number": 13},
+        {"name": "Granit Xhaka", "position": "Midfielder", "goals": 1, "assists": 0, "jersey_number": 10},
+        {"name": "Remo Freuler", "position": "Midfielder", "goals": 1, "assists": 0, "jersey_number": 8},
+        {"name": "Djibril Sow", "position": "Midfielder", "goals": 0, "assists": 0, "jersey_number": 15},
+        {"name": "Xherdan Shaqiri", "position": "Forward", "goals": 1, "assists": 0, "jersey_number": 23},
+        {"name": "Breel Embolo", "position": "Forward", "goals": 2, "assists": 0, "jersey_number": 7},
+        {"name": "Ruben Vargas", "position": "Forward", "goals": 0, "assists": 0, "jersey_number": 17}
       ]
     }
   ]
