@@ -121,14 +121,51 @@ function saveBracketSession(session) {
     }
 }
 
-async function replaceStoredBracket(bracketState, completedMatch = null) {
+function normalizeUsernameList(values) {
+    if (!Array.isArray(values)) {
+        return [];
+    }
+
+    return Array.from(
+        new Set(
+            values
+                .map(value => String(value || '').trim())
+                .filter(Boolean),
+        ),
+    );
+}
+
+async function loadStoredBracket() {
+    try {
+        const response = await fetch('/api/bracket');
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            return null;
+        }
+
+        return data?.bracket || null;
+    } catch {
+        return null;
+    }
+}
+
+async function replaceStoredBracket(bracketState, {
+    completedMatch = null,
+    liveReplay = null,
+    bannedUsernames = [],
+} = {}) {
     try {
         await fetch('/api/bracket', {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ bracketState, completedMatch }),
+            body: JSON.stringify({
+                bracketState,
+                completedMatch,
+                liveReplay,
+                bannedUsernames: normalizeUsernameList(bannedUsernames),
+            }),
         });
     } catch {
         // ignore persistence errors so moderator flow keeps working
@@ -922,7 +959,7 @@ function ModItemCard({title, subtitle, meta, stake, index, onCancel}) {
 }
 
 // live tab for mod **global chat
-function ModLiveTab({chatMessages, onDeleteMessage, onNewMessage, username, selectedMatch, simulationState, onSimulationComplete}) {
+function ModLiveTab({chatMessages, onDeleteMessage, onBanUser, onNewMessage, username, selectedMatch, simulationState, onSimulationComplete}) {
     // general constants for global chat
     const [inputText, setInputText] = useState('');
     const [userSearch, setUserSearch] = useState('');
@@ -1047,6 +1084,15 @@ function ModLiveTab({chatMessages, onDeleteMessage, onNewMessage, username, sele
                             onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 71, 87, 0.08)'}>
                                 <Icon.Trash /> DEL
                             </button>
+                            <button onClick={() => onBanUser(msg.user)} title="Ban user" style={{
+                                flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 6,
+                                background: 'rgba(250, 204, 21, 0.08)', border: '1px solid rgba(250, 204, 21, 0.25)', color: '#FACC15',
+                                fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', cursor: 'pointer', transition: 'all 0.2s',
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(250, 204, 21, 0.18)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'rgba(250, 204, 21, 0.08)'}>
+                                <Icon.Ban /> BAN
+                            </button>
                         </div>
                     ))}
                     {filteredMessages.length === 0 && (
@@ -1080,13 +1126,14 @@ function ModLiveTab({chatMessages, onDeleteMessage, onNewMessage, username, sele
 
 // main export / make the mod dashboard a thing
 export default function ModDash({
-    username, proposals, onApprove, onDecline, chatMessages, onNewMessage, onDeleteMessage, players, teams, games, onCancelStake, isLoadingProposals = false,
+    username, proposals, onApprove, onDecline, chatMessages, onNewMessage, onDeleteMessage, onBanUser, players, teams, games, onCancelStake, bannedUsernames = [], isLoadingProposals = false,
 }) {
     // constants
     const [activeTab, setActiveTab] = useState(MOD_TABS.PROPOSALS);
     const [bracketState, setBracketState] = useState(() => createBracketState(BRACKET_TEAMS));
     const [selectedMatch, setSelectedMatch] = useState(null);
     const [simulationState, setSimulationState] = useState(null);
+    const [liveReplay, setLiveReplay] = useState(null);
     const [hasLoadedBracketSession, setHasLoadedBracketSession] = useState(false);
     const {confirm, modal} = useConfirm();
     const nextPlayableMatch = getNextPlayableBracketMatch(bracketState);
@@ -1096,6 +1143,25 @@ export default function ModDash({
 
         const initializeBracket = async () => {
             const session = loadBracketSession();
+            const storedBracket = await loadStoredBracket();
+
+            if (storedBracket?.bracketState) {
+                if (!isMounted) {
+                    return;
+                }
+
+                setBracketState(storedBracket.bracketState);
+                setSelectedMatch(null);
+                setSimulationState(storedBracket.liveReplay?.result ? {
+                    matchId: storedBracket.liveReplay.matchId,
+                    homeTeam: storedBracket.liveReplay.homeTeam,
+                    awayTeam: storedBracket.liveReplay.awayTeam,
+                    result: storedBracket.liveReplay.result,
+                } : session?.simulationState || null);
+                setLiveReplay(storedBracket.liveReplay || null);
+                setHasLoadedBracketSession(true);
+                return;
+            }
 
             if (session?.bracketState) {
                 if (!isMounted) {
@@ -1105,6 +1171,7 @@ export default function ModDash({
                 setBracketState(session.bracketState);
                 setSelectedMatch(session.selectedMatch || null);
                 setSimulationState(session.simulationState || null);
+                setLiveReplay(session.liveReplay || null);
                 setHasLoadedBracketSession(true);
                 return;
             }
@@ -1115,7 +1182,8 @@ export default function ModDash({
             }
 
             setBracketState(generatedBracket);
-            void replaceStoredBracket(generatedBracket);
+            setLiveReplay(null);
+            void replaceStoredBracket(generatedBracket, { bannedUsernames });
 
             setSelectedMatch(session?.selectedMatch || null);
             setSimulationState(session?.simulationState || null);
@@ -1138,16 +1206,21 @@ export default function ModDash({
             bracketState,
             selectedMatch,
             simulationState,
+            liveReplay,
         });
-    }, [bracketState, hasLoadedBracketSession, selectedMatch, simulationState]);
+    }, [bracketState, hasLoadedBracketSession, liveReplay, selectedMatch, simulationState]);
 
     const handleShuffleBracket = () => {
         const generatedBracket = createBracketState(BRACKET_TEAMS);
         setBracketState(generatedBracket);
         setSelectedMatch(null);
         setSimulationState(null);
+        setLiveReplay(null);
         setActiveTab(MOD_TABS.BRACKET);
-        void replaceStoredBracket(generatedBracket);
+        void replaceStoredBracket(generatedBracket, {
+            liveReplay: null,
+            bannedUsernames,
+        });
     };
 
     const handleSelectBracketMatch = ({roundIndex, matchIndex, match}) => {
@@ -1177,18 +1250,35 @@ export default function ModDash({
             return;
         }
 
+        const nextLiveReplay = {
+            matchId: selectedMatch.matchId,
+            roundIndex: selectedMatch.roundIndex,
+            matchIndex: selectedMatch.matchIndex,
+            homeTeam,
+            awayTeam,
+            startedAt: new Date().toISOString(),
+            durationMs: 60000,
+            status: 'running',
+            result,
+        };
+
         setBracketState(prev => {
             const nextBracketState = advanceBracketState(prev, selectedMatch, result);
             if (nextBracketState !== prev) {
                 void replaceStoredBracket(nextBracketState, {
-                    matchId: selectedMatch.matchId,
-                    homeTeam,
-                    awayTeam,
-                    result,
+                    completedMatch: {
+                        matchId: selectedMatch.matchId,
+                        homeTeam,
+                        awayTeam,
+                        result,
+                    },
+                    liveReplay: nextLiveReplay,
+                    bannedUsernames,
                 });
             }
             return nextBracketState;
         });
+        setLiveReplay(nextLiveReplay);
         setSimulationState({
             matchId: selectedMatch.matchId,
             homeTeam,
@@ -1239,6 +1329,30 @@ export default function ModDash({
         }
     };
 
+    const handleBanUser = async (bannedUsername) => {
+        const normalizedUsername = String(bannedUsername || '').trim();
+        if (!normalizedUsername) {
+            return;
+        }
+
+        const ok = await confirm({
+            title: 'BAN USER',
+            message: `Delete ${normalizedUsername}'s account and remove them from chat immediately?`,
+            confirmLabel: 'BAN',
+            confirmDanger: true,
+        });
+        if (!ok) {
+            return;
+        }
+
+        const nextBannedUsernames = normalizeUsernameList([...bannedUsernames, normalizedUsername]);
+        await onBanUser(normalizedUsername);
+        void replaceStoredBracket(bracketState, {
+            liveReplay,
+            bannedUsernames: nextBannedUsernames,
+        });
+    };
+
     // make things visible <3 / tabRender
     const renderContent = () => {
         switch(activeTab) {
@@ -1269,7 +1383,7 @@ export default function ModDash({
                 );
             case MOD_TABS.LIVE: 
                 return(
-                    <ModLiveTab chatMessages={chatMessages} onDeleteMessage={handleDeleteMessage} onNewMessage={onNewMessage} username={username} selectedMatch={selectedMatch} simulationState={simulationState} onSimulationComplete={handleBracketSimulationComplete} />
+                    <ModLiveTab chatMessages={chatMessages} onDeleteMessage={handleDeleteMessage} onBanUser={handleBanUser} onNewMessage={onNewMessage} username={username} selectedMatch={selectedMatch} simulationState={simulationState} onSimulationComplete={handleBracketSimulationComplete} />
                 );
             default: 
                 return null;

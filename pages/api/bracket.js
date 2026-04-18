@@ -50,6 +50,20 @@ function getNextPlayableBracketMatch(bracketState) {
     return null;
 }
 
+function normalizeUsernameList(values) {
+    if (!Array.isArray(values)) {
+        return [];
+    }
+
+    return Array.from(
+        new Set(
+            values
+                .map(value => String(value || '').trim())
+                .filter(Boolean),
+        ),
+    );
+}
+
 function buildCurrentMatchGameBets(nextPlayable) {
     if (!nextPlayable?.match?.home?.name || !nextPlayable?.match?.away?.name) {
         return [];
@@ -311,6 +325,10 @@ export default async function handler(req, res) {
         if (req.method === 'PUT') {
             const bracketState = req.body?.bracketState;
             const completedMatch = req.body?.completedMatch;
+            const liveReplay = req.body?.liveReplay && typeof req.body.liveReplay === 'object'
+                ? req.body.liveReplay
+                : null;
+            const bannedUsernames = normalizeUsernameList(req.body?.bannedUsernames);
 
             if (!bracketState || typeof bracketState !== 'object') {
                 return res.status(400).json({ error: 'A valid bracketState object is required.' });
@@ -320,6 +338,8 @@ export default async function handler(req, res) {
             await bracketCollection.deleteMany({});
             const insertResult = await bracketCollection.insertOne({
                 bracketState,
+                liveReplay,
+                bannedUsernames,
                 createdAt: new Date(),
                 updatedAt: new Date(),
             });

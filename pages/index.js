@@ -261,6 +261,79 @@ function getGameBetMatchKey(gameBetLike) {
     return `meta:${away}|${home}|${time}|${winner}|${odds}`;
 }
 
+function normalizeUsernameList(values) {
+    if (!Array.isArray(values)) {
+        return [];
+    }
+
+    return Array.from(
+        new Set(
+            values
+                .map(value => String(value || '').trim())
+                .filter(Boolean),
+        ),
+    );
+}
+
+function parseReplayMinuteValue(minuteValue) {
+    const raw = String(minuteValue ?? '').trim().replace(/'/g, '');
+    const plusMatch = raw.match(/^(\d{1,3})\+(\d{1,2})$/);
+    if (plusMatch) {
+        return Number(plusMatch[1]) + Number(plusMatch[2]);
+    }
+
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatReplayClock(minuteValue) {
+    const safeMinute = Math.max(0, minuteValue);
+    const wholeMinute = Math.floor(safeMinute);
+    if (wholeMinute > 90) {
+        return `90+${wholeMinute - 90}'`;
+    }
+    return `${wholeMinute}'`;
+}
+
+function buildReplaySnapshot(liveReplay, nowMs = Date.now()) {
+    if (!liveReplay?.result) {
+        return null;
+    }
+
+    const startedAtMs = new Date(liveReplay.startedAt).getTime();
+    if (!Number.isFinite(startedAtMs)) {
+        return null;
+    }
+
+    const durationMs = Number.isFinite(Number(liveReplay.durationMs))
+        ? Number(liveReplay.durationMs)
+        : 60000;
+    const rawEvents = Array.isArray(liveReplay.result.match_events) ? liveReplay.result.match_events : [];
+    const maxEventMinute = rawEvents.reduce((maxMinute, event) => (
+        Math.max(maxMinute, parseReplayMinuteValue(event?.minute))
+    ), 90);
+    const totalReplayMinutes = Math.max(90, maxEventMinute);
+    const elapsedMs = Math.max(0, nowMs - startedAtMs);
+    const clampedElapsedMs = Math.min(durationMs, elapsedMs);
+    const progress = durationMs > 0 ? (clampedElapsedMs / durationMs) : 1;
+    const currentMinute = totalReplayMinutes * progress;
+    const visibleEvents = rawEvents.filter(event => parseReplayMinuteValue(event?.minute) <= currentMinute + 0.0001);
+    const homeScore = visibleEvents.filter(event => (
+        (event?.event === 'goal' || event?.event === 'penalty_scored') && event?.team === 'home'
+    )).length;
+    const awayScore = visibleEvents.filter(event => (
+        (event?.event === 'goal' || event?.event === 'penalty_scored') && event?.team === 'away'
+    )).length;
+
+    return {
+        isActive: elapsedMs < durationMs,
+        clockLabel: formatReplayClock(currentMinute),
+        visibleEvents,
+        homeScore,
+        awayScore,
+    };
+}
+
 function upsertLatestChatByUser(prevMessages, incomingMessage) {
     if (!incomingMessage || typeof incomingMessage !== 'object') {
         return prevMessages;
@@ -1625,7 +1698,7 @@ function YourPicksTab({playerPicks, teamPicks, gamePicks}){
                                 background: '#111318',
                             }}>
                                 <img
-                                    src="/ja%CC%88rvinen-jarvis.gif"
+                                    src="/jarvis-banner.gif"
                                     alt="Banner ad gif"
                                     style={{
                                         width: '100%',
@@ -1659,13 +1732,13 @@ function YourPicksTab({playerPicks, teamPicks, gamePicks}){
                                     letterSpacing: '0.06em',
                                     color: 'var(--text-primary)',
                                     lineHeight: 1,
-                                }}>LOCK IN THE NEXT SLIP</div>
+                                }}>IRON MAN DOESN'T PARLAY THE ARC REACTOR</div>
                                 <p style={{
                                     margin: 0,
                                     fontSize: 13,
                                     color: 'var(--text-secondary)',
                                     lineHeight: 1.5,
-                                }}>Stack your picks and lock in before the whistle. Don't sleep on it.</p>
+                                }}>Even Tony Stark would hedge before he bet the suit on one slip.</p>
                             </div>
                         </div>
                     </div>
@@ -2136,22 +2209,27 @@ function TeamSquare({ teamName, score, cards }) {
     );
 }
 
-function LiveTab({chatMessages, onNewMessage, username, bracketState}){
+function LiveTab({chatMessages, onNewMessage, username, bracketState, liveReplay, replayNowMs}){
     const lastMatch = getLastPlayedMatch(bracketState);
     const nextMatch = getNextPlayableMatch(bracketState);
-    const events = lastMatch?.result?.match_events || [];
+    const replaySnapshot = buildReplaySnapshot(liveReplay, replayNowMs);
+    const isReplayActive = Boolean(replaySnapshot?.isActive);
+    const replayEvents = replaySnapshot?.visibleEvents || [];
+    const finalEvents = lastMatch?.result?.match_events || [];
+    const events = isReplayActive ? replayEvents : finalEvents;
     const homeYellows = events.filter(e => e.event === 'yellow_card' && e.team === 'home').length;
     const homeReds = events.filter(e => e.event === 'red_card' && e.team === 'home').length;
     const awayYellows = events.filter(e => e.event === 'yellow_card' && e.team === 'away').length;
     const awayReds = events.filter(e => e.event === 'red_card' && e.team === 'away').length;
 
-    // Show last result scores if available, otherwise 0-0 for upcoming match
     const scoreParts = (lastMatch?.result?.score || '0 - 0').split('-').map(s => s.trim());
-    const homeScore = scoreParts[0] || '0';
-    const awayScore = scoreParts[1] || '0';
-    // Prefer: last played match teams > next upcoming match teams > placeholder
-    const homeName = lastMatch?.home?.name || nextMatch?.home?.name || 'HOME TEAM';
-    const awayName = lastMatch?.away?.name || nextMatch?.away?.name || 'AWAY TEAM';
+    const homeScore = isReplayActive ? String(replaySnapshot.homeScore) : (scoreParts[0] || '0');
+    const awayScore = isReplayActive ? String(replaySnapshot.awayScore) : (scoreParts[1] || '0');
+    const homeName = liveReplay?.homeTeam || lastMatch?.home?.name || nextMatch?.home?.name || 'HOME TEAM';
+    const awayName = liveReplay?.awayTeam || lastMatch?.away?.name || nextMatch?.away?.name || 'AWAY TEAM';
+    const matchClock = isReplayActive ? replaySnapshot.clockLabel : (lastMatch ? "90'" : "0'");
+    const liveBadgeLabel = isReplayActive ? 'LIVE REPLAY' : (lastMatch ? 'FULL TIME' : 'PRE-MATCH');
+    const liveBadgeColor = isReplayActive ? 'var(--danger)' : (lastMatch ? 'var(--accent)' : 'var(--danger)');
 
     return(
         <div style={{
@@ -2170,20 +2248,31 @@ function LiveTab({chatMessages, onNewMessage, username, bracketState}){
                         color: 'var(--text-primary)',
                     }}>{homeName}</span>
                     <div style={{
-                        display: 'flex', alignItems: 'center', gap: 4, margin: '0 14px',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, margin: '0 14px',
                     }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <div style={{
+                                background: 'var(--bg-card)', border: '1px solid var(--border)',
+                                borderRadius: 6, padding: '6px 14px',
+                                fontFamily: 'var(--font-mono)', fontSize: 18, fontWeight: 700,
+                                color: 'var(--text-primary)', textAlign: 'center', minWidth: 40,
+                            }}>{homeScore}</div>
+                            <div style={{
+                                background: 'var(--bg-card)', border: '1px solid var(--border)',
+                                borderRadius: 6, padding: '6px 14px',
+                                fontFamily: 'var(--font-mono)', fontSize: 18, fontWeight: 700,
+                                color: 'var(--text-primary)', textAlign: 'center', minWidth: 40,
+                            }}>{awayScore}</div>
+                        </div>
                         <div style={{
-                            background: 'var(--bg-card)', border: '1px solid var(--border)',
-                            borderRadius: 6, padding: '6px 14px',
-                            fontFamily: 'var(--font-mono)', fontSize: 18, fontWeight: 700,
-                            color: 'var(--text-primary)', textAlign: 'center', minWidth: 40,
-                        }}>{homeScore}</div>
-                        <div style={{
-                            background: 'var(--bg-card)', border: '1px solid var(--border)',
-                            borderRadius: 6, padding: '6px 14px',
-                            fontFamily: 'var(--font-mono)', fontSize: 18, fontWeight: 700,
-                            color: 'var(--text-primary)', textAlign: 'center', minWidth: 40,
-                        }}>{awayScore}</div>
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: 12,
+                            fontWeight: 700,
+                            letterSpacing: '0.08em',
+                            color: isReplayActive ? 'var(--accent)' : 'var(--text-secondary)',
+                        }}>
+                            {matchClock}
+                        </div>
                     </div>
                     <span style={{
                         fontFamily: 'var(--font-display)', fontSize: 16, letterSpacing: '0.06em',
@@ -2218,18 +2307,18 @@ function LiveTab({chatMessages, onNewMessage, username, bracketState}){
                     }}>
                         <div style={{
                             width: 7, height: 7, borderRadius: '50%',
-                            background: lastMatch ? 'var(--accent)' : 'var(--danger)',
+                            background: liveBadgeColor,
                             animation: 'live-dot 1.2s ease-in-out infinite',
                         }}/>
                         <span style={{
                             fontSize: 10, fontWeight: 800, letterSpacing: '0.1em',
-                            color: lastMatch ? 'var(--accent)' : 'var(--danger)',
+                            color: liveBadgeColor,
                             fontFamily: 'var(--font-mono)',
-                        }}>{lastMatch ? 'FULL TIME' : 'PRE-MATCH'}</span>
+                        }}>{liveBadgeLabel}</span>
                     </div>
 
                     {/* Pre-match state */}
-                    {!lastMatch && (
+                    {!lastMatch && !isReplayActive && (
                         <div style={{
                             position: 'absolute', inset: 0,
                             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -2244,6 +2333,32 @@ function LiveTab({chatMessages, onNewMessage, username, bracketState}){
                             <span style={{
                                 fontSize: 11, color: 'var(--text-secondary)',
                             }}>Live match data will show up here once the game begins.</span>
+                        </div>
+                    )}
+                    {isReplayActive && (
+                        <div style={{
+                            position: 'absolute',
+                            left: 12,
+                            top: 12,
+                            background: 'rgba(8, 10, 15, 0.76)',
+                            border: '1px solid rgba(198, 241, 53, 0.2)',
+                            borderRadius: 10,
+                            padding: '8px 10px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 3,
+                        }}>
+                            <span style={{
+                                fontSize: 10,
+                                fontWeight: 800,
+                                letterSpacing: '0.1em',
+                                color: 'var(--accent)',
+                                fontFamily: 'var(--font-mono)',
+                            }}>SHARED REPLAY</span>
+                            <span style={{
+                                fontSize: 11,
+                                color: 'var(--text-primary)',
+                            }}>Clients are watching the same 60-second match feed.</span>
                         </div>
                     )}
                 </div>
@@ -2615,7 +2730,9 @@ const TAB_CONFIG = [
 
 function Dashboard({username, players, playerPicks, teams, teamPicks, games, gamePicks, chatMessages, onNewMessage, activeTab, setActiveTab, userCredits, onPlacePlayerBet, onPlaceTeamBet, onPlaceGameBet, showBetSuccessBanner = false}){
     const [bracketState, setBracketState] = useState(null);
+    const [liveReplay, setLiveReplay] = useState(null);
     const [isBracketLoading, setIsBracketLoading] = useState(true);
+    const [replayNowMs, setReplayNowMs] = useState(() => Date.now());
 
     useEffect(() => {
         let isMounted = true;
@@ -2631,6 +2748,7 @@ function Dashboard({username, players, playerPicks, teams, teamPicks, games, gam
 
                 if (isMounted) {
                     setBracketState(data?.bracket?.bracketState || null);
+                    setLiveReplay(data?.bracket?.liveReplay || null);
                 }
             } catch {
                 // keep latest local bracket view if fetch fails
@@ -2644,12 +2762,20 @@ function Dashboard({username, players, playerPicks, teams, teamPicks, games, gam
         void loadBracket();
         const intervalId = setInterval(() => {
             void loadBracket();
-        }, 5000);
+        }, 1500);
 
         return () => {
             isMounted = false;
             clearInterval(intervalId);
         };
+    }, []);
+
+    useEffect(() => {
+        const intervalId = setInterval(() => {
+            setReplayNowMs(Date.now());
+        }, 250);
+
+        return () => clearInterval(intervalId);
     }, []);
 
     // Betting feature: hide already-confirmed bets from available tabs.
@@ -2667,7 +2793,7 @@ function Dashboard({username, players, playerPicks, teams, teamPicks, games, gam
             case TABS.TEAMS: return <TeamsTab teams={availableTeams} availableCredits={userCredits} onPlaceBet={onPlaceTeamBet}/>;
             case TABS.GAMES: return <GamesTab games={availableGames} availableCredits={userCredits} onPlaceBet={onPlaceGameBet} />;
             case TABS.BRACKET: return <UserBracketTab bracket={bracketState} isLoading={isBracketLoading} />;
-            case TABS.LIVE: return <LiveTab chatMessages={chatMessages} onNewMessage={onNewMessage} username={username} bracketState={bracketState}/>;
+            case TABS.LIVE: return <LiveTab chatMessages={chatMessages} onNewMessage={onNewMessage} username={username} bracketState={bracketState} liveReplay={liveReplay} replayNowMs={replayNowMs}/>;
             default: return null;
         }
     };
@@ -3579,6 +3705,7 @@ export default function App(){
     const [proposals, setProposals] = useState([]);
     const [chatMessages, setChatMessages] = useState(SEED_MESSAGES);
     const [moderatorChatMessages, setModeratorChatMessages] = useState(INITIAL_CHAT_MESSAGES);
+    const [bannedUsernames, setBannedUsernames] = useState([]);
     const [showBetSuccessBanner, setShowBetSuccessBanner] = useState(false);
     const betSuccessBannerTimeoutRef = useRef(null);
     const previousActiveTabRef = useRef(activeTab);
@@ -4174,7 +4301,8 @@ export default function App(){
 
         const user = String(msg.user || '').trim();
         const text = String(msg.text || '').trim();
-        if (!user || !text) {
+        const isBannedUser = bannedUsernames.includes(user);
+        if (!user || !text || isBannedUser) {
             return;
         }
 
@@ -4192,13 +4320,46 @@ export default function App(){
         });
 
         setModeratorChatMessages(prev => upsertLatestChatByUser(prev, normalizedMessage));
-    }, []);
+    }, [bannedUsernames]);
 
     const handleDeleteMessage = useCallback((id) =>{
         setModeratorChatMessages(prev => prev.map(msg => (
             msg.id === id ? { ...msg, text: '[message removed by moderator]' } : msg
         )));
     }, []);
+
+    const handleBanUser = useCallback(async (bannedUsername) => {
+        const normalizedUsername = String(bannedUsername || '').trim();
+        if (!normalizedUsername) {
+            return;
+        }
+
+        const previousChatMessages = chatMessages;
+        const previousModeratorMessages = moderatorChatMessages;
+        const previousBannedUsernames = bannedUsernames;
+
+        setBannedUsernames(prev => normalizeUsernameList([...prev, normalizedUsername]));
+        setChatMessages(prev => prev.filter(msg => msg.user !== normalizedUsername));
+        setModeratorChatMessages(prev => prev.filter(msg => msg.user !== normalizedUsername));
+
+        try {
+            const response = await fetch('/api/ban-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: normalizedUsername }),
+            });
+
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(data.error || 'Unable to ban user right now.');
+            }
+        } catch (error) {
+            setBannedUsernames(previousBannedUsernames);
+            setChatMessages(previousChatMessages);
+            setModeratorChatMessages(previousModeratorMessages);
+            throw error;
+        }
+    }, [bannedUsernames, chatMessages, moderatorChatMessages]);
 
     useEffect(() => {
         if (!isModerator || screen !== SCREENS.DASHBOARD) {
@@ -4227,14 +4388,49 @@ export default function App(){
     }, [isModerator, loadActiveBets, screen]);
 
     useEffect(() => {
+        if (screen !== SCREENS.DASHBOARD) {
+            return;
+        }
+
+        let isCancelled = false;
+
+        const loadModerationState = async () => {
+            try {
+                const response = await fetch('/api/bracket');
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || isCancelled) {
+                    return;
+                }
+
+                setBannedUsernames(normalizeUsernameList(data?.bracket?.bannedUsernames));
+            } catch (error) {
+                if (!isCancelled) {
+                    console.error('Failed to sync moderation state:', error);
+                }
+            }
+        };
+
+        void loadModerationState();
+        const intervalId = setInterval(() => {
+            void loadModerationState();
+        }, 2000);
+
+        return () => {
+            isCancelled = true;
+            clearInterval(intervalId);
+        };
+    }, [screen]);
+
+    useEffect(() => {
         const usernames = CHAT_USER_ROSTER;
         const feedMessages = worldcupData?.messages || [];
-        if (usernames.length === 0 || feedMessages.length === 0) {
+        const allowedUsernames = usernames.filter(user => !bannedUsernames.includes(user));
+        if (allowedUsernames.length === 0 || feedMessages.length === 0) {
             return;
         }
 
         const interval = setInterval(() => {
-            const randomUser = usernames[Math.floor(Math.random() * usernames.length)];
+            const randomUser = allowedUsernames[Math.floor(Math.random() * allowedUsernames.length)];
             const randomText = feedMessages[Math.floor(Math.random() * feedMessages.length)];
             handleNewMessage({
                 user: randomUser,
@@ -4243,7 +4439,7 @@ export default function App(){
         }, 300);
 
         return () => clearInterval(interval);
-    }, [handleNewMessage]);
+    }, [bannedUsernames, handleNewMessage]);
 
     // Betting feature: refresh available Player bets from Mongo when Players tab opens.
     useEffect(() => {
@@ -4484,7 +4680,7 @@ export default function App(){
 
         {screen === SCREENS.DASHBOARD && ( isModerator ? (
             <ModDash username={username} proposals={proposals} onApprove={handleApproveProposal} onDecline={handleDeclineProposal} chatMessages={moderatorChatMessages} 
-                    onNewMessage={handleNewMessage} onDeleteMessage={handleDeleteMessage} players={players} teams={teams} games={games} onCancelStake={handleCancelStake} isLoadingProposals={isLoadingProposals}/>
+                    onNewMessage={handleNewMessage} onDeleteMessage={handleDeleteMessage} onBanUser={handleBanUser} players={players} teams={teams} games={games} onCancelStake={handleCancelStake} bannedUsernames={bannedUsernames} isLoadingProposals={isLoadingProposals}/>
         ) : (
             <>
             <Dashboard username={username} players={players} playerPicks={playerPicks} teams={teams} teamPicks={teamPicks} games={games} gamePicks={gamePicks} chatMessages={chatMessages} 
