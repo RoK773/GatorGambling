@@ -1,11 +1,9 @@
 // implements the approval of user proposed bets
 import dns from 'dns';
 import {MongoClient, ServerApiVersion, ObjectId} from 'mongodb';
-import { BETTING_PHASES, getCurrentBettingPhase } from './_lib/bettingLifecycle';
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 const uri = process.env.MONGODB_URI;
 const dbName = process.env.MONGODB_SOCCER_DB || 'Soccer_Data';
-const bracketCollectionName = process.env.MONGODB_BRACKET_COLLECTION || 'Bracket';
 const PENDING_COLLECTION = 'Pending_Bets';
 const ACTIVE_COLLECTIONS = {
     Player: process.env.MONGODB_PLAYER_BETS_COLLECTION || 'Player_bets',
@@ -28,6 +26,56 @@ if (!global._mongoClientPromise){
 }
 clientPromise = global._mongoClientPromise;
 
+function normalizeThresholdValue(value) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+        return 0;
+    }
+    return parsed;
+}
+
+function calculatePlayerPayoutMultiplier(comparator, statNum) {
+    const normalizedComparator = String(comparator || '').trim().toLowerCase();
+    const threshold = normalizeThresholdValue(statNum);
+
+    if (normalizedComparator === 'under') {
+        const effectiveThreshold = Math.max(1, threshold);
+        const rawMultiplier = 1.75 - ((effectiveThreshold - 1) * 0.15);
+        return Number(Math.max(1.05, rawMultiplier).toFixed(2));
+    }
+
+    if (normalizedComparator === 'over') {
+        const rawMultiplier = 1.25 + (threshold * 0.25);
+        return Number(rawMultiplier.toFixed(2));
+    }
+
+    return null;
+}
+
+function calculateTeamPayoutMultiplier(rangeType, points) {
+    const normalizedRangeType = String(rangeType || '').trim().toLowerCase();
+    const threshold = normalizeThresholdValue(points);
+
+    if (normalizedRangeType === 'by more than') {
+        const rawMultiplier = 1.8 + (threshold * 0.1);
+        return Number(rawMultiplier.toFixed(2));
+    }
+
+    if (normalizedRangeType === 'by less than') {
+        const effectiveThreshold = Math.max(1, threshold);
+        const rawMultiplier = 1.8 - ((effectiveThreshold - 1) * 0.15);
+        return Number(rawMultiplier.toFixed(2));
+    }
+
+    if (normalizedRangeType === 'exactly') {
+        const effectiveThreshold = Math.max(1, threshold);
+        const rawMultiplier = 1.8 + ((effectiveThreshold - 1) * 0.3);
+        return Number(rawMultiplier.toFixed(2));
+    }
+
+    return null;
+}
+
 // convert a pending proposal into the active collection shape so it matches with index.js frontend
 function buildActiveDocument(proposal){
     const {category, condition = {}, playerData, teamData, gameData, proposedBy} = proposal;
@@ -40,7 +88,10 @@ function buildActiveDocument(proposal){
             stat: condition?.statType || playerData?.stat || '--',
             range: condition?.comparator || playerData?.range || '--',
             stat_num: condition?.condVal ?? playerData.stat_num ?? null,
-            payout_mult: null,
+            payout_mult: calculatePlayerPayoutMultiplier(
+                condition?.comparator || playerData?.range,
+                condition?.condVal ?? playerData?.stat_num,
+            ),
             proposedBy,
             approvedAt,
         };
@@ -53,7 +104,10 @@ function buildActiveDocument(proposal){
             outcome: condition?.result || teamData?.outcome || '--',
             range: condition?.marginType || teamData?.range || '--',
             points: condition?.condVal ?? teamData?.points ?? null,
-            payout_mult: null,
+            payout_mult: calculateTeamPayoutMultiplier(
+                condition?.marginType || teamData?.range,
+                condition?.condVal ?? teamData?.points,
+            ),
             proposedBy, 
             approvedAt,
         };
@@ -95,17 +149,6 @@ export default async function handler(req, res){
 
     try{
         const client = await clientPromise;
-        const { phase } = await getCurrentBettingPhase(client, {
-            dbName,
-            bracketCollectionName,
-        });
-
-        if (phase !== BETTING_PHASES.SIMULATION_RUNNING) {
-            return res.status(403).json({
-                error: 'Proposal moderation is only available while a match simulation is running.',
-            });
-        }
-
         const db = client.db(dbName);
         const pending = db.collection(PENDING_COLLECTION);
 
