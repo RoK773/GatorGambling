@@ -74,10 +74,14 @@ export default async function handler(req, res){
         if (!playerData?.playerId){
             return res.status(400).json({error: 'A player must be selected from the dropdown.'});
         }
+        const incomingNumber = String(playerData?.number || '').trim();
+        const normalizedNumber = Number.isFinite(Number(incomingNumber))
+            ? String(Number(incomingNumber))
+            : '-';
         document.playerData={
             playerId: String(playerData.playerId).trim(),
             name: String(playerData.name || '').trim() || 'Unknown Player',
-            number: '1',
+            number: normalizedNumber,
             team: String(playerData.team || '').trim() || 'N/A',
             stat: String(condition?.statType || '').trim() || '--',
             range: String(condition?.comparator || '').trim() || '--',

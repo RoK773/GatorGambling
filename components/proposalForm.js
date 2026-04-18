@@ -358,12 +358,16 @@ export default function ProposalForm({onSubmit, username, isProposalsOpen = true
                 const teamPlayers = Array.isArray(team?.players) ? team.players : [];
                 return teamPlayers.map((player, playerIndex) => {
                     const playerName = String(player?.name || '').trim() || 'Unknown Player';
+                    const jerseyNumberRaw = player?.jersey_number;
+                    const jerseyNumber = Number.isFinite(Number(jerseyNumberRaw))
+                        ? String(Number(jerseyNumberRaw))
+                        : '-';
                     const id = `${team?.id ?? 'team'}-${playerIndex}-${playerName}`;
                     return {
                         id,
                         label: playerName,
-                        hint: `#1 · ${teamName}`,
-                        number: '1',
+                        hint: `#${jerseyNumber} · ${teamName}`,
+                        number: jerseyNumber,
                         team: teamName,
                         raw: player,
                     };
@@ -477,7 +481,7 @@ useEffect(() => {
             playerData: category === 'Player' && selectedPlayer ? {
                 playerId: selectedPlayer.id,
                 name: selectedPlayer.label,
-                number: '1',
+                number: String(selectedPlayer.number || '-'),
                 team: selectedPlayer.team,
             } : undefined,
             teamData: category === 'Team' && selectedTeam ? {
