@@ -307,6 +307,30 @@ function parseReplayMinuteValue(minuteValue) {
     return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function parseReplayRevealMinute(minuteValue) { // similar to parseReplayMinuteValue but with special handling to keep 45+X' appear at 45' instead of 45+X'
+    const raw = String(minuteValue ?? '').trim().replace(/'/g, '');
+    const plusMatch = raw.match(/^(\d{1,3})\+(\d{1,2})$/);
+    if (plusMatch) {
+        const base = Number(plusMatch[1]);
+        const extra = Number(plusMatch[2]);
+
+        if (base === 45) {
+            return 45;
+        }
+
+        return base + extra;
+    }
+
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatMatchEventMinute(minuteValue) {
+    const raw = String(minuteValue ?? '').trim();
+    const base = raw.endsWith("'") ? raw.slice(0, -1).trim() : raw;
+    return `${base}'`;
+}
+
 function formatReplayClock(minuteValue) {
     const safeMinute = Math.max(0, minuteValue);
     const wholeMinute = Math.floor(safeMinute);
@@ -338,7 +362,8 @@ function buildReplaySnapshot(liveReplay, nowMs = Date.now()) {
     const clampedElapsedMs = Math.min(durationMs, elapsedMs);
     const progress = durationMs > 0 ? (clampedElapsedMs / durationMs) : 1;
     const currentMinute = totalReplayMinutes * progress;
-    const visibleEvents = rawEvents.filter(event => parseReplayMinuteValue(event?.minute) <= currentMinute + 0.0001);
+    //const visibleEvents = rawEvents.filter(event => parseReplayMinuteValue(event?.minute) <= currentMinute + 0.0001);
+    const visibleEvents = rawEvents.filter(event => parseReplayRevealMinute(event?.minute) <= currentMinute + 0.0001);
     const homeScore = visibleEvents.filter(event => (
         (event?.event === 'goal' || event?.event === 'penalty_scored') && event?.team === 'home'
     )).length;
@@ -2423,6 +2448,110 @@ function LiveTab({chatMessages, onNewMessage, username, bracketState, liveReplay
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <div style={{
+                    marginTop: 12,
+                    background: 'var(--bg-card)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 12,
+                    padding: '12px 14px',
+                }}>
+                    <h3 style={{
+                        margin: 0,
+                        marginBottom: 10,
+                        fontSize: 16,
+                        color: 'var(--text-primary)',
+                        borderBottom: '1px solid var(--border)',
+                        paddingBottom: 8,
+                    }}>
+                        Match Events
+                    </h3>
+
+                    {events.length === 0 ? (
+                        <div style={{
+                            fontSize: 12,
+                            color: 'var(--text-secondary)',
+                            fontFamily: 'var(--font-mono)',
+                            letterSpacing: '0.04em',
+                        }}>
+                            {isReplayActive ? 'No events yet.' : 'No match events available.'}
+                        </div>
+                    ) : (
+                        <div style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 10,
+                        }}>
+                            {events.map((event, index) => (
+                                <div
+                                    key={`${event.minute || '0'}-${event.event || 'event'}-${index}`}
+                                    style={{
+                                        background: 'var(--bg-secondary)',
+                                        border: '1px solid var(--border)',
+                                        borderRadius: 10,
+                                        padding: '10px 14px',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        gap: 10,
+                                    }}
+                                >
+                                    <div>
+                                        <span style={{
+                                            fontWeight: 700,
+                                            color: 'var(--accent)',
+                                            marginRight: 10,
+                                        }}>
+                                            {formatMatchEventMinute(event.minute)}
+                                        </span>
+                                        <span style={{ color: 'var(--text-primary)' }}>
+                                            {event.description}
+                                        </span>
+                                    </div>
+
+                                    <span style={{
+                                        fontSize: event.event === 'penalty_scored' ? 10 : 12,
+                                        padding: event.event === 'penalty_scored' ? '2px 6px' : '4px 8px',
+                                        borderRadius: 999,
+                                        background:
+                                            event.event === 'goal'
+                                                ? 'rgba(34,197,94,0.15)'
+                                                : event.event === 'penalty_scored'
+                                                ? 'rgba(16,185,129,0.16)'
+                                                : event.event === 'penalty_missed'
+                                                ? 'rgba(245,158,11,0.18)'
+                                                : event.event === 'yellow_card'
+                                                ? 'rgba(250,204,21,0.15)'
+                                                : event.event === 'red_card'
+                                                ? 'rgba(239,68,68,0.15)'
+                                                : event.event === 'injury'
+                                                ? 'rgba(147,51,234,0.18)'
+                                                : 'rgba(59,130,246,0.15)',
+                                        color:
+                                            event.event === 'goal'
+                                                ? '#22c55e'
+                                                : event.event === 'penalty_scored'
+                                                ? '#10b981'
+                                                : event.event === 'penalty_missed'
+                                                ? '#f59e0b'
+                                                : event.event === 'yellow_card'
+                                                ? '#facc15'
+                                                : event.event === 'red_card'
+                                                ? '#ff0000'
+                                                : event.event === 'injury'
+                                                ? '#9333ea'
+                                                : '#3b82f6',
+                                        textTransform: 'capitalize',
+                                        fontWeight: 600,
+                                        whiteSpace: 'nowrap',
+                                    }}>
+                                        {String(event.event || '').replace('_', ' ')}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
             <GlobalChat messages={chatMessages} onNewMessage={onNewMessage} username={username}/>
