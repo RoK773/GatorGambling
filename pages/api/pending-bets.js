@@ -26,7 +26,6 @@ function mapPendingDocument(doc){
     const payload = 
         doc.category === 'Player' ? doc.playerData :
         doc.category === 'Team' ? doc.teamData :
-        doc.category === 'Game' ? doc.gameData :
         {};
 
     return {
@@ -54,7 +53,7 @@ export default async function handler(req, res){
         const pending = client.db(dbName).collection(PENDING_COLLECTION);
 
         // sort ascending for oldest first
-        const docs = await pending.find({}).sort({proposedAt: 1}).toArray();
+        const docs = await pending.find({ category: { $in: ['Player', 'Team'] } }).sort({proposedAt: 1}).toArray();
         return res.status(200).json({ proposals: docs.map(mapPendingDocument),});
     } catch (error){
         console.error('Failed to fetch pending bets:', error);

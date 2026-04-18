@@ -5,7 +5,7 @@ const PLAYER_STATS = ['Goals', 'Fouls'];
 const COMPARATORS = ['Over', 'Under', 'Exactly'];
 const TEAM_RESULTS = ['Wins', 'Loses'];
 const MARGIN_TYPES = ['By More Than', 'By Less Than', 'By Exactly'];
-const CATEGORIES = ['Player', 'Team', 'Game'];
+const CATEGORIES = ['Player', 'Team'];
 
 function getNextBracketMatch(bracketState) {
     const rounds = Array.isArray(bracketState?.rounds) ? bracketState.rounds : [];
@@ -275,103 +275,6 @@ function TeamConditionBuilder({ value, onChange, disabled}) {
     );
 }
 
-// game condition builder - condition, comparator, number
-function GameConditionBuilder({value, onChange, homeTeam, awayTeam}) {
-    const outcome = value.outcome || 'Home Team Wins';
-    const homeScore = value.homeScore || '';
-    const awayScore = value.awayScore || '';
-    const showScore = value.showScore || false;
-    const update = (patch) => onChange({...value, outcome, homeScore, awayScore, showScore, ...patch});
-    const outcomeLabel = outcome === 'Home Team Wins' ? (homeTeam || 'Home') : outcome === 'Away Team Wins' ? (awayTeam || 'Away') : 'Draw';
-    const preview = showScore && homeScore !== '' && awayScore !== '' ? `${outcomeLabel} - ${homeTeam || 'Home'} ${homeScore} : ${awayScore} ${awayTeam || 'Away'}` : `${outcomeLabel} wins`;
-    return (
-        <div style={{
-            marginBottom: 14,
-        }}>
-            <div style={{
-                fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.12em', textTransform: 'upperCase', marginBottom: 8,
-            }}>Bet Condition</div>
-            <div style={{
-                background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 12px 10px', display: 'flex', flexDirection: 'column', gap: 8,
-            }}>
-                <div style={{
-                    display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
-                }}>
-                    <span style={{
-                        fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.1em',
-                    }}>WINNER</span>
-                    <PillSelect value={outcome} onChange={e => update({outcome: e.target.value})} options={[
-                        {value: 'Home Team Wins', label: `${homeTeam || 'Home'} wins`},
-                        {value: 'Away Team Wins', label: `${awayTeam || 'Away'} wins`},
-                        {value: 'Draw', label: `Draw`},
-                    ]}
-                    minWidth={150}
-                    />
-                </div>
-                <div style={{
-                    display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
-                }}>
-                    <button type="button" onClick={() => update({showScore: !showScore})} style={{
-                        display: 'flex', alignItems: 'center', gap: 5, background: showScore ? 'rgba(198, 241, 53, 0.1)' : 'transparent',
-                        border: showScore ? '1px solid rgba(198, 241, 53, 0.3)' : '1px solid var(--border)', borderRadius: 6, padding: '5px 10px',
-                        cursor: 'pointer', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', 
-                        color: showScore ? 'var(--accent)' : 'var(--text-muted)', transition: 'all 0.2s',
-                    }}>{showScore ? '!' : '-'}PREDICT SCORE</button>
-                    {showScore && ( <div style={{
-                        display: 'flex', alignItems: 'center', gap: 6,
-                    }}>
-                        <span style={{
-                            fontSize: 9, color: 'var(--text-muted)', fontWeight: 700,
-                        }}>{homeTeam || 'HOME'}</span>
-                        <PillNumber value={homeScore} onChange={e => update({homeScore: e.target.value})}/>
-                        <span style={{
-                            color: 'var(--text-muted)', fontWeight: 700,
-                        }}>-</span>
-                        <PillNumber value={awayScore} onChange={e => update({awayScore: e.target.value})} />
-                         <span style={{
-                            fontSize: 9, color: 'var(--text-muted)', fontWeight: 700,
-                        }}>{awayTeam || 'AWAY'}</span>
-                        </div>
-                        )}
-                </div>
-                <div style={{
-                    fontSize: 10, color: 'var(--accent)', fontFamily: 'var(--font-mono)', fontWeight: 700, letterSpacing: '0.06em',
-                }}>
-                    ! {preview}
-                </div>
-            </div>
-        </div>
-    );
-}
-
-// sub components (formatting)
-function ModalField({label, value, onChange, placeholder, type='text', disabled = false}) {
-    return (
-        <div style={{
-            marginBottom: 14,
-        }}>
-            <label style={{
-                display: 'block', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6,
-            }}>{label}</label>
-            <input type={type} value={value} onChange={onChange} placeholder={placeholder} disabled={disabled} style={{
-                width: '100%', boxSizing: 'border-box', background: disabled ? 'var(--bg-primary)' : 'var(--bg-secondary)', borderRadius: 9,
-                padding: '11px 14px', fontSize: 13, color: 'var(--text-primary)', outline: 'none', transition: 'border-color 0.2s, box-shadow 0.2s',
-                opacity: disabled ? 0.7 : 1,
-                cursor: disabled ? 'not-allowed' : 'text',
-            }} onFocus={e => {
-                if (disabled) {
-                    return;
-                }
-                e.target.style.borderColor = 'var(--accent)';
-                e.target.style.boxShadow = '0 0 0 3px var(--accent-glow)';
-            }} onBlur ={e => {
-                e.target.style.borderColor = 'var(--border)';
-                e.target.style.boxShadow = 'none';
-            }} />
-        </div>
-    );
-}
-
 // yippie main export (make it a thing)
 export default function ProposalForm({onSubmit, username, isProposalsOpen = true}) {
     // define constants
@@ -383,7 +286,6 @@ export default function ProposalForm({onSubmit, username, isProposalsOpen = true
     const [loadingTeams, setLoadingTeams] = useState(false);
     const [selectedPlayer, setSelectedPlayer] = useState(null);
     const [selectedTeam, setSelectedTeam] = useState(null);
-    const [gameFields, setGameFields] = useState({homeTeam: '', awayTeam: '', gameTime: '', spread: ''});
     const [condition, setCondition] = useState({});
     const [submitted, setSubmitted] = useState(false);
     const [error, setError] = useState('');
@@ -507,18 +409,6 @@ useEffect(() => {
     }
     }, [open, nextMatch]);
 
-    useEffect(() => {
-        if (!nextMatch) {
-            return;
-        }
-
-        setGameFields(prev => ({
-            ...prev,
-            homeTeam: String(nextMatch?.home?.name || '').trim(),
-            awayTeam: String(nextMatch?.away?.name || '').trim(),
-        }));
-    }, [nextMatch]);
-
     // helpers
 
     // reset values when a new form is made
@@ -527,7 +417,6 @@ useEffect(() => {
         setCategory('Player');
         setSelectedPlayer(null);
         setSelectedTeam(null);
-        setGameFields({homeTeam: '', awayTeam: '', gameTime: '', spread: ''});
         setCondition({});
         setError('');
         setSubmitted(false);
@@ -541,13 +430,6 @@ useEffect(() => {
         setSelectedTeam(null);
         setCondition({});
         setError('');
-        if (cat === 'Game') {
-            setGameFields(prev => ({
-                ...prev,
-                homeTeam: String(nextMatch?.home?.name || '').trim(),
-                awayTeam: String(nextMatch?.away?.name || '').trim(),
-            }));
-        }
     };
 
     // submission
@@ -577,19 +459,6 @@ useEffect(() => {
             setError('Please select a team from the dropdown before submitting.');
             return;
         }
-        if (category === 'Game'){
-            const normalizedHome = gameFields.homeTeam.trim();
-            const normalizedAway = gameFields.awayTeam.trim();
-            if (!normalizedHome || !normalizedAway){
-                setError('Current game matchup is not available yet.');
-                return;
-            }
-            if (!allowedTeamNames.has(normalizedHome) || !allowedTeamNames.has(normalizedAway)) {
-                setError('Game proposals must use the current bracket matchup teams only.');
-                return;
-            }
-        }
-
         if (category === 'Player' && selectedPlayer && !allowedTeamNames.has(String(selectedPlayer.team || '').trim())) {
             setError('Player proposals are limited to players in the current bracket matchup.');
             return;
@@ -615,12 +484,6 @@ useEffect(() => {
                 teamId: selectedTeam.id,
                 country: selectedTeam.label,
                 record: selectedTeam.record,
-            } : undefined,
-            gameData: category === 'Game' ? {
-                homeTeam: gameFields.homeTeam.trim(),
-                awayTeam: gameFields.awayTeam.trim(),
-                gameTeam: gameFields.gameTime.trim(),
-                spread: gameFields.spread.trim(),
             } : undefined,
         };
         
@@ -786,27 +649,12 @@ useEffect(() => {
                                 </div>
                         )}
 
-                        {/* game category */}
-                        {category === 'Game' && (
-                            <div style={{
-                                background: 'var(--bg-secondary)', borderRadius: 12, padding: '18px 16px', marginBottom: 14, border: '1px solid var(--border)',
-                            }}>
-                                <ModalField label="Home Team" value={gameFields.homeTeam} onChange={e => setGameFields(p => ({ ...p, homeTeam: e.target.value}))} placeholder="e.g. Canada" disabled />
-                                <ModalField label="Away Team" value={gameFields.awayTeam} onChange={e => setGameFields(p => ({ ...p, awayTeam: e.target.value}))} placeholder="e.g. Sweden" disabled />
-                                <ModalField label="Game Time" value={gameFields.gameTime} onChange={e => setGameFields(p => ({...p, gameTime: e.target.value}))} placeholder="e.g. 6:00 PM" />
-                                <ModalField label="Spread" value={gameFields.spread} onChange={e => setGameFields(p => ({...p, spread: e.target.value }))} placeholder="e.g. -3.5" />
-                            </div>
-                        )}
-
                         {/* condition builders */}
                         {category === 'Player' && (
                             <PlayerConditionBuilder value={condition} onChange={setCondition} disabled={!selectedPlayer}/>
                         )}
                         {category === 'Team' && (
                             <TeamConditionBuilder value={condition} onChange={setCondition} disabled={!selectedTeam} />
-                        )}
-                        {category === 'Game' && (
-                            <GameConditionBuilder value={condition} onChange={setCondition} homeTeam={gameFields.homeTeam} awayTeam={gameFields.awayTeam} />
                         )}
                 {error && (
                     <p style={{

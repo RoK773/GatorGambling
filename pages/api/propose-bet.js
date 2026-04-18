@@ -50,12 +50,12 @@ export default async function handler(req, res){
         return res.status(405).json({error: 'Method not allowed'});
     }
 
-    const {category, username, playerData, teamData, gameData, condition} = req.body || {};
+    const {category, username, playerData, teamData, condition} = req.body || {};
 
     // cat is required
     const normalizedCategory = String(category || '').trim();
-    if (!['Player', 'Team', 'Game'].includes(normalizedCategory)){
-        return res.status(405).json({error: 'category must be Player, Team, or Game.'});
+    if (!['Player', 'Team'].includes(normalizedCategory)){
+        return res.status(405).json({error: 'category must be Player or Team.'});
     }
 
     const proposedBy = String(username || 'anonymous').trim();
@@ -105,19 +105,6 @@ export default async function handler(req, res){
             points: condition?.condVal ?? null,
         };
     }
-     if (normalizedCategory === 'Game'){
-        if (!gameData?.homeTeam || !gameData?.awayTeam){
-            return res.status(400).json({error: 'Home team and away team are required for a Game bet.'});
-        }
-        document.gameData ={
-            home_team: String(gameData.homeTeam || '').trim(),
-            away_team: String(gameData.awayTeam || '').trim(),
-            time: String(gameData.gameTime || '').trim() || '--:--',
-            odds: String(gameData.spread || '').trim() || '--',
-            winner: String(condition?.outcome || '').trim() || '--',
-        };
-     }
-
      try {
         const client = await clientPromise;
         const { phase } = await getCurrentBettingPhase(client, {

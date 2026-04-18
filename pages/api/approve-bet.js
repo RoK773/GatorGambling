@@ -8,7 +8,6 @@ const PENDING_COLLECTION = 'Pending_Bets';
 const ACTIVE_COLLECTIONS = {
     Player: process.env.MONGODB_PLAYER_BETS_COLLECTION || 'Player_bets',
     Team: process.env.MONGODB_TEAM_BETS_COLLECTION || 'Team_bets',
-    Game: process.env.MONGODB_GAME_BETS_COLLECTION || 'Game_bets',
 };
 
 const options= {
@@ -78,7 +77,7 @@ function calculateTeamPayoutMultiplier(rangeType, points) {
 
 // convert a pending proposal into the active collection shape so it matches with index.js frontend
 function buildActiveDocument(proposal){
-    const {category, condition = {}, playerData, teamData, gameData, proposedBy} = proposal;
+    const {category, condition = {}, playerData, teamData, proposedBy} = proposal;
     const approvedAt = new Date();
     if (category === 'Player'){
         return {
@@ -109,19 +108,6 @@ function buildActiveDocument(proposal){
                 condition?.condVal ?? teamData?.points,
             ),
             proposedBy, 
-            approvedAt,
-        };
-    }
-
-    if (category === 'Game'){
-        return {
-            home_team: gameData?.home_team || '--',
-            away_team: gameData?.away_team || '--',
-            time: gameData?.time || '--:--',
-            odds: gameData?.odds || '--',
-            winner: condition?.outcome || gameData?.winner || '--',
-            payout_mult: null,
-            proposedBy,
             approvedAt,
         };
     }
