@@ -1138,7 +1138,7 @@ function ModLiveTab({chatMessages, onDeleteMessage, onBanUser, onNewMessage, use
 
 // main export / make the mod dashboard a thing
 export default function ModDash({
-    username, proposals, onApprove, onDecline, chatMessages, onNewMessage, onDeleteMessage, onBanUser, players, teams, games, onCancelStake, bannedUsernames = [], isLoadingProposals = false, onTabClick,
+    username, proposals, onApprove, onDecline, chatMessages, onNewMessage, onDeleteMessage, onBanUser, players, teams, games, onCancelStake, bannedUsernames = [], isLoadingProposals = false,
 }) {
     // constants
     const [activeTab, setActiveTab] = useState(MOD_TABS.PROPOSALS);
@@ -1432,12 +1432,7 @@ export default function ModDash({
                             const isActive = activeTab === tab.key;
                             const pendingCount = tab.badge ? proposals.length : 0;
                             return (
-                                <button key={tab.key} onClick={() => {
-                                    setActiveTab(tab.key);
-                                    if (typeof onTabClick === 'function') {
-                                        onTabClick(tab.key);
-                                    }
-                                }} style={{
+                                <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
                                     display: 'flex', alignItems: 'center', gap: 7, padding: '0 16px', height: 'var(--tab-height)', background: 'none', 
                                     color: isActive ? 'var(--accent)' : 'var(--text-muted)', letterSpacing: '0.04em', fontSize: 13,
                                     borderBottom: isActive ? '2px solid var(--accent)' : '2px solid transparent', transition: 'all 0.2s', flexShrink: 0,

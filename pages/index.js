@@ -307,7 +307,7 @@ function parseReplayMinuteValue(minuteValue) {
     return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function parseReplayRevealMinute(minuteValue) { // similar to parseReplayMinuteValue but with special handling to keep 45+X' appear at 45' instead of 45+X'
+function parseReplayRevealMinute(minuteValue) {
     const raw = String(minuteValue ?? '').trim().replace(/'/g, '');
     const plusMatch = raw.match(/^(\d{1,3})\+(\d{1,2})$/);
     if (plusMatch) {
@@ -362,7 +362,6 @@ function buildReplaySnapshot(liveReplay, nowMs = Date.now()) {
     const clampedElapsedMs = Math.min(durationMs, elapsedMs);
     const progress = durationMs > 0 ? (clampedElapsedMs / durationMs) : 1;
     const currentMinute = totalReplayMinutes * progress;
-    //const visibleEvents = rawEvents.filter(event => parseReplayMinuteValue(event?.minute) <= currentMinute + 0.0001);
     const visibleEvents = rawEvents.filter(event => parseReplayRevealMinute(event?.minute) <= currentMinute + 0.0001);
     const homeScore = visibleEvents.filter(event => (
         (event?.event === 'goal' || event?.event === 'penalty_scored') && event?.team === 'home'
@@ -2875,7 +2874,7 @@ const TAB_CONFIG = [
     {key: TABS.LIVE, label: "Live", icon: <Radio size={15} />, live:true},
 ];
 
-function Dashboard({username, players, playerPicks, teams, teamPicks, games, gamePicks, chatMessages, onNewMessage, activeTab, setActiveTab, onTabClick, bracketRefreshNonce = 0, userCredits, onPlacePlayerBet, onPlaceTeamBet, onPlaceGameBet, showBetSuccessBanner = false, canPlaceBets = true}){
+function Dashboard({username, players, playerPicks, teams, teamPicks, games, gamePicks, chatMessages, onNewMessage, activeTab, setActiveTab, userCredits, onPlacePlayerBet, onPlaceTeamBet, onPlaceGameBet, showBetSuccessBanner = false, canPlaceBets = true}){
     const [bracketState, setBracketState] = useState(null);
     const [liveReplay, setLiveReplay] = useState(null);
     const [isBracketLoading, setIsBracketLoading] = useState(true);
@@ -2907,11 +2906,15 @@ function Dashboard({username, players, playerPicks, teams, teamPicks, games, gam
         };
 
         void loadBracket();
+        const intervalId = setInterval(() => {
+            void loadBracket();
+        }, 1500);
 
         return () => {
             isMounted = false;
+            clearInterval(intervalId);
         };
-    }, [activeTab, bracketRefreshNonce]);
+    }, []);
 
     useEffect(() => {
         const intervalId = setInterval(() => {
@@ -2955,13 +2958,7 @@ function Dashboard({username, players, playerPicks, teams, teamPicks, games, gam
                     {TAB_CONFIG.map(tab => {
                         const isActive = activeTab === tab.key;
                         return (
-                            <button key={tab.key} onClick={() => {
-                                if (typeof onTabClick === 'function') {
-                                    onTabClick(tab.key);
-                                    return;
-                                }
-                                setActiveTab(tab.key);
-                            }} style={{
+                            <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
                                 display: 'flex', alignItems: 'center', gap: 7, padding: '0 16px', height: 'var(--tab-height)',
                                 background: 'none', color: isActive ? 'var(--accent)' : 'var(--text-muted)',
                                 letterSpacing: '0.04em', borderBottom: isActive ? '2px solid var(--accent)' : '2px solid transparent',
@@ -3861,11 +3858,12 @@ export default function App(){
     const previousActiveTabRef = useRef(activeTab);
     const isModerator = userRole === 'moderator';
     const [isLoadingProposals, setIsLoadingProposals] = useState(false);
-    const [bracketRefreshNonce, setBracketRefreshNonce] = useState(0);
 
     // helper for loadPendingProposals
-    const loadPendingProposals = useCallback(async () => {
-        setIsLoadingProposals(true);
+    const loadPendingProposals = useCallback(async ({ silent = false } = {}) => {
+        if (!silent) {
+            setIsLoadingProposals(true);
+        }
         try{
             const response = await fetch('/api/pending-bets');
             const data = await response.json().catch(()=> ({}));
@@ -3880,7 +3878,9 @@ export default function App(){
         } catch (error){
             console.error('Pending proposals fetch error:', error);
         } finally {
-            setIsLoadingProposals(false);
+            if (!silent) {
+                setIsLoadingProposals(false);
+            }
         }
     }, []);
 
@@ -4331,82 +4331,10 @@ export default function App(){
         triggerBetSuccessBanner();
     }, [triggerBetSuccessBanner, username]);
 
-    const refreshModerationState = useCallback(async () => {
-        try {
-            const response = await fetch('/api/bracket');
-            const data = await response.json().catch(() => ({}));
-            if (!response.ok) {
-                return;
-            }
-
-            setBannedUsernames(normalizeUsernameList(data?.bracket?.bannedUsernames));
-            setBettingPhase(normalizeBettingPhase(data?.bracket?.matchLifecycle?.phase));
-        } catch (error) {
-            console.error('Failed to sync moderation state:', error);
-        }
-    }, []);
-
-    const refreshUserState = useCallback(async () => {
-        if (isModerator || !username) {
-            return;
-        }
-
-        try {
-            const response = await fetch('/api/user-state', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username }),
-            });
-
-            const data = await response.json().catch(() => ({}));
-            if (!response.ok) {
-                return;
-            }
-
-            setUserCredits(Number.isFinite(Number(data.credits)) ? Number(data.credits) : 0);
-            setUserTotalBets(Number.isFinite(Number(data.total_bets)) ? Number(data.total_bets) : 0);
-            setUserWins(Number.isFinite(Number(data.wins)) ? Number(data.wins) : 0);
-            setUserLosses(Number.isFinite(Number(data.losses)) ? Number(data.losses) : 0);
-            setUserProfit(Number.isFinite(Number(data.profit)) ? Number(data.profit) : 0);
-            setPlayerPicks(Array.isArray(data.player_picks) ? data.player_picks.map(mapPlayerBetToPlayerCard) : []);
-            setTeamPicks(Array.isArray(data.team_picks) ? data.team_picks.map(mapTeamBetToTeamCard) : []);
-            setGamePicks(Array.isArray(data.game_picks) ? data.game_picks.map(mapGameBetToGameRow) : []);
-        } catch (error) {
-            console.error('Failed to sync user state:', error);
-        }
-    }, [isModerator, username]);
-
-    const triggerDashboardRefreshes = useCallback(() => {
-        void refreshModerationState();
-        void refreshUserState();
-        setBracketRefreshNonce(prev => prev + 1);
-    }, [refreshModerationState, refreshUserState]);
-
-    const triggerModeratorRefreshes = useCallback(() => {
-        if (!isModerator || screen !== SCREENS.DASHBOARD) {
-            return;
-        }
-
-        void refreshModerationState();
-        void loadPendingProposals();
-        void loadActiveBets();
-    }, [isModerator, loadActiveBets, loadPendingProposals, refreshModerationState, screen]);
-
-    const handleDashboardTabClick = useCallback((tabKey) => {
-        setActiveTab(tabKey);
-        triggerDashboardRefreshes();
-    }, [triggerDashboardRefreshes]);
-
-    const handleModeratorTabClick = useCallback(() => {
-        triggerModeratorRefreshes();
-    }, [triggerModeratorRefreshes]);
-
     const handleLogoClick = useCallback(() => {
         setScreen(SCREENS.DASHBOARD);
         setActiveTab(TABS.PICKS);
-        triggerDashboardRefreshes();
-        triggerModeratorRefreshes();
-    }, [triggerDashboardRefreshes, triggerModeratorRefreshes]);
+    }, []);
 
     const handleAvatarClick = useCallback(() => {
         setScreen(SCREENS.PROFILE);
@@ -4593,38 +4521,76 @@ export default function App(){
         }
     }, [bannedUsernames, chatMessages, moderatorChatMessages]);
 
+    // Moderator dashboard polling: keep proposals + active pools fresh without manual navigation.
     useEffect(() => {
         if (!isModerator || screen !== SCREENS.DASHBOARD) {
             return;
         }
-        loadPendingProposals();
-    }, [isModerator, screen, loadPendingProposals]);
-
-    // Moderator dashboard uses its own local tabs, so load all active bet pools on entry.
-    useEffect(() => {
-        if (screen !== SCREENS.DASHBOARD || !isModerator) {
-            return;
-        }
 
         let isCancelled = false;
+        let isRefreshing = false;
 
-        loadActiveBets().catch((error) => {
-            if (!isCancelled) {
-                console.error('Failed to refresh moderator bets:', error);
+        const refreshModeratorData = async () => {
+            if (isCancelled || isRefreshing) {
+                return;
             }
-        });
+
+            isRefreshing = true;
+            try {
+                await Promise.allSettled([
+                    loadPendingProposals({ silent: true }),
+                    loadActiveBets(),
+                ]);
+            } finally {
+                isRefreshing = false;
+            }
+        };
+
+        void refreshModeratorData();
+        const intervalId = setInterval(() => {
+            void refreshModeratorData();
+        }, 2000);
 
         return () => {
             isCancelled = true;
+            clearInterval(intervalId);
         };
-    }, [isModerator, loadActiveBets, screen]);
+    }, [isModerator, loadActiveBets, loadPendingProposals, screen]);
 
     useEffect(() => {
         if (screen !== SCREENS.DASHBOARD) {
             return;
         }
-        void refreshModerationState();
-    }, [refreshModerationState, screen]);
+
+        let isCancelled = false;
+
+        const loadModerationState = async () => {
+            try {
+                const response = await fetch('/api/bracket');
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || isCancelled) {
+                    return;
+                }
+
+                setBannedUsernames(normalizeUsernameList(data?.bracket?.bannedUsernames));
+                setBettingPhase(normalizeBettingPhase(data?.bracket?.matchLifecycle?.phase));
+            } catch (error) {
+                if (!isCancelled) {
+                    console.error('Failed to sync moderation state:', error);
+                }
+            }
+        };
+
+        void loadModerationState();
+        const intervalId = setInterval(() => {
+            void loadModerationState();
+        }, 2000);
+
+        return () => {
+            isCancelled = true;
+            clearInterval(intervalId);
+        };
+    }, [screen]);
 
     useEffect(() => {
         const usernames = CHAT_USER_ROSTER;
@@ -4693,8 +4659,46 @@ export default function App(){
             return;
         }
 
-        void refreshUserState();
-    }, [isModerator, refreshUserState, screen, username]);
+        let isCancelled = false;
+
+        const syncUserState = async () => {
+            try {
+                const response = await fetch('/api/user-state', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username }),
+                });
+
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || isCancelled) {
+                    return;
+                }
+
+                setUserCredits(Number.isFinite(Number(data.credits)) ? Number(data.credits) : 0);
+                setUserTotalBets(Number.isFinite(Number(data.total_bets)) ? Number(data.total_bets) : 0);
+                setUserWins(Number.isFinite(Number(data.wins)) ? Number(data.wins) : 0);
+                setUserLosses(Number.isFinite(Number(data.losses)) ? Number(data.losses) : 0);
+                setUserProfit(Number.isFinite(Number(data.profit)) ? Number(data.profit) : 0);
+                setPlayerPicks(Array.isArray(data.player_picks) ? data.player_picks.map(mapPlayerBetToPlayerCard) : []);
+                setTeamPicks(Array.isArray(data.team_picks) ? data.team_picks.map(mapTeamBetToTeamCard) : []);
+                setGamePicks(Array.isArray(data.game_picks) ? data.game_picks.map(mapGameBetToGameRow) : []);
+            } catch (error) {
+                if (!isCancelled) {
+                    console.error('Failed to sync user state:', error);
+                }
+            }
+        };
+
+        void syncUserState();
+        const intervalId = setInterval(() => {
+            void syncUserState();
+        }, 1500);
+
+        return () => {
+            isCancelled = true;
+            clearInterval(intervalId);
+        };
+    }, [isModerator, screen, username]);
 
     // Betting feature: refresh available Team bets from Mongo when Teams tab opens.
     useEffect(() => {
@@ -4847,11 +4851,11 @@ export default function App(){
 
         {screen === SCREENS.DASHBOARD && ( isModerator ? (
             <ModDash username={username} proposals={proposals} onApprove={handleApproveProposal} onDecline={handleDeclineProposal} chatMessages={moderatorChatMessages} 
-                    onNewMessage={handleNewMessage} onDeleteMessage={handleDeleteMessage} onBanUser={handleBanUser} players={players} teams={teams} games={games} onCancelStake={handleCancelStake} bannedUsernames={bannedUsernames} isLoadingProposals={isLoadingProposals} onTabClick={handleModeratorTabClick}/>
+                    onNewMessage={handleNewMessage} onDeleteMessage={handleDeleteMessage} onBanUser={handleBanUser} players={players} teams={teams} games={games} onCancelStake={handleCancelStake} bannedUsernames={bannedUsernames} isLoadingProposals={isLoadingProposals}/>
         ) : (
             <>
             <Dashboard username={username} players={players} playerPicks={playerPicks} teams={teams} teamPicks={teamPicks} games={games} gamePicks={gamePicks} chatMessages={chatMessages} 
-                    onNewMessage={handleNewMessage} activeTab={activeTab} setActiveTab={setActiveTab} onTabClick={handleDashboardTabClick} bracketRefreshNonce={bracketRefreshNonce} userCredits={userCredits} onPlacePlayerBet={handlePlacePlayerBet} onPlaceTeamBet={handlePlaceTeamBet} onPlaceGameBet={handlePlaceGameBet} showBetSuccessBanner={showBetSuccessBanner} canPlaceBets={bettingPhase === BETTING_PHASES.SIMULATION_RUNNING} />
+                    onNewMessage={handleNewMessage} activeTab={activeTab} setActiveTab={setActiveTab} userCredits={userCredits} onPlacePlayerBet={handlePlacePlayerBet} onPlaceTeamBet={handlePlaceTeamBet} onPlaceGameBet={handlePlaceGameBet} showBetSuccessBanner={showBetSuccessBanner} canPlaceBets={bettingPhase === BETTING_PHASES.SIMULATION_RUNNING} />
                 <ProposalForm onSubmit={handleAddProposal} username={username} isProposalsOpen={bettingPhase === BETTING_PHASES.PROPOSALS_OPEN}/>
             </>
         )
