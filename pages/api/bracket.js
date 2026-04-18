@@ -1,5 +1,6 @@
 import dns from 'dns';
 import { MongoClient, ServerApiVersion } from 'mongodb';
+import { BETTING_PHASES } from './_lib/bettingLifecycle';
 
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
@@ -7,6 +8,7 @@ const uri = process.env.MONGODB_URI || 'mongodb+srv://admin:admin1Password@clust
 const dbName = process.env.MONGODB_SOCCER_DB || 'Soccer_Data';
 const collectionName = process.env.MONGODB_BRACKET_COLLECTION || 'Bracket';
 const gameBetsCollectionName = process.env.MONGODB_GAME_BETS_COLLECTION || 'Game_bets';
+const pendingBetsCollectionName = process.env.MONGODB_PENDING_BETS_COLLECTION || 'Pending_Bets';
 const userDbName = process.env.MONGODB_DB || 'User_Data';
 const usersCollectionName = process.env.MONGODB_COLLECTION || 'Users';
 const completedBetsCollectionName = process.env.MONGODB_COMPLETED_BETS_COLLECTION || 'Completed-bets';
@@ -106,6 +108,24 @@ function toFiniteNumber(value) {
 
 function roundMoney(value) {
     return Number((Number.isFinite(Number(value)) ? Number(value) : 0).toFixed(2));
+}
+
+function toValidDateOrNull(value) {
+    const date = new Date(value);
+    return Number.isFinite(date.getTime()) ? date : null;
+}
+
+function getReplayEndAt(liveReplay) {
+    const startedAt = toValidDateOrNull(liveReplay?.startedAt);
+    if (!startedAt) {
+        return null;
+    }
+
+    const durationMs = Number.isFinite(Number(liveReplay?.durationMs))
+        ? Number(liveReplay.durationMs)
+        : 60000;
+
+    return new Date(startedAt.getTime() + Math.max(0, durationMs));
 }
 
 function parseScorePair(scoreText) {
@@ -306,11 +326,71 @@ async function settleCompletedMatchGameBets(client, completedMatch) {
     };
 }
 
+async function finalizeReplaySettlementIfReady(client, latestBracket, bracketCollection) {
+    if (!latestBracket?._id) {
+        return latestBracket;
+    }
+
+    const lifecycle = latestBracket.matchLifecycle || {};
+    const isLocked = String(lifecycle.phase || '').trim().toUpperCase() === BETTING_PHASES.MODERATOR_LOCKED;
+    if (!isLocked) {
+        return latestBracket;
+    }
+
+    const completedMatch = lifecycle.pendingSettlementMatch;
+    if (!completedMatch || typeof completedMatch !== 'object') {
+        return latestBracket;
+    }
+
+    const replayEndAt = toValidDateOrNull(lifecycle.userReplayEndsAt) || getReplayEndAt(latestBracket.liveReplay);
+    if (!replayEndAt || replayEndAt.getTime() > Date.now()) {
+        return latestBracket;
+    }
+
+    const settlementSummary = await settleCompletedMatchGameBets(client, completedMatch);
+    const settlementCompletedAt = new Date();
+
+    await bracketCollection.updateOne(
+        { _id: latestBracket._id },
+        {
+            $set: {
+                matchLifecycle: {
+                    phase: BETTING_PHASES.PROPOSALS_OPEN,
+                    settlementCompletedAt,
+                    lastSettledMatch: completedMatch,
+                    lastSettlementSummary: settlementSummary,
+                    simulationStartedAt: null,
+                    moderatorFinishedAt: null,
+                    userReplayEndsAt: null,
+                    pendingSettlementMatch: null,
+                },
+                updatedAt: settlementCompletedAt,
+            },
+        },
+    );
+
+    return {
+        ...latestBracket,
+        matchLifecycle: {
+            phase: BETTING_PHASES.PROPOSALS_OPEN,
+            settlementCompletedAt,
+            lastSettledMatch: completedMatch,
+            lastSettlementSummary: settlementSummary,
+            simulationStartedAt: null,
+            moderatorFinishedAt: null,
+            userReplayEndsAt: null,
+            pendingSettlementMatch: null,
+        },
+        updatedAt: settlementCompletedAt,
+    };
+}
+
 export default async function handler(req, res) {
     try {
         const client = await clientPromise;
         const bracketCollection = client.db(dbName).collection(collectionName);
         const gameBetsCollection = client.db(dbName).collection(gameBetsCollectionName);
+        const pendingBetsCollection = client.db(dbName).collection(pendingBetsCollectionName);
 
         if (req.method === 'GET') {
             const latestBracket = await bracketCollection
@@ -319,10 +399,18 @@ export default async function handler(req, res) {
                 .limit(1)
                 .next();
 
-            return res.status(200).json({ bracket: latestBracket || null });
+            const normalizedBracket = await finalizeReplaySettlementIfReady(client, latestBracket, bracketCollection);
+
+            return res.status(200).json({ bracket: normalizedBracket || null });
         }
 
         if (req.method === 'PUT') {
+            const previousBracket = await bracketCollection
+                .find({})
+                .sort({ updatedAt: -1, createdAt: -1 })
+                .limit(1)
+                .next();
+
             const bracketState = req.body?.bracketState;
             const completedMatch = req.body?.completedMatch;
             const liveReplay = req.body?.liveReplay && typeof req.body.liveReplay === 'object'
@@ -336,17 +424,48 @@ export default async function handler(req, res) {
 
             // Explicitly replace all stored bracket docs with this new first-generation bracket.
             await bracketCollection.deleteMany({});
+
+            const previousLifecycle = previousBracket?.matchLifecycle && typeof previousBracket.matchLifecycle === 'object'
+                ? previousBracket.matchLifecycle
+                : null;
+
+            let nextLifecycle = previousLifecycle || {
+                phase: BETTING_PHASES.PROPOSALS_OPEN,
+                simulationStartedAt: null,
+                moderatorFinishedAt: null,
+                userReplayEndsAt: null,
+                pendingSettlementMatch: null,
+            };
+
+            if (completedMatch && typeof completedMatch === 'object') {
+                const now = new Date();
+                const replayEndAt = getReplayEndAt(liveReplay);
+                nextLifecycle = {
+                    ...nextLifecycle,
+                    phase: BETTING_PHASES.MODERATOR_LOCKED,
+                    moderatorFinishedAt: now,
+                    userReplayEndsAt: replayEndAt,
+                    pendingSettlementMatch: completedMatch,
+                };
+            }
+
             const insertResult = await bracketCollection.insertOne({
                 bracketState,
                 liveReplay,
                 bannedUsernames,
+                matchLifecycle: nextLifecycle,
                 createdAt: new Date(),
                 updatedAt: new Date(),
             });
 
             let settlementSummary = null;
             if (completedMatch && typeof completedMatch === 'object') {
-                settlementSummary = await settleCompletedMatchGameBets(client, completedMatch);
+                await pendingBetsCollection.deleteMany({});
+                settlementSummary = {
+                    pendingBetsCleared: true,
+                    settledPicks: 0,
+                    totalPayout: 0,
+                };
             }
 
             // Keep Game_bets aligned to the current (next playable) bracket match.

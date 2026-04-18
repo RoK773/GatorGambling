@@ -1,9 +1,11 @@
 // permanently removes a proposal from pending_bets without moving it to any active collection
 import dns from 'dns';
 import {MongoClient, ServerApiVersion, ObjectId} from 'mongodb';
+import { BETTING_PHASES, getCurrentBettingPhase } from './_lib/bettingLifecycle';
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 const uri = process.env.MONGODB_URI;
 const dbName = process.env.MONGODB_SOCCER_DB || 'Soccer_Data';
+const bracketCollectionName = process.env.MONGODB_BRACKET_COLLECTION || 'Bracket';
 const PENDING_COLLECTION = 'Pending_Bets';
 const options= {
     serverApi:{
@@ -40,6 +42,17 @@ export default async function handler(req, res){
 
     try{
         const client = await clientPromise;
+        const { phase } = await getCurrentBettingPhase(client, {
+            dbName,
+            bracketCollectionName,
+        });
+
+        if (phase !== BETTING_PHASES.SIMULATION_RUNNING) {
+            return res.status(403).json({
+                error: 'Proposal moderation is only available while a match simulation is running.',
+            });
+        }
+
         const pending = client.db(dbName).collection(PENDING_COLLECTION);
         const result = await pending.deleteOne({_id: objectId});
 

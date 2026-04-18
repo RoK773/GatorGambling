@@ -1,11 +1,14 @@
 import dns from 'dns';
 import { MongoClient, ServerApiVersion } from 'mongodb';
+import { BETTING_PHASES, getCurrentBettingPhase } from './_lib/bettingLifecycle';
 
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
 const uri = process.env.MONGODB_URI || 'mongodb+srv://admin:admin1Password@cluster0.9uypigw.mongodb.net/?appName=Cluster0';
 const dbName = process.env.MONGODB_DB || 'User_Data';
 const collectionName = process.env.MONGODB_COLLECTION || 'Users';
+const soccerDbName = process.env.MONGODB_SOCCER_DB || 'Soccer_Data';
+const bracketCollectionName = process.env.MONGODB_BRACKET_COLLECTION || 'Bracket';
 
 const options = {
     serverApi: {
@@ -49,6 +52,17 @@ export default async function handler(req, res) {
 
     try {
         const client = await clientPromise;
+        const { phase } = await getCurrentBettingPhase(client, {
+            dbName: soccerDbName,
+            bracketCollectionName,
+        });
+
+        if (phase !== BETTING_PHASES.SIMULATION_RUNNING) {
+            return res.status(403).json({
+                error: 'Bet placement is closed. Bets can only be placed while a match simulation is running.',
+            });
+        }
+
         const users = client.db(dbName).collection(collectionName);
 
         const user = await users.findOne(

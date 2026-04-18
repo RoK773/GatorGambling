@@ -1,9 +1,11 @@
 // implements the approval of user proposed bets
 import dns from 'dns';
 import {MongoClient, ServerApiVersion, ObjectId} from 'mongodb';
+import { BETTING_PHASES, getCurrentBettingPhase } from './_lib/bettingLifecycle';
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 const uri = process.env.MONGODB_URI;
 const dbName = process.env.MONGODB_SOCCER_DB || 'Soccer_Data';
+const bracketCollectionName = process.env.MONGODB_BRACKET_COLLECTION || 'Bracket';
 const PENDING_COLLECTION = 'Pending_Bets';
 const ACTIVE_COLLECTIONS = {
     Player: process.env.MONGODB_PLAYER_BETS_COLLECTION || 'Player_bets',
@@ -93,6 +95,17 @@ export default async function handler(req, res){
 
     try{
         const client = await clientPromise;
+        const { phase } = await getCurrentBettingPhase(client, {
+            dbName,
+            bracketCollectionName,
+        });
+
+        if (phase !== BETTING_PHASES.SIMULATION_RUNNING) {
+            return res.status(403).json({
+                error: 'Proposal moderation is only available while a match simulation is running.',
+            });
+        }
+
         const db = client.db(dbName);
         const pending = db.collection(PENDING_COLLECTION);
 

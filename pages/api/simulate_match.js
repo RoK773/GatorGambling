@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import dns from 'dns';
 import { MongoClient, ServerApiVersion } from 'mongodb';
+import { BETTING_PHASES } from './_lib/bettingLifecycle';
 //const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
 const OLLAMA_URL = process.env.OLLAMA_URL || 'https://lakia-semifuturistic-unbecomingly.ngrok-free.dev';
 
@@ -10,6 +11,7 @@ dns.setServers(['8.8.8.8', '8.8.4.4']);
 const uri = process.env.MONGODB_URI || 'mongodb+srv://admin:admin1Password@cluster0.9uypigw.mongodb.net/?appName=Cluster0';
 const dbName = process.env.MONGODB_SOCCER_DB || 'Soccer_Data';
 const collectionName = process.env.MONGODB_CURRENT_GAME_DATA_COLLECTION || 'Current_game_data';
+const bracketCollectionName = process.env.MONGODB_BRACKET_COLLECTION || 'Bracket';
 
 const options = {
   serverApi: {
@@ -34,6 +36,35 @@ export default async function handler(req, res) {
   }
 
   const { homeTeam, awayTeam } = req.body;
+
+  try {
+    const client = await clientPromise;
+    const bracketCollection = client.db(dbName).collection(bracketCollectionName);
+    const latestBracket = await bracketCollection
+      .find({})
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .limit(1)
+      .next();
+
+    if (latestBracket?._id) {
+      await bracketCollection.updateOne(
+        { _id: latestBracket._id },
+        {
+          $set: {
+            matchLifecycle: {
+              phase: BETTING_PHASES.SIMULATION_RUNNING,
+              simulationStartedAt: new Date(),
+              simulatorHomeTeam: String(homeTeam || '').trim() || null,
+              simulatorAwayTeam: String(awayTeam || '').trim() || null,
+            },
+            updatedAt: new Date(),
+          },
+        },
+      );
+    }
+  } catch (lifecycleError) {
+    console.error('Failed to mark simulation start lifecycle:', lifecycleError);
+  }
 
   //  data/worldcup2022.json
   const filePath = path.join(process.cwd(), 'data', 'worldcup2022.json');

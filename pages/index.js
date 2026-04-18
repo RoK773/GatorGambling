@@ -30,10 +30,22 @@ const TABS = {
     LIVE: 'live',
 };
 
-const MODERATOR_CREDENTIALS ={
-    username: 'moderator01',
-    password: 'moderator01Auth',
-}
+const BETTING_PHASES = {
+    PROPOSALS_OPEN: 'PROPOSALS_OPEN',
+    SIMULATION_RUNNING: 'SIMULATION_RUNNING',
+    MODERATOR_LOCKED: 'MODERATOR_LOCKED',
+};
+
+const MODERATOR_CREDENTIALS = [
+    {
+        username: 'moderator01',
+        password: 'moderator01Auth',
+    },
+    {
+        username: 'moderator02',
+        password: 'moderator02Auth',
+    },
+];
 
 // seed messages so App can own chatMessages state and pass it down for mod deletion
 // static messages for global chat
@@ -273,6 +285,15 @@ function normalizeUsernameList(values) {
                 .filter(Boolean),
         ),
     );
+}
+
+function normalizeBettingPhase(rawPhase) {
+    const phase = String(rawPhase || '').trim().toUpperCase();
+    if (Object.values(BETTING_PHASES).includes(phase)) {
+        return phase;
+    }
+
+    return BETTING_PHASES.PROPOSALS_OPEN;
 }
 
 function parseReplayMinuteValue(minuteValue) {
@@ -1115,7 +1136,7 @@ function BetAmountModal({
 }
 
 // Betting feature: Player bet card with fixed condition UI + credit-backed placement flow.
-function PlayerBetCard({ playerId, title, subtitle, meta, stake, stat, range, statNum, payoutMult, animDelay, availableCredits = 0, onPlaceBet, confirmed = false }) {
+function PlayerBetCard({ playerId, title, subtitle, meta, stake, stat, range, statNum, payoutMult, animDelay, availableCredits = 0, onPlaceBet, confirmed = false, bettingOpen = true }) {
     const [hover, setHover] = useState(false);
     const [betPlaced, setBet] = useState(false);
     const [isSubmittingBet, setIsSubmittingBet] = useState(false);
@@ -1131,6 +1152,14 @@ function PlayerBetCard({ playerId, title, subtitle, meta, stake, stat, range, st
 
     const handleBet = () => {
         if (!hasCondition || confirmed){
+            return;
+        }
+
+        if (!bettingOpen) {
+            setBetBanner({
+                type: 'error',
+                message: 'Bet placement is currently closed for this match.',
+            });
             return;
         }
 
@@ -1268,13 +1297,13 @@ function PlayerBetCard({ playerId, title, subtitle, meta, stake, stat, range, st
                     </div>
                     <BarChart2 size={20} color="var(--text-muted)"/>
                 </div>
-                <button onClick={handleBet} disabled={confirmed || !hasCondition || betPlaced} title={confirmed ? 'This bet is already confirmed' : (!hasCondition ? 'Condition unavailable for this bet' : '')} style={{
+                <button onClick={handleBet} disabled={confirmed || !hasCondition || betPlaced || !bettingOpen} title={confirmed ? 'This bet is already confirmed' : (!hasCondition ? 'Condition unavailable for this bet' : (!bettingOpen ? 'Bet placement is currently closed' : ''))} style={{
                     background: confirmed ? 'var(--success)' : (betPlaced ? 'var(--success)' : 'var(--accent)'),
                     color: '#080A0F', fontWeight: 700, fontSize: 13, letterSpacing: '0.08em', 
-                    padding: '11px', borderRadius: 8, border: (!hasCondition && !confirmed) ? '1px solid var(--border)' : 'none', cursor: (confirmed || !hasCondition) ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.2s', opacity: (confirmed || !hasCondition) ? 0.75 : 1,
+                    padding: '11px', borderRadius: 8, border: (!hasCondition && !confirmed) ? '1px solid var(--border)' : 'none', cursor: (confirmed || !hasCondition || !bettingOpen) ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s', opacity: (confirmed || !hasCondition || !bettingOpen) ? 0.75 : 1,
                 }}>
-                    {confirmed ? 'BET CONFIRMED' : (betPlaced ? '✓ BET PLACED' : (!hasCondition ? 'CONDITION UNAVAILABLE' : 'PLACE BET'))}
+                    {confirmed ? 'BET CONFIRMED' : (betPlaced ? '✓ BET PLACED' : (!hasCondition ? 'CONDITION UNAVAILABLE' : (!bettingOpen ? 'BETTING CLOSED' : 'PLACE BET')))}
                 </button>
             </div>
 
@@ -1294,7 +1323,7 @@ function PlayerBetCard({ playerId, title, subtitle, meta, stake, stat, range, st
 }
 
 // Betting feature: Team bet card with fixed condition UI + credit-backed placement flow.
-function TeamBetCard({ teamId, title, subtitle, stake, outcome, range, points, payoutMult, animDelay, availableCredits = 0, onPlaceBet, confirmed = false }) {
+function TeamBetCard({ teamId, title, subtitle, stake, outcome, range, points, payoutMult, animDelay, availableCredits = 0, onPlaceBet, confirmed = false, bettingOpen = true }) {
     const [hover, setHover] = useState(false);
     const [betPlaced, setBet] = useState(false);
     const [isSubmittingBet, setIsSubmittingBet] = useState(false);
@@ -1311,6 +1340,14 @@ function TeamBetCard({ teamId, title, subtitle, stake, outcome, range, points, p
 
     const handleBet = () => {
         if (!hasCondition || confirmed) {
+            return;
+        }
+
+        if (!bettingOpen) {
+            setBetBanner({
+                type: 'error',
+                message: 'Bet placement is currently closed for this match.',
+            });
             return;
         }
 
@@ -1434,13 +1471,13 @@ function TeamBetCard({ teamId, title, subtitle, stake, outcome, range, points, p
                     </div>
                     <BarChart2 size={20} color="var(--text-muted)" />
                 </div>
-                <button onClick={handleBet} disabled={confirmed || !hasCondition || betPlaced} title={confirmed ? 'This bet is already confirmed' : (!hasCondition ? 'Condition unavailable for this bet' : '')} style={{
+                <button onClick={handleBet} disabled={confirmed || !hasCondition || betPlaced || !bettingOpen} title={confirmed ? 'This bet is already confirmed' : (!hasCondition ? 'Condition unavailable for this bet' : (!bettingOpen ? 'Bet placement is currently closed' : ''))} style={{
                     background: confirmed ? 'var(--success)' : (betPlaced ? 'var(--success)' : 'var(--accent)'),
                     color: '#080A0F', fontWeight: 700, fontSize: 13, letterSpacing: '0.08em',
-                    padding: '11px', borderRadius: 8, border: (!hasCondition && !confirmed) ? '1px solid var(--border)' : 'none', cursor: (confirmed || !hasCondition) ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.2s', opacity: (confirmed || !hasCondition) ? 0.75 : 1,
+                    padding: '11px', borderRadius: 8, border: (!hasCondition && !confirmed) ? '1px solid var(--border)' : 'none', cursor: (confirmed || !hasCondition || !bettingOpen) ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s', opacity: (confirmed || !hasCondition || !bettingOpen) ? 0.75 : 1,
                 }}>
-                    {confirmed ? 'BET CONFIRMED' : (betPlaced ? '✓ BET PLACED' : (!hasCondition ? 'CONDITION UNAVAILABLE' : 'PLACE BET'))}
+                    {confirmed ? 'BET CONFIRMED' : (betPlaced ? '✓ BET PLACED' : (!hasCondition ? 'CONDITION UNAVAILABLE' : (!bettingOpen ? 'BETTING CLOSED' : 'PLACE BET')))}
                 </button>
             </div>
 
@@ -1753,7 +1790,7 @@ function YourPicksTab({playerPicks, teamPicks, gamePicks}){
 }
 
 // Betting feature: available Player bets listing.
-function PlayersTab({players, availableCredits, onPlaceBet}){
+function PlayersTab({players, availableCredits, onPlaceBet, bettingOpen = true}){
     return(
         <div style={{
             display: 'flex',
@@ -1762,7 +1799,7 @@ function PlayersTab({players, availableCredits, onPlaceBet}){
         }}>
             <BetGrid>
                 {players.map((p, i) => (
-                    <PlayerBetCard key={p.id} playerId={p.id} title={p.name} subtitle={`#${p.number}`} meta={p.pos} stake={p.stake} stat={p.stat} range={p.range} statNum={p.stat_num} payoutMult={p.payout_mult} animDelay={`${i*0.05}s`} availableCredits={availableCredits} onPlaceBet={onPlaceBet} />
+                    <PlayerBetCard key={p.id} playerId={p.id} title={p.name} subtitle={`#${p.number}`} meta={p.pos} stake={p.stake} stat={p.stat} range={p.range} statNum={p.stat_num} payoutMult={p.payout_mult} animDelay={`${i*0.05}s`} availableCredits={availableCredits} onPlaceBet={onPlaceBet} bettingOpen={bettingOpen} />
                 ))}
             </BetGrid>
         </div>
@@ -1770,7 +1807,7 @@ function PlayersTab({players, availableCredits, onPlaceBet}){
 }
 
 // Betting feature: available Team bets listing.
-function TeamsTab({teams, availableCredits, onPlaceBet}){
+function TeamsTab({teams, availableCredits, onPlaceBet, bettingOpen = true}){
     return(
         <div style={{
             display: 'flex',
@@ -1780,14 +1817,14 @@ function TeamsTab({teams, availableCredits, onPlaceBet}){
             <Top25Rail title="TOP 25 TEAMS" />
             <BetGrid>
                 {teams.map((t, i) =>(
-                        <TeamBetCard key={t.id} teamId={t.id} title={t.name} subtitle={t.record} stake={t.stake} outcome={t.outcome} range={t.range} points={t.points} payoutMult={t.payout_mult} animDelay={`${i * 0.05}s`} availableCredits={availableCredits} onPlaceBet={onPlaceBet}/>
+                        <TeamBetCard key={t.id} teamId={t.id} title={t.name} subtitle={t.record} stake={t.stake} outcome={t.outcome} range={t.range} points={t.points} payoutMult={t.payout_mult} animDelay={`${i * 0.05}s`} availableCredits={availableCredits} onPlaceBet={onPlaceBet} bettingOpen={bettingOpen}/>
                 ))}
             </BetGrid>
         </div>
     );
 }
 
-function GamesRow({g, i, availableCredits = 0, onPlaceBet, confirmed = false}) {
+function GamesRow({g, i, availableCredits = 0, onPlaceBet, confirmed = false, bettingOpen = true}) {
     const [hover, setHover] = useState(false);
     const [betPlaced, setBetPlaced] = useState(false);
     const [isSubmittingBet, setIsSubmittingBet] = useState(false);
@@ -1813,6 +1850,14 @@ function GamesRow({g, i, availableCredits = 0, onPlaceBet, confirmed = false}) {
 
     const handleBet = () => {
         if (!hasCondition || confirmed) {
+            return;
+        }
+
+        if (!bettingOpen) {
+            setBetBanner({
+                type: 'error',
+                message: 'Bet placement is currently closed for this match.',
+            });
             return;
         }
 
@@ -1962,7 +2007,7 @@ function GamesRow({g, i, availableCredits = 0, onPlaceBet, confirmed = false}) {
                             <ConditionLabel>Pick Team</ConditionLabel>
                             <select
                                 value={selectedTeamChoice}
-                                disabled={!hasCondition}
+                                disabled={!hasCondition || !bettingOpen}
                                 onChange={event => {
                                     setSelectedTeamChoice(event.target.value);
                                     setBetBanner(null);
@@ -1979,7 +2024,7 @@ function GamesRow({g, i, availableCredits = 0, onPlaceBet, confirmed = false}) {
                                     letterSpacing: '0.05em',
                                     color: 'var(--text-primary)',
                                     outline: 'none',
-                                    cursor: !hasCondition ? 'not-allowed' : 'pointer',
+                                    cursor: (!hasCondition || !bettingOpen) ? 'not-allowed' : 'pointer',
                                 }}
                             >
                                 <option value="">Select team...</option>
@@ -1994,11 +2039,11 @@ function GamesRow({g, i, availableCredits = 0, onPlaceBet, confirmed = false}) {
                         {conditionText}
                     </div>
                 </ConditionZone>
-                <button onClick={handleBet} disabled={confirmed || !hasCondition || betPlaced} title={confirmed ? 'This bet is already confirmed' : (!hasCondition ? 'Condition unavailable for this bet' : '')} style={{
+                <button onClick={handleBet} disabled={confirmed || !hasCondition || betPlaced || !bettingOpen} title={confirmed ? 'This bet is already confirmed' : (!hasCondition ? 'Condition unavailable for this bet' : (!bettingOpen ? 'Bet placement is currently closed' : ''))} style={{
                     background: confirmed ? 'var(--success)' : (betPlaced ? 'var(--success)' : 'var(--accent)'), color: '#080A0F', letterSpacing: '0.08em', padding: '11px 20px',
-                    borderRadius: 8, border: (!hasCondition && !confirmed) ? '1px solid var(--border)' : 'none', cursor: (confirmed || !hasCondition) ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.2s', fontWeight: 700, fontSize: 13, alignSelf: 'flex-end', opacity: (confirmed || !hasCondition) ? 0.75 : 1,
-                }}>{confirmed ? 'BET CONFIRMED' : (betPlaced ? '✓ BET PLACED' : (!hasCondition ? 'CONDITION UNAVAILABLE' : 'PLACE BET'))}</button>
+                    borderRadius: 8, border: (!hasCondition && !confirmed) ? '1px solid var(--border)' : 'none', cursor: (confirmed || !hasCondition || !bettingOpen) ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s', fontWeight: 700, fontSize: 13, alignSelf: 'flex-end', opacity: (confirmed || !hasCondition || !bettingOpen) ? 0.75 : 1,
+                }}>{confirmed ? 'BET CONFIRMED' : (betPlaced ? '✓ BET PLACED' : (!hasCondition ? 'CONDITION UNAVAILABLE' : (!bettingOpen ? 'BETTING CLOSED' : 'PLACE BET')))}</button>
             </div>
 
             <BetAmountModal
@@ -2016,13 +2061,13 @@ function GamesRow({g, i, availableCredits = 0, onPlaceBet, confirmed = false}) {
     );
 }
 
-function GamesTab({games, availableCredits = 0, onPlaceBet, confirmed = false}){
+function GamesTab({games, availableCredits = 0, onPlaceBet, confirmed = false, bettingOpen = true}){
     return(
         <div style={{
             display: 'flex', flexDirection: 'column', gap: 16,
         }}>
             {games.map((g, i) => (
-                <GamesRow key={g.id} g={g} i={i} availableCredits={availableCredits} onPlaceBet={onPlaceBet} confirmed={confirmed} />
+                <GamesRow key={g.id} g={g} i={i} availableCredits={availableCredits} onPlaceBet={onPlaceBet} confirmed={confirmed} bettingOpen={bettingOpen} />
         ))}
         </div>
     );
@@ -2702,7 +2747,7 @@ const TAB_CONFIG = [
     {key: TABS.LIVE, label: "Live", icon: <Radio size={15} />, live:true},
 ];
 
-function Dashboard({username, players, playerPicks, teams, teamPicks, games, gamePicks, chatMessages, onNewMessage, activeTab, setActiveTab, userCredits, onPlacePlayerBet, onPlaceTeamBet, onPlaceGameBet, showBetSuccessBanner = false}){
+function Dashboard({username, players, playerPicks, teams, teamPicks, games, gamePicks, chatMessages, onNewMessage, activeTab, setActiveTab, userCredits, onPlacePlayerBet, onPlaceTeamBet, onPlaceGameBet, showBetSuccessBanner = false, canPlaceBets = true}){
     const [bracketState, setBracketState] = useState(null);
     const [liveReplay, setLiveReplay] = useState(null);
     const [isBracketLoading, setIsBracketLoading] = useState(true);
@@ -2763,9 +2808,9 @@ function Dashboard({username, players, playerPicks, teams, teamPicks, games, gam
     const renderTabContent = () => {
         switch (activeTab){
             case TABS.PICKS: return <YourPicksTab playerPicks={playerPicks} teamPicks={teamPicks} gamePicks={gamePicks} />;
-            case TABS.PLAYERS: return <PlayersTab players={availablePlayers} availableCredits={userCredits} onPlaceBet={onPlacePlayerBet} />;
-            case TABS.TEAMS: return <TeamsTab teams={availableTeams} availableCredits={userCredits} onPlaceBet={onPlaceTeamBet}/>;
-            case TABS.GAMES: return <GamesTab games={availableGames} availableCredits={userCredits} onPlaceBet={onPlaceGameBet} />;
+            case TABS.PLAYERS: return <PlayersTab players={availablePlayers} availableCredits={userCredits} onPlaceBet={onPlacePlayerBet} bettingOpen={canPlaceBets} />;
+            case TABS.TEAMS: return <TeamsTab teams={availableTeams} availableCredits={userCredits} onPlaceBet={onPlaceTeamBet} bettingOpen={canPlaceBets}/>;
+            case TABS.GAMES: return <GamesTab games={availableGames} availableCredits={userCredits} onPlaceBet={onPlaceGameBet} bettingOpen={canPlaceBets} />;
             case TABS.BRACKET: return <UserBracketTab bracket={bracketState} isLoading={isBracketLoading} />;
             case TABS.LIVE: return <LiveTab chatMessages={chatMessages} onNewMessage={onNewMessage} username={username} bracketState={bracketState} liveReplay={liveReplay} replayNowMs={replayNowMs}/>;
             default: return null;
@@ -2838,7 +2883,7 @@ function Dashboard({username, players, playerPicks, teams, teamPicks, games, gam
                     {activeTab !== TABS.PICKS && activeTab !== TABS.LIVE && activeTab !== TABS.BRACKET && (
                         <p style={{
                             fontSize: 13, color: 'var(--text-secondary)', marginTop: 4,
-                        }}>Select an option and place your bet.
+                        }}>{canPlaceBets ? 'Select an option and place your bet.' : 'Bet placement is currently closed for this match.'}
                         </p>
                     )}
                 </div>
@@ -3677,6 +3722,7 @@ export default function App(){
     const [games, setGames] = useState([]);
     const [gamePicks, setGamePicks] = useState([]);
     const [proposals, setProposals] = useState([]);
+    const [bettingPhase, setBettingPhase] = useState(BETTING_PHASES.PROPOSALS_OPEN);
     const [chatMessages, setChatMessages] = useState(SEED_MESSAGES);
     const [moderatorChatMessages, setModeratorChatMessages] = useState(INITIAL_CHAT_MESSAGES);
     const [bannedUsernames, setBannedUsernames] = useState([]);
@@ -3752,7 +3798,11 @@ export default function App(){
 
         setLoginError('');
 
-        if( payload.username === MODERATOR_CREDENTIALS.username && payload.password === MODERATOR_CREDENTIALS.password){
+        const isValidModerator = MODERATOR_CREDENTIALS.some(credentials => (
+            payload.username === credentials.username && payload.password === credentials.password
+        ));
+
+        if (isValidModerator) {
             setUsername(payload.username);
             setUserEmail('');
             setUserCredits(0);
@@ -3869,6 +3919,7 @@ export default function App(){
         setGamePicks([]);
         setProfileNotice('');
         setShowBetSuccessBanner(false);
+        setBettingPhase(BETTING_PHASES.PROPOSALS_OPEN);
         setUserRole('user');
         setHasCardOnFile(false);
         setScreen(SCREENS.LANDING);
@@ -4159,6 +4210,10 @@ export default function App(){
     }, []);
 
     const handleAddProposal = useCallback(async (proposal) => {
+         if (bettingPhase !== BETTING_PHASES.PROPOSALS_OPEN) {
+          throw new Error('Proposals are closed right now. Wait for replay settlement before proposing a new bet.');
+         }
+
        try{
         const response = await fetch('/api/propose-bet', {
             method: 'POST',
@@ -4182,7 +4237,7 @@ export default function App(){
        } catch (error){
         throw error;
        }
-    }, [username]);
+     }, [bettingPhase, username]);
 
     const handleApproveProposal = useCallback(async (id) => {
         setProposals(prev => prev.filter(p => p.id !== id));
@@ -4377,6 +4432,7 @@ export default function App(){
                 }
 
                 setBannedUsernames(normalizeUsernameList(data?.bracket?.bannedUsernames));
+                setBettingPhase(normalizeBettingPhase(data?.bracket?.matchLifecycle?.phase));
             } catch (error) {
                 if (!isCancelled) {
                     console.error('Failed to sync moderation state:', error);
@@ -4658,8 +4714,8 @@ export default function App(){
         ) : (
             <>
             <Dashboard username={username} players={players} playerPicks={playerPicks} teams={teams} teamPicks={teamPicks} games={games} gamePicks={gamePicks} chatMessages={chatMessages} 
-                    onNewMessage={handleNewMessage} activeTab={activeTab} setActiveTab={setActiveTab} userCredits={userCredits} onPlacePlayerBet={handlePlacePlayerBet} onPlaceTeamBet={handlePlaceTeamBet} onPlaceGameBet={handlePlaceGameBet} showBetSuccessBanner={showBetSuccessBanner} />
-            <ProposalForm onSubmit={handleAddProposal} username={username}/>
+                    onNewMessage={handleNewMessage} activeTab={activeTab} setActiveTab={setActiveTab} userCredits={userCredits} onPlacePlayerBet={handlePlacePlayerBet} onPlaceTeamBet={handlePlaceTeamBet} onPlaceGameBet={handlePlaceGameBet} showBetSuccessBanner={showBetSuccessBanner} canPlaceBets={bettingPhase === BETTING_PHASES.SIMULATION_RUNNING} />
+                <ProposalForm onSubmit={handleAddProposal} username={username} isProposalsOpen={bettingPhase === BETTING_PHASES.PROPOSALS_OPEN}/>
             </>
         )
             

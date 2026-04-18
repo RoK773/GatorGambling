@@ -3,12 +3,14 @@
 import dns from 'dns';
 import {MongoClient, ServerApiVersion} from 'mongodb';
 import worldcupData from '../../data/worldcup2022.json';
+import { BETTING_PHASES, getCurrentBettingPhase } from './_lib/bettingLifecycle';
 
 // force node's dns resolver to use google's public servers 
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
 const uri = process.env.MONGODB_URI;
 const dbName = process.env.MONGODB_SOCCER_DB || 'Soccer_Data';
+const bracketCollectionName = process.env.MONGODB_BRACKET_COLLECTION || 'Bracket';
 
 // collection that holds proposals
 const PENDING_COLLECTION = 'Pending_Bets';
@@ -118,6 +120,17 @@ export default async function handler(req, res){
 
      try {
         const client = await clientPromise;
+        const { phase } = await getCurrentBettingPhase(client, {
+            dbName,
+            bracketCollectionName,
+        });
+
+        if (phase !== BETTING_PHASES.PROPOSALS_OPEN) {
+            return res.status(403).json({
+                error: 'Proposals are closed right now. You can propose bets after replay settlement and before the next simulation starts.',
+            });
+        }
+
         const pending = client.db(dbName).collection(PENDING_COLLECTION);
         const result = await pending.insertOne(document);
         return res.status(201).json({

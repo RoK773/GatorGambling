@@ -373,7 +373,7 @@ function ModalField({label, value, onChange, placeholder, type='text', disabled 
 }
 
 // yippie main export (make it a thing)
-export default function ProposalForm({onSubmit, username}) {
+export default function ProposalForm({onSubmit, username, isProposalsOpen = true}) {
     // define constants
     const [open, setOpen] = useState(false);
     const [category, setCategory] = useState('Player');
@@ -554,6 +554,11 @@ useEffect(() => {
     const handleSubmit = async () => {
         setError('');
 
+        if (!isProposalsOpen) {
+            setError('Proposals are currently closed. They reopen after replay settlement and before the next simulation starts.');
+            return;
+        }
+
         if (loadingNextMatch) {
             setError('Loading current bracket matchup. Please wait a moment.');
             return;
@@ -634,17 +639,25 @@ useEffect(() => {
     return ( 
         // style main export -- button to expand the proposal form
         <>
-        <button onClick={() => setOpen(true)} style={{
+        <button onClick={() => {
+            if (!isProposalsOpen) {
+                return;
+            }
+            setOpen(true);
+        }} disabled={!isProposalsOpen} style={{
             position: 'fixed', bottom: 30, right: 30, zIndex: 30, display: 'flex', alignItems: 'center', gap: 10, background: 'var(--accent)', 
             color: '#080A0F', fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, letterSpacing: '0.1em', 
-            padding: '14px 24px', borderRadius: 50, border: 'none', cursor: 'pointer', boxShadow: '0 8px 32px var(--accent-glow-strong)', transition: 'all 0.2s',
+            padding: '14px 24px', borderRadius: 50, border: 'none', cursor: isProposalsOpen ? 'pointer' : 'not-allowed', boxShadow: '0 8px 32px var(--accent-glow-strong)', transition: 'all 0.2s', opacity: isProposalsOpen ? 1 : 0.65,
         }} onMouseEnter={e => {
+            if (!isProposalsOpen) {
+                return;
+            }
             e.currentTarget.style.transform = 'translateY(-3px) scale(1.03)';
             e.currentTarget.style.boxShadow = '0 14px 44px var(--accent-glow-strong)';
         }} onMouseLeave={e => {
             e.currentTarget.style.transform = 'none';
             e.currentTarget.style.boxShadow = '0 8px 32px var(--accent-glow-strong)';
-        }} title="Propose a new bet">
+        }} title={isProposalsOpen ? 'Propose a new bet' : 'Proposals are currently closed'}>
             <svg width="17" height="17" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLineJoin="round">
                 <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12"/>
             </svg>
@@ -802,13 +815,13 @@ useEffect(() => {
                     }}>{error}</p>
                 )}
                 {/* submit button */}
-                <button onClick={handleSubmit} disabled={submitted || loadingNextMatch || !nextMatch} style={{
+                <button onClick={handleSubmit} disabled={submitted || loadingNextMatch || !nextMatch || !isProposalsOpen} style={{
                     width: '100%', padding: '14px', borderRadius: 11, fontWeight: 700, fontSize: 14, letterSpacing: '0.08em',
                     background: submitted ? 'var(--success)' : 'var(--accent)', color: '#080A0F', border: 'none', 
-                    cursor: submitted || loadingNextMatch || !nextMatch ? 'not-allowed' : 'pointer', transition: 'background 0.3s', opacity: submitting || loadingNextMatch || !nextMatch ? 0.7 : 1,
+                    cursor: submitted || loadingNextMatch || !nextMatch || !isProposalsOpen ? 'not-allowed' : 'pointer', transition: 'background 0.3s', opacity: submitting || loadingNextMatch || !nextMatch || !isProposalsOpen ? 0.7 : 1,
                 }}
                 >
-                {submitted ? '✓ PROPOSAL SUBMITTED' : 'SUBMIT PROPOSAL'}
+                {submitted ? '✓ PROPOSAL SUBMITTED' : (!isProposalsOpen ? 'PROPOSALS CLOSED' : 'SUBMIT PROPOSAL')}
                 </button>
             </div>
         </div>
