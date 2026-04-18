@@ -13,11 +13,15 @@ function mapWorldCupPlayers() {
             if (!playerName) {
                 return;
             }
+            const jerseyNumberRaw = player?.jersey_number;
+            const jerseyNumber = Number.isFinite(Number(jerseyNumberRaw))
+                ? String(Number(jerseyNumberRaw))
+                : '-';
 
             players.push({
                 id: `${team?.id ?? teamIndex}-${playerIndex}`,
                 name: playerName,
-                number: '1',
+                number: jerseyNumber,
                 pos: teamName,
             });
         });
