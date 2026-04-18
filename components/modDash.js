@@ -991,7 +991,7 @@ function ModLiveTab({chatMessages, onDeleteMessage, onBanUser, onNewMessage, use
             display: 'flex',  flexDirection: 'row', gap: 16, alignItems: 'flex-start', animation: 'fadeIn 0.4s ease',
         }}>
             <div style={{
-                flex: '0 0 72%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                flex: '0 0 58%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                 minHeight: 520, gap: 16, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14,
                 padding: 24, overflowY: 'auto',
             }}>
@@ -1004,7 +1004,7 @@ function ModLiveTab({chatMessages, onDeleteMessage, onBanUser, onNewMessage, use
                 />
             </div>
             <div style={{
-                flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg-card)', border: '1px solid var(--border)',
+                flex: '0 0 42%', minWidth: 420, display: 'flex', flexDirection: 'column', background: 'var(--bg-card)', border: '1px solid var(--border)',
                 borderRadius: 14, overflow: 'hidden', height: 520,
             }}>
                 <div style={{
@@ -1057,7 +1057,8 @@ function ModLiveTab({chatMessages, onDeleteMessage, onBanUser, onNewMessage, use
                 }}>
                     {filteredMessages.map(msg => (
                         <div key={msg.id} style={{
-                            display: 'flex', gap: 8, alignItems: 'flex-start', padding: '4px 6px', borderRadius: 8, transition: 'background 0.2s',
+                            display: 'grid', gridTemplateColumns: '28px minmax(0, 1fr) 92px', gap: 10, alignItems: 'flex-start',
+                            padding: '4px 10px 4px 6px', borderRadius: 8, transition: 'background 0.2s',
                         }}
                         onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
@@ -1069,30 +1070,41 @@ function ModLiveTab({chatMessages, onDeleteMessage, onBanUser, onNewMessage, use
                                 flex: 1, minWidth: 0,
                             }}>
                                 <span style={{
-                                    fontSize: 10, fontWeight: 700, color: msg.color, fontFamily: 'var(--font-mono)',
+                                    fontSize: 10, fontWeight: 700, color: msg.color, fontFamily: 'var(--font-mono)', display: 'block',
                                 }}>{msg.user}{''}</span>
                                 <span style={{
-                                    fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5,
+                                    fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.55, display: 'block',
                                 }}>{msg.text}</span>
                             </div>
-                            <button onClick={() => onDeleteMessage(msg.id)} title="Delete message" style={{
-                                flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 6,
-                                background: 'rgba(255, 71, 87, 0.08)', border: '1px solid rgba(255, 71, 87, 0.2)', color: 'var(--danger)',
-                                fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', cursor: 'pointer', transition: 'all 0.2s',
-                            }}
-                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255, 71, 87, 0.2)'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 71, 87, 0.08)'}>
-                                <Icon.Trash /> DEL
-                            </button>
-                            <button onClick={() => onBanUser(msg.user)} title="Ban user" style={{
-                                flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 6,
-                                background: 'rgba(250, 204, 21, 0.08)', border: '1px solid rgba(250, 204, 21, 0.25)', color: '#FACC15',
-                                fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', cursor: 'pointer', transition: 'all 0.2s',
-                            }}
-                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(250, 204, 21, 0.18)'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'rgba(250, 204, 21, 0.08)'}>
-                                <Icon.Ban /> BAN
-                            </button>
+                            <div style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 6,
+                                alignItems: 'flex-end',
+                                justifySelf: 'end',
+                                paddingTop: 1,
+                            }}>
+                                <button onClick={() => onDeleteMessage(msg.id)} title="Delete message" style={{
+                                    width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    padding: 0, borderRadius: 8,
+                                    background: 'rgba(255, 71, 87, 0.08)', border: '1px solid rgba(255, 71, 87, 0.2)', color: 'var(--danger)',
+                                    fontSize: 0, cursor: 'pointer', transition: 'all 0.2s',
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255, 71, 87, 0.2)'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 71, 87, 0.08)'}>
+                                    <Icon.Trash />
+                                </button>
+                                <button onClick={() => onBanUser(msg.user)} title="Ban user" style={{
+                                    width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    padding: 0, borderRadius: 8,
+                                    background: 'rgba(250, 204, 21, 0.08)', border: '1px solid rgba(250, 204, 21, 0.25)', color: '#FACC15',
+                                    fontSize: 0, cursor: 'pointer', transition: 'all 0.2s',
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(250, 204, 21, 0.18)'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'rgba(250, 204, 21, 0.08)'}>
+                                    <Icon.Ban />
+                                </button>
+                            </div>
                         </div>
                     ))}
                     {filteredMessages.length === 0 && (

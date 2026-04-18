@@ -2335,32 +2335,6 @@ function LiveTab({chatMessages, onNewMessage, username, bracketState, liveReplay
                             }}>Live match data will show up here once the game begins.</span>
                         </div>
                     )}
-                    {isReplayActive && (
-                        <div style={{
-                            position: 'absolute',
-                            left: 12,
-                            top: 12,
-                            background: 'rgba(8, 10, 15, 0.76)',
-                            border: '1px solid rgba(198, 241, 53, 0.2)',
-                            borderRadius: 10,
-                            padding: '8px 10px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 3,
-                        }}>
-                            <span style={{
-                                fontSize: 10,
-                                fontWeight: 800,
-                                letterSpacing: '0.1em',
-                                color: 'var(--accent)',
-                                fontFamily: 'var(--font-mono)',
-                            }}>SHARED REPLAY</span>
-                            <span style={{
-                                fontSize: 11,
-                                color: 'var(--text-primary)',
-                            }}>Clients are watching the same 60-second match feed.</span>
-                        </div>
-                    )}
                 </div>
 
                 {/* Card boxes */}
