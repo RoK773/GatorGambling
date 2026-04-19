@@ -303,12 +303,28 @@ function getNextPlayableBracketMatch(bracketState) {
                     roundIndex,
                     matchIndex,
                     matchId: match.id,
+                    homeTeam: match.home.name,
+                    awayTeam: match.away.name,
                 };
             }
         }
     }
 
     return null;
+}
+
+function getReplayCountdownSeconds(liveReplay, nowMs = Date.now()) {
+    const startedAtMs = new Date(liveReplay?.startedAt).getTime();
+    if (!Number.isFinite(startedAtMs)) {
+        return null;
+    }
+
+    const diffMs = startedAtMs - nowMs;
+    if (diffMs <= 0) {
+        return null;
+    }
+
+    return Math.ceil(diffMs / 1000);
 }
 
 // triggers the confirmmodal and resolves to true or false for the action
@@ -869,9 +885,9 @@ function ModGameRow({g, i, onCancel}) {
                     <div style={{
                         fontFamily: 'var(--font-display)', fontSize: 16, color: 'var(--text-primary)',
                     }}>
-                        {g.away} <span style={{
+                        {g.home} <span style={{
                             color: 'var(--text-muted)',
-                        }}>@</span>{g.home}
+                        }}>vs</span> {g.away}
                     </div>
                     <div style={{
                         fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', marginTop: 4,
@@ -1146,9 +1162,14 @@ export default function ModDash({
     const [selectedMatch, setSelectedMatch] = useState(null);
     const [simulationState, setSimulationState] = useState(null);
     const [liveReplay, setLiveReplay] = useState(null);
+    const [liveNowMs, setLiveNowMs] = useState(() => Date.now());
     const [hasLoadedBracketSession, setHasLoadedBracketSession] = useState(false);
     const {confirm, modal} = useConfirm();
     const nextPlayableMatch = getNextPlayableBracketMatch(bracketState);
+    const nextMatchLabel = nextPlayableMatch?.homeTeam && nextPlayableMatch?.awayTeam
+        ? `${nextPlayableMatch.homeTeam} vs ${nextPlayableMatch.awayTeam}`
+        : 'TBD vs TBD';
+    const liveTabCountdownSeconds = getReplayCountdownSeconds(liveReplay, liveNowMs);
 
     useEffect(() => {
         let isMounted = true;
@@ -1222,6 +1243,14 @@ export default function ModDash({
         });
     }, [bracketState, hasLoadedBracketSession, liveReplay, selectedMatch, simulationState]);
 
+    useEffect(() => {
+        const intervalId = setInterval(() => {
+            setLiveNowMs(Date.now());
+        }, 250);
+
+        return () => clearInterval(intervalId);
+    }, []);
+
     const handleShuffleBracket = () => {
         const generatedBracket = createBracketState(BRACKET_TEAMS);
         setBracketState(generatedBracket);
@@ -1268,9 +1297,9 @@ export default function ModDash({
             matchIndex: selectedMatch.matchIndex,
             homeTeam,
             awayTeam,
-            startedAt: new Date().toISOString(),
+            startedAt: new Date(Date.now() + 30000).toISOString(),
             durationMs: 60000,
-            status: 'running',
+            status: 'pending',
             result,
         };
 
@@ -1453,9 +1482,35 @@ export default function ModDash({
                                     width: 6, height: 6, borderRadius: '50%', background: 'var(--danger)', animation: 'live-dot 1.2s ease-in-out infinite',
                                 }} />
                                 )}
+                                {tab.live && liveTabCountdownSeconds !== null && (
+                                    <span style={{
+                                        fontSize: 10,
+                                        fontFamily: 'var(--font-mono)',
+                                        color: 'var(--danger)',
+                                        marginTop: 2,
+                                    }}>
+                                        {liveTabCountdownSeconds}s
+                                    </span>
+                                )}
                             </button>
                             );
                         })}
+                        <div style={{
+                            marginLeft: 'auto',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            height: 'var(--tab-height)',
+                            padding: '0 10px 0 16px',
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: 11,
+                            letterSpacing: '0.06em',
+                            color: 'var(--text-secondary)',
+                            whiteSpace: 'nowrap',
+                        }}>
+                            <span style={{ color: 'var(--text-muted)' }}>NEXT MATCH</span>
+                            <span style={{ color: 'var(--accent)' }}>{nextMatchLabel}</span>
+                        </div>
                     </div>
                 </div>
                 <div style={{

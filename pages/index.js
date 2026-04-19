@@ -11,6 +11,7 @@ import {
 // constants here
 import ProposalForm from '../components/proposalForm';
 import ModDash from '../components/modDash';
+import SimInstructions from '../components/simInstructions';
 import worldcupData from '../worldcup.json';
 
 const SCREENS = {
@@ -340,6 +341,20 @@ function formatReplayClock(minuteValue) {
     return `${wholeMinute}'`;
 }
 
+function getReplayCountdownSeconds(liveReplay, nowMs = Date.now()) {
+    const startedAtMs = new Date(liveReplay?.startedAt).getTime();
+    if (!Number.isFinite(startedAtMs)) {
+        return null;
+    }
+
+    const diffMs = startedAtMs - nowMs;
+    if (diffMs <= 0) {
+        return null;
+    }
+
+    return Math.ceil(diffMs / 1000);
+}
+
 function buildReplaySnapshot(liveReplay, nowMs = Date.now()) {
     if (!liveReplay?.result) {
         return null;
@@ -353,6 +368,20 @@ function buildReplaySnapshot(liveReplay, nowMs = Date.now()) {
     const durationMs = Number.isFinite(Number(liveReplay.durationMs))
         ? Number(liveReplay.durationMs)
         : 60000;
+    const countdownSeconds = getReplayCountdownSeconds(liveReplay, nowMs);
+
+    if (countdownSeconds !== null) {
+        return {
+            pending: true,
+            countdownSeconds,
+            isActive: false,
+            clockLabel: "0'",
+            visibleEvents: [],
+            homeScore: 0,
+            awayScore: 0,
+        };
+    }
+
     const rawEvents = Array.isArray(liveReplay.result.match_events) ? liveReplay.result.match_events : [];
     const maxEventMinute = rawEvents.reduce((maxMinute, event) => (
         Math.max(maxMinute, parseReplayMinuteValue(event?.minute))
@@ -371,6 +400,8 @@ function buildReplaySnapshot(liveReplay, nowMs = Date.now()) {
     )).length;
 
     return {
+        pending: false,
+        countdownSeconds: null,
         isActive: elapsedMs < durationMs,
         clockLabel: formatReplayClock(currentMinute),
         visibleEvents,
@@ -1680,6 +1711,7 @@ function YourPicksTab({playerPicks, teamPicks, gamePicks}){
                     flexDirection: 'column',
                     gap: 24,
                 }}>
+                    <SimInstructions />
                     {hasAnyPicks ? (
                         <>
                             {playerPickList.length > 0 && (
@@ -1976,10 +2008,9 @@ function GamesRow({g, i, availableCredits = 0, onPlaceBet, confirmed = false, be
                         <div style={{
                             fontFamily: 'var(--font-display)', fontSize: 16, letterSpacing: '0.04em', color: 'var(--text-primary)',
                         }}>
-                            {g.away}
-                            <span style={{
+                            {g.home} <span style={{
                                 color: 'var(--text-muted)',
-                            }}>@</span> {g.home}
+                            }}>vs</span> {g.away}
                         </div>
                         <div style={{
                             fontSize: 12, color: 'var(--text-secondary)', marginTop: 3, fontFamily: 'var(--font-mono)',
@@ -2281,23 +2312,26 @@ function LiveTab({chatMessages, onNewMessage, username, bracketState, liveReplay
     const lastMatch = getLastPlayedMatch(bracketState);
     const nextMatch = getNextPlayableMatch(bracketState);
     const replaySnapshot = buildReplaySnapshot(liveReplay, replayNowMs);
+    const isReplayPending = Boolean(replaySnapshot?.pending);
     const isReplayActive = Boolean(replaySnapshot?.isActive);
     const replayEvents = replaySnapshot?.visibleEvents || [];
     const finalEvents = lastMatch?.result?.match_events || [];
-    const events = isReplayActive ? replayEvents : finalEvents;
+    const events = isReplayActive ? replayEvents : (isReplayPending ? [] : finalEvents);
     const homeYellows = events.filter(e => e.event === 'yellow_card' && e.team === 'home').length;
     const homeReds = events.filter(e => e.event === 'red_card' && e.team === 'home').length;
     const awayYellows = events.filter(e => e.event === 'yellow_card' && e.team === 'away').length;
     const awayReds = events.filter(e => e.event === 'red_card' && e.team === 'away').length;
 
     const scoreParts = (lastMatch?.result?.score || '0 - 0').split('-').map(s => s.trim());
-    const homeScore = isReplayActive ? String(replaySnapshot.homeScore) : (scoreParts[0] || '0');
-    const awayScore = isReplayActive ? String(replaySnapshot.awayScore) : (scoreParts[1] || '0');
+    const homeScore = (isReplayActive || isReplayPending) ? String(replaySnapshot.homeScore) : (scoreParts[0] || '0');
+    const awayScore = (isReplayActive || isReplayPending) ? String(replaySnapshot.awayScore) : (scoreParts[1] || '0');
     const homeName = liveReplay?.homeTeam || lastMatch?.home?.name || nextMatch?.home?.name || 'HOME TEAM';
     const awayName = liveReplay?.awayTeam || lastMatch?.away?.name || nextMatch?.away?.name || 'AWAY TEAM';
-    const matchClock = isReplayActive ? replaySnapshot.clockLabel : (lastMatch ? "90'" : "0'");
-    const liveBadgeLabel = isReplayActive ? 'LIVE REPLAY' : (lastMatch ? 'FULL TIME' : 'PRE-MATCH');
-    const liveBadgeColor = isReplayActive ? 'var(--danger)' : (lastMatch ? 'var(--accent)' : 'var(--danger)');
+    const matchClock = (isReplayActive || isReplayPending) ? replaySnapshot.clockLabel : (lastMatch ? "90'" : "0'");
+    const liveBadgeLabel = isReplayPending
+        ? `STARTS IN ${replaySnapshot.countdownSeconds}s`
+        : (isReplayActive ? 'LIVE REPLAY' : (lastMatch ? 'FULL TIME' : 'PRE-MATCH'));
+    const liveBadgeColor = isReplayPending ? 'var(--danger)' : (isReplayActive ? 'var(--danger)' : (lastMatch ? 'var(--accent)' : 'var(--danger)'));
 
     return(
         <div style={{
@@ -2931,6 +2965,11 @@ function Dashboard({username, players, playerPicks, teams, teamPicks, games, gam
     const availableTeams = (teams || []).filter(team => !teamPickKeySet.has(getTeamBetMatchKey(team)));
     const gamePickKeySet = new Set((gamePicks || []).map(getGameBetMatchKey).filter(Boolean));
     const availableGames = (games || []).filter(game => !gamePickKeySet.has(getGameBetMatchKey(game)));
+    const nextPlayableMatch = getNextPlayableMatch(bracketState);
+    const nextMatchLabel = nextPlayableMatch?.home?.name && nextPlayableMatch?.away?.name
+        ? `${nextPlayableMatch.home.name} vs ${nextPlayableMatch.away.name}`
+        : 'TBD vs TBD';
+    const liveTabCountdownSeconds = getReplayCountdownSeconds(liveReplay, replayNowMs);
 
     const renderTabContent = () => {
         switch (activeTab){
@@ -2955,30 +2994,62 @@ function Dashboard({username, players, playerPicks, teams, teamPicks, games, gam
                 <div style={{
                     display: 'flex', padding: '0 20px', minWidth: 'max-content',
                 }}>
-                    {TAB_CONFIG.map(tab => {
-                        const isActive = activeTab === tab.key;
-                        return (
-                            <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
-                                display: 'flex', alignItems: 'center', gap: 7, padding: '0 16px', height: 'var(--tab-height)',
-                                background: 'none', color: isActive ? 'var(--accent)' : 'var(--text-muted)',
-                                letterSpacing: '0.04em', borderBottom: isActive ? '2px solid var(--accent)' : '2px solid transparent',
-                                transition: 'all 0.2s', flexShrink: 0, cursor: 'pointer',
-                            }}
-                            onMouseEnter={e => {if (!isActive) e.currentTarget.style.color = 'var(--text-secondary)';}}
-                            onMouseLeave={e => {if (!isActive) e.currentTarget.style.color = 'var(--text-muted)';}}
-                        >
-                            <span style={{
-                                color: isActive ? 'var(--accent)' : 'inherit',
-                            }}>{tab.icon}</span>
-                            {tab.label}
-                            {tab.live && (
-                                <div style={{
-                                    width: 6, height: 6, borderRadius: '50%', background: 'var(--danger)', animation: 'live-dot 1.2s ease-in-out infinite',
-                                }}/>
-                            )}
-                        </button>
-                        );
-                    })}
+                    <div style={{
+                        display: 'flex',
+                    }}>
+                        {TAB_CONFIG.map(tab => {
+                            const isActive = activeTab === tab.key;
+                            return (
+                                <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
+                                    display: 'flex', alignItems: 'center', gap: 7, padding: '0 16px', height: 'var(--tab-height)',
+                                    background: 'none', color: isActive ? 'var(--accent)' : 'var(--text-muted)',
+                                    letterSpacing: '0.04em', borderBottom: isActive ? '2px solid var(--accent)' : '2px solid transparent',
+                                    transition: 'all 0.2s', flexShrink: 0, cursor: 'pointer',
+                                }}
+                                onMouseEnter={e => {if (!isActive) e.currentTarget.style.color = 'var(--text-secondary)';}}
+                                onMouseLeave={e => {if (!isActive) e.currentTarget.style.color = 'var(--text-muted)';}}
+                            >
+                                <span style={{
+                                    color: isActive ? 'var(--accent)' : 'inherit',
+                                }}>{tab.icon}</span>
+                                {tab.label}
+                                {tab.live && (
+                                    <>
+                                        <div style={{
+                                            width: 6, height: 6, borderRadius: '50%', background: 'var(--danger)', animation: 'live-dot 1.2s ease-in-out infinite',
+                                        }}/>
+                                        {liveTabCountdownSeconds !== null && (
+                                            <span style={{
+                                                fontSize: 10,
+                                                fontFamily: 'var(--font-mono)',
+                                                color: 'var(--danger)',
+                                                marginTop: 2,
+                                            }}>
+                                                {liveTabCountdownSeconds}s
+                                            </span>
+                                        )}
+                                    </>
+                                )}
+                            </button>
+                            );
+                        })}
+                    </div>
+                    <div style={{
+                        marginLeft: 'auto',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        height: 'var(--tab-height)',
+                        padding: '0 10px 0 16px',
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: 11,
+                        letterSpacing: '0.06em',
+                        color: 'var(--text-secondary)',
+                        whiteSpace: 'nowrap',
+                    }}>
+                        <span style={{ color: 'var(--text-muted)' }}>NEXT MATCH</span>
+                        <span style={{ color: 'var(--accent)' }}>{nextMatchLabel}</span>
+                    </div>
                 </div>
             </div>
             <div style={{

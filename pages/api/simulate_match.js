@@ -209,7 +209,7 @@ Return JSON ONLY, exactly like this format, but fill in the numbers realisticall
 
 Rules:
 - Return at least 8 match_events.
-- There MUST be a winner for bracket matches.
+- There MUST be a winner, NO DRAWS ALLOWED.
 - Possession must use percentage signs and add up to 100%.
 - Use the real team names and players from worldcup2022.json.
 - Allowed events: goal, yellow_card, red_card, substitution, penalty_missed, penalty_scored, injury.

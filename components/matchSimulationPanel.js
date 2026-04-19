@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import SimInstructions from './simInstructions';
 
 export default function MatchSimulationPanel({homeTeam = '', awayTeam = '', initialResult = null, onSimulated}) {
     const [team1, setTeam1] = useState(homeTeam);
@@ -95,6 +96,7 @@ export default function MatchSimulationPanel({homeTeam = '', awayTeam = '', init
                     onFocus={e => e.target.style.borderColor = 'var(--accent)'}
                     onBlur={e => e.target.style.borderColor = 'var(--border)'}
                 />
+                <SimInstructions compact />
                 <button
                     onClick={handleSimulate}
                     disabled={loading || !team1 || !team2}
@@ -198,8 +200,8 @@ export default function MatchSimulationPanel({homeTeam = '', awayTeam = '', init
                                         </div>
 
                                         <span style={{
-                                            fontSize: event.event === 'penalty_scored' ? 10 : 12,
-                                            padding: event.event === 'penalty_scored' ? '2px 6px' : '4px 8px',
+                                            fontSize: 12,
+                                            padding: '4px 8px',
                                             borderRadius: 999,
                                             background:
                                                 event.event === 'goal'
@@ -231,6 +233,8 @@ export default function MatchSimulationPanel({homeTeam = '', awayTeam = '', init
                                                     : '#3b82f6',
                                             textTransform: 'capitalize',
                                             fontWeight: 600,
+                                            whiteSpace: 'nowrap',
+                                            marginLeft: 10,
                                         }}>
                                             {event.event.replace('_', ' ')}
                                         </span>
