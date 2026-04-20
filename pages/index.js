@@ -1708,7 +1708,7 @@ function GifAdSlot({ src, alt, label }) {
     );
 }
 
-// Rotating set of ad pairs used across client-facing tabs. Every variant shows 4 unique gifs.
+// Rotating set of ad pairs used across client-facing tabs. Every media file ships at least once.
 const AD_RAIL_VARIANTS = {
     picks: {
         left: [
@@ -1723,7 +1723,7 @@ const AD_RAIL_VARIANTS = {
     players: {
         left: [
             { src: '/3580a5d1-5287-4ca0-8e22-c2dd98dee1a1_text.gif', alt: 'Free spins promo gif', label: 'FREE SPINS' },
-            { src: '/dyd-betting-the-betting-king.gif', alt: 'Betting king gif', label: 'SGP HEAT' },
+            { src: '/gambling-450-x-450-gif-omfh7vymyb0v1abs.webp', alt: 'Gambling promo', label: 'PROP HUNT' },
         ],
         right: [
             { src: '/jarvis-banner.gif', alt: 'Banner ad gif', label: 'BAD BEAT FUEL' },
@@ -1733,21 +1733,21 @@ const AD_RAIL_VARIANTS = {
     teams: {
         left: [
             { src: '/dodep2.gif', alt: 'Promo gif', label: 'MONEYLINE' },
-            { src: '/jarvis-banner.gif', alt: 'Banner ad gif', label: 'DOUBLE DOWN' },
+            { src: '/gambling-498-x-278-gif-89eurdbfvepkk3nz.webp', alt: 'Gambling promo', label: 'DOUBLE DOWN' },
         ],
         right: [
             { src: '/järvinen-jarvis.gif', alt: 'Jarvinen gif', label: 'DRY SPELL' },
-            { src: '/place-your-bets-sports-betting.gif', alt: 'Place your bets gif', label: 'RIDE THE LINE' },
+            { src: '/gambling-498-x-413-gif-zpnv5w7ksy21elw0.webp', alt: 'Gambling promo', label: 'RIDE THE LINE' },
         ],
     },
     games: {
         left: [
-            { src: '/bspin-bspin-casino.gif', alt: 'Casino promo gif', label: 'MATCH MARKET' },
+            { src: '/gambling-498-x-498-gif-kvbr77w2fcg0v0dq.webp', alt: 'Gambling promo', label: 'MATCH MARKET' },
             { src: '/shopee-ronaldo.gif', alt: 'Ronaldo ad gif', label: 'SIUUU MONEY' },
         ],
         right: [
             { src: '/3580a5d1-5287-4ca0-8e22-c2dd98dee1a1_text.gif', alt: 'Promo gif', label: 'PARLAY GOD' },
-            { src: '/järvinen-jarvis.gif', alt: 'Jarvinen gif', label: 'COLD STREAK' },
+            { src: '/jarvis-banner.gif', alt: 'Banner ad gif', label: 'HOUSE $$$' },
         ],
     },
 };
@@ -2068,6 +2068,7 @@ function PlayersTab({players, availableCredits, onPlaceBet, bettingOpen = true})
 function TeamsTab({teams, availableCredits, onPlaceBet, bettingOpen = true}){
     return(
         <AdRailLayout variant="teams">
+            <Top25Rail title="TOP 25 TEAMS" />
             <BetGrid>
                 {teams.map((t, i) =>(
                         <TeamBetCard key={t.id} teamId={t.id} title={t.name} subtitle={t.record} stake={t.stake} outcome={t.outcome} range={t.range} points={t.points} payoutMult={t.payout_mult} animDelay={`${i * 0.05}s`} availableCredits={availableCredits} onPlaceBet={onPlaceBet} bettingOpen={bettingOpen}/>
