@@ -5275,10 +5275,20 @@ export default function App(){
         )}
 
         {screen === SCREENS.DASHBOARD && ( isModerator ? (
-            <ModDash username={username} proposals={proposals} onApprove={handleApproveProposal} onDecline={handleDeclineProposal} chatMessages={moderatorChatMessages} 
+            <ModDash username={username} proposals={proposals} onApprove={handleApproveProposal} onDecline={handleDeclineProposal} chatMessages={moderatorChatMessages}
                     onNewMessage={handleNewMessage} onDeleteMessage={handleDeleteMessage} onBanUser={handleBanUser} players={players} teams={teams} games={games} onCancelStake={handleCancelStake} bannedUsernames={bannedUsernames} isLoadingProposals={isLoadingProposals}/>
         ) : (
             <>
+            <style jsx global>{`
+                body { background-color: transparent !important; }
+                html {
+                    background-image: linear-gradient(180deg, rgba(8, 10, 15, 0.82), rgba(8, 10, 15, 0.92)), url('/Background%20logged%20in%20site.jpg');
+                    background-size: cover;
+                    background-position: center;
+                    background-repeat: no-repeat;
+                    background-attachment: fixed;
+                }
+            `}</style>
             <Dashboard username={username} players={players} playerPicks={playerPicks} teams={teams} teamPicks={teamPicks} games={games} gamePicks={gamePicks} chatMessages={chatMessages}
                     onNewMessage={handleNewMessage} activeTab={activeTab} setActiveTab={setActiveTab} userCredits={userCredits} onPlacePlayerBet={handlePlacePlayerBet} onPlaceTeamBet={handlePlaceTeamBet} onPlaceGameBet={handlePlaceGameBet} onClaimGamePick={handleClaimGamePick} claimingPickKey={claimingPickKey} showBetSuccessBanner={showBetSuccessBanner} canPlaceBets={bettingPhase === BETTING_PHASES.SIMULATION_RUNNING} />
             <ProposalForm onSubmit={handleAddProposal} username={username} isProposalsOpen={bettingPhase === BETTING_PHASES.PROPOSALS_OPEN}/>
