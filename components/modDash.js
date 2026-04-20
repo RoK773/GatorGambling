@@ -1007,10 +1007,44 @@ function ModLiveTab({chatMessages, onDeleteMessage, onBanUser, onNewMessage, use
             display: 'flex',  flexDirection: 'row', gap: 16, alignItems: 'flex-start', animation: 'fadeIn 0.4s ease',
         }}>
             <div style={{
-                flex: '0 0 58%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                flex: '0 0 58%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start',
                 minHeight: 520, gap: 16, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14,
                 padding: 24, overflowY: 'auto',
             }}>
+                <div style={{
+                    width: '100%', maxWidth: 520,
+                    background: 'linear-gradient(135deg, rgba(198, 241, 53, 0.12), rgba(20, 24, 32, 0.92))',
+                    border: '1px solid rgba(198, 241, 53, 0.3)',
+                    borderRadius: 14, padding: '16px 18px',
+                    display: 'flex', flexDirection: 'column', gap: 8,
+                }}>
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+                    }}>
+                        <div style={{
+                            fontFamily: 'var(--font-display)', fontSize: 16, letterSpacing: '0.06em',
+                            color: 'var(--accent)',
+                        }}>MODERATOR PLAYBOOK</div>
+                        <div style={{
+                            background: 'rgba(198, 241, 53, 0.16)', border: '1px solid rgba(198, 241, 53, 0.28)',
+                            borderRadius: 999, padding: '2px 8px', fontSize: 9, fontWeight: 800, letterSpacing: '0.12em',
+                            color: 'var(--accent)', fontFamily: 'var(--font-mono)',
+                        }}>MOD ONLY</div>
+                    </div>
+                    <div style={{
+                        fontSize: 12, color: 'var(--text-secondary)', fontStyle: 'italic', lineHeight: 1.5,
+                    }}>Keep the wheels greased. The degens are watching.</div>
+                    <ol style={{
+                        margin: 0, padding: '4px 0 0 18px',
+                        display: 'flex', flexDirection: 'column', gap: 6,
+                        color: 'var(--text-primary)', fontSize: 13, lineHeight: 1.55,
+                    }}>
+                        <li>Lock the matchup, hit SIMULATE MATCH. One shot per bracket slot — no mulligans.</li>
+                        <li>Every goal, foul, and card streams live to every bettor. Let the drama cook.</li>
+                        <li>When the whistle blows, winners see a CLAIM button. Losses auto-sweep into the history book.</li>
+                        <li>Wait the 30-second buffer before the next kickoff so the action stays tight.</li>
+                    </ol>
+                </div>
                 <MatchSimulationPanel
                     key={selectedMatch?.matchId || simulationState?.matchId || 'manual-sim'}
                     homeTeam={selectedMatch?.homeTeam || simulationState?.homeTeam || ''}

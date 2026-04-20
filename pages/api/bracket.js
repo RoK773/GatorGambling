@@ -464,7 +464,7 @@ async function settleCompletedMatchGameBets(client, completedMatch) {
     };
 
     if (!currentMatchContext.homeTeam || !currentMatchContext.awayTeam) {
-        return { settledPicks: 0, totalPayout: 0 };
+        return { settledPicks: 0, totalPayout: 0, unclaimedWins: 0, unclaimedPayout: 0 };
     }
 
     const gameOutcomes = {
@@ -489,6 +489,8 @@ async function settleCompletedMatchGameBets(client, completedMatch) {
 
     let settledPicks = 0;
     let totalPayout = 0;
+    let unclaimedWins = 0;
+    let unclaimedPayout = 0;
 
     for (const user of candidateUsers) {
         const playerPicks = Array.isArray(user.player_picks) ? user.player_picks : [];
@@ -506,9 +508,10 @@ async function settleCompletedMatchGameBets(client, completedMatch) {
 
         const remainingPlayerPicks = playerPicks.filter(pick => !isPlayerPickForCompletedMatch(pick, currentMatchContext));
         const remainingTeamPicks = teamPicks.filter(pick => !isTeamPickForCompletedMatch(pick, currentMatchContext));
-        const remainingGamePicks = gamePicks.filter(pick => !isGamePickForCompletedMatch(pick, gameOutcomes));
+        const untouchedGamePicks = gamePicks.filter(pick => !isGamePickForCompletedMatch(pick, gameOutcomes));
         const settledAt = new Date();
 
+        // Player + team picks auto-credit; game picks hold in game_picks as won_unclaimed until claimed.
         let userPayout = 0;
         let userWins = 0;
         let userLosses = 0;
@@ -592,48 +595,64 @@ async function settleCompletedMatchGameBets(client, completedMatch) {
             };
         });
 
-        const gameCompletedRecords = gamePicksToSettle.map(pick => {
+        const unclaimedWinPicks = [];
+        const gameLostRecords = [];
+        let userGamePendingPayout = 0;
+
+        gamePicksToSettle.forEach(pick => {
             const expectedTeam = resolveExpectedTeamForMarket(pick?.winner, gameOutcomes);
             const selectedTeam = String(pick?.selected_team || '').trim();
             const didWin = Boolean(expectedTeam) && normalizeKey(selectedTeam) === normalizeKey(expectedTeam);
             const amount = roundMoney(pick?.amount);
             const payoutMult = Number.isFinite(Number(pick?.payout_mult)) ? Number(pick.payout_mult) : 0;
             const payout = didWin ? roundMoney(amount * payoutMult) : 0;
-            const net = roundMoney(payout - amount);
 
-            userPayout += payout;
-            userProfitDelta += net;
             if (didWin) {
-                userWins += 1;
+                unclaimedWinPicks.push({
+                    ...pick,
+                    status: 'won_unclaimed',
+                    payout,
+                    amount,
+                    payout_mult: payoutMult,
+                    expected_team: expectedTeam,
+                    selected_team: selectedTeam || null,
+                    settledAt,
+                    completedMatch: {
+                        matchId: String(completedMatch?.matchId || '').trim() || null,
+                        homeTeam: gameOutcomes.homeTeam,
+                        awayTeam: gameOutcomes.awayTeam,
+                    },
+                });
+                userGamePendingPayout += payout;
             } else {
                 userLosses += 1;
+                userProfitDelta -= amount;
+                gameLostRecords.push({
+                    username: user.username,
+                    category: 'Game',
+                    status: 'lost',
+                    amount,
+                    payout_mult: payoutMult,
+                    payout: 0,
+                    net: roundMoney(0 - amount),
+                    selected_team: selectedTeam || null,
+                    expected_team: expectedTeam,
+                    market: String(pick?.winner || '').trim() || '--',
+                    settledAt,
+                    pick,
+                    completedMatch: {
+                        matchId: String(completedMatch?.matchId || '').trim() || null,
+                        homeTeam: gameOutcomes.homeTeam,
+                        awayTeam: gameOutcomes.awayTeam,
+                    },
+                });
             }
-
-            return {
-                username: user.username,
-                category: 'Game',
-                status: didWin ? 'won' : 'lost',
-                amount,
-                payout_mult: payoutMult,
-                payout,
-                net,
-                selected_team: selectedTeam || null,
-                expected_team: expectedTeam,
-                market: String(pick?.winner || '').trim() || '--',
-                settledAt,
-                pick,
-                completedMatch: {
-                    matchId: String(completedMatch?.matchId || '').trim() || null,
-                    homeTeam: gameOutcomes.homeTeam,
-                    awayTeam: gameOutcomes.awayTeam,
-                },
-            };
         });
 
         const completedRecords = [
             ...playerCompletedRecords,
             ...teamCompletedRecords,
-            ...gameCompletedRecords,
+            ...gameLostRecords,
         ];
 
         const currentCredits = Number.isFinite(Number(user.credits)) ? Number(user.credits) : 0;
@@ -652,7 +671,7 @@ async function settleCompletedMatchGameBets(client, completedMatch) {
                 $set: {
                     player_picks: remainingPlayerPicks,
                     team_picks: remainingTeamPicks,
-                    game_picks: remainingGamePicks,
+                    game_picks: [...untouchedGamePicks, ...unclaimedWinPicks],
                     credits: roundMoney(currentCredits + userPayout),
                     wins: currentWins + userWins,
                     losses: currentLosses + userLosses,
@@ -669,11 +688,15 @@ async function settleCompletedMatchGameBets(client, completedMatch) {
 
         settledPicks += totalUserPicksToSettle;
         totalPayout += userPayout;
+        unclaimedWins += unclaimedWinPicks.length;
+        unclaimedPayout += userGamePendingPayout;
     }
 
     return {
         settledPicks,
         totalPayout: roundMoney(totalPayout),
+        unclaimedWins,
+        unclaimedPayout: roundMoney(unclaimedPayout),
     };
 }
 

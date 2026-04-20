@@ -199,6 +199,7 @@ function mapGameBetToGameRow(gameBet, index) {
         ? `x${payoutMultNum}`
         : String(payoutMultRaw || '--');
 
+    const payoutNum = Number(gameBet?.payout);
     return {
         id: gameBet?.id || gameBet?.gameId || gameBet?._id || `${awayTeam}-${homeTeam}-${time}-${index}`,
         away: awayTeam,
@@ -210,6 +211,9 @@ function mapGameBetToGameRow(gameBet, index) {
         spread: odds,
         payout_mult: gameBet?.payout_mult,
         stake,
+        status: String(gameBet?.status || '').trim() || null,
+        payout: Number.isFinite(payoutNum) ? payoutNum : null,
+        amount: Number.isFinite(Number(gameBet?.amount)) ? Number(gameBet.amount) : null,
     };
 }
 
@@ -353,6 +357,36 @@ function getReplayCountdownSeconds(liveReplay, nowMs = Date.now()) {
     }
 
     return Math.ceil(diffMs / 1000);
+}
+
+const SIM_POSTMATCH_COUNTDOWN_MS = 30000;
+
+// After a sim ends, the LIVE tab shows a countdown for 30s signalling the next kickoff.
+function getPostMatchCountdownMs(liveReplay, nowMs = Date.now()) {
+    if (!liveReplay?.startedAt) {
+        return 0;
+    }
+
+    const startedAtMs = new Date(liveReplay.startedAt).getTime();
+    if (!Number.isFinite(startedAtMs)) {
+        return 0;
+    }
+
+    const durationMs = Number.isFinite(Number(liveReplay.durationMs))
+        ? Number(liveReplay.durationMs)
+        : 60000;
+    const endsAtMs = startedAtMs + durationMs;
+    const elapsedSinceEnd = nowMs - endsAtMs;
+    if (elapsedSinceEnd < 0 || elapsedSinceEnd >= SIM_POSTMATCH_COUNTDOWN_MS) {
+        return 0;
+    }
+
+    return SIM_POSTMATCH_COUNTDOWN_MS - elapsedSinceEnd;
+}
+
+function formatPostMatchCountdown(remainingMs) {
+    const secs = Math.max(0, Math.ceil(remainingMs / 1000));
+    return `0:${String(secs).padStart(2, '0')}`;
 }
 
 function buildReplaySnapshot(liveReplay, nowMs = Date.now()) {
@@ -1674,6 +1708,190 @@ function GifAdSlot({ src, alt, label }) {
     );
 }
 
+// Rotating set of ad pairs used across client-facing tabs. Every variant shows 4 unique gifs.
+const AD_RAIL_VARIANTS = {
+    picks: {
+        left: [
+            { src: '/place-your-bets-sports-betting.gif', alt: 'Place your bets gif', label: 'PLACE BETS' },
+            { src: '/shopee-ronaldo.gif', alt: 'Ronaldo ad gif', label: 'CR7 CASHES' },
+        ],
+        right: [
+            { src: '/cat-gamble.gif', alt: 'Cat gambling gif', label: 'HOT SLOT' },
+            { src: '/dyd-betting-the-betting-king.gif', alt: 'Betting king gif', label: 'BET KING' },
+        ],
+    },
+    players: {
+        left: [
+            { src: '/3580a5d1-5287-4ca0-8e22-c2dd98dee1a1_text.gif', alt: 'Free spins promo gif', label: 'FREE SPINS' },
+            { src: '/dyd-betting-the-betting-king.gif', alt: 'Betting king gif', label: 'SGP HEAT' },
+        ],
+        right: [
+            { src: '/jarvis-banner.gif', alt: 'Banner ad gif', label: 'BAD BEAT FUEL' },
+            { src: '/bspin-bspin-casino.gif', alt: 'Casino promo gif', label: 'LUCKY DIP' },
+        ],
+    },
+    teams: {
+        left: [
+            { src: '/dodep2.gif', alt: 'Promo gif', label: 'MONEYLINE' },
+            { src: '/jarvis-banner.gif', alt: 'Banner ad gif', label: 'DOUBLE DOWN' },
+        ],
+        right: [
+            { src: '/järvinen-jarvis.gif', alt: 'Jarvinen gif', label: 'DRY SPELL' },
+            { src: '/place-your-bets-sports-betting.gif', alt: 'Place your bets gif', label: 'RIDE THE LINE' },
+        ],
+    },
+    games: {
+        left: [
+            { src: '/bspin-bspin-casino.gif', alt: 'Casino promo gif', label: 'MATCH MARKET' },
+            { src: '/shopee-ronaldo.gif', alt: 'Ronaldo ad gif', label: 'SIUUU MONEY' },
+        ],
+        right: [
+            { src: '/3580a5d1-5287-4ca0-8e22-c2dd98dee1a1_text.gif', alt: 'Promo gif', label: 'PARLAY GOD' },
+            { src: '/järvinen-jarvis.gif', alt: 'Jarvinen gif', label: 'COLD STREAK' },
+        ],
+    },
+};
+
+// Dashboard-width grid that slots an ad rail on each side of the content column.
+function AdRailLayout({ variant = 'picks', children }) {
+    const rails = AD_RAIL_VARIANTS[variant] || AD_RAIL_VARIANTS.picks;
+    return (
+        <div className="dashboard-layout">
+            <aside className="dashboard-ad-rail">
+                {rails.left.map((ad, idx) => (
+                    <GifAdSlot key={`left-${idx}`} src={ad.src} alt={ad.alt} label={ad.label} />
+                ))}
+            </aside>
+            <div style={{
+                display: 'flex', flexDirection: 'column', gap: 18, minWidth: 0,
+            }}>
+                {children}
+            </div>
+            <aside className="dashboard-ad-rail">
+                {rails.right.map((ad, idx) => (
+                    <GifAdSlot key={`right-${idx}`} src={ad.src} alt={ad.alt} label={ad.label} />
+                ))}
+            </aside>
+        </div>
+    );
+}
+
+// Quirky how-to card rendered on Your Picks (users) and inside the mod simulator.
+function SimInstructionsCard({ forRole = 'user' }) {
+    const isMod = forRole === 'mod';
+    const title = isMod ? 'MODERATOR PLAYBOOK' : 'HOW TO RUN UP THE BAG';
+    const tagline = isMod
+        ? 'Keep the wheels greased. The degens are watching.'
+        : 'The sim doesn\'t lie. Your gut does. Trust the numbers, stack the credits.';
+    const steps = isMod
+        ? [
+            'Lock the matchup, hit SIMULATE MATCH. One shot per bracket slot — no mulligans.',
+            'Every goal, foul, and card streams live to every bettor. Let the drama cook.',
+            'When the whistle blows, winners see a CLAIM button. Losses auto-sweep into the history book.',
+            'Wait the 30-second buffer before the next kickoff so the action stays tight.',
+        ]
+        : [
+            'Scout the Players, Teams, and Games tabs. Every line has an edge if you look hard enough.',
+            'Lock in your stake before kickoff. Fortune favors the bold (and the stubborn).',
+            'Hit the LIVE tab and ride every minute. Goals hit different when you have money on it.',
+            'After full time, circle back here and smash CLAIM on every green ticket. Then fire it back in on the next match.',
+        ];
+
+    return (
+        <div style={{
+            background: 'linear-gradient(135deg, rgba(198, 241, 53, 0.12), rgba(20, 24, 32, 0.92))',
+            border: '1px solid rgba(198, 241, 53, 0.3)',
+            borderRadius: 14,
+            padding: '18px 20px',
+            display: 'flex', flexDirection: 'column', gap: 10,
+            animation: 'fadeIn 0.4s ease',
+        }}>
+            <div style={{
+                display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+            }}>
+                <div style={{
+                    fontFamily: 'var(--font-display)', fontSize: 18, letterSpacing: '0.06em',
+                    color: 'var(--accent)',
+                }}>{title}</div>
+                <div style={{
+                    background: 'rgba(198, 241, 53, 0.16)', border: '1px solid rgba(198, 241, 53, 0.28)',
+                    borderRadius: 999, padding: '2px 8px', fontSize: 9, fontWeight: 800, letterSpacing: '0.12em',
+                    color: 'var(--accent)', fontFamily: 'var(--font-mono)',
+                }}>{isMod ? 'MOD ONLY' : 'PLAYER GUIDE'}</div>
+            </div>
+            <div style={{
+                fontSize: 12, color: 'var(--text-secondary)', fontStyle: 'italic', lineHeight: 1.5,
+            }}>{tagline}</div>
+            <ol style={{
+                margin: 0, padding: '4px 0 0 18px',
+                display: 'flex', flexDirection: 'column', gap: 6,
+                color: 'var(--text-primary)', fontSize: 13, lineHeight: 1.55,
+            }}>
+                {steps.map((step, idx) => (
+                    <li key={idx}>{step}</li>
+                ))}
+            </ol>
+        </div>
+    );
+}
+
+// Celebratory modal shown after a user manually claims a winning game pick.
+function WinPopup({ isOpen, payout, market, matchup, onClose }) {
+    if (!isOpen) {
+        return null;
+    }
+
+    const formattedPayout = new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 2, maximumFractionDigits: 2,
+    }).format(Number.isFinite(Number(payout)) ? Number(payout) : 0);
+
+    return (
+        <div style={{
+            position: 'fixed', inset: 0, zIndex: 200,
+            background: 'rgba(8, 10, 15, 0.78)', backdropFilter: 'blur(6px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 24, animation: 'fadeIn 0.2s ease',
+        }}>
+            <div style={{
+                width: '100%', maxWidth: 420,
+                background: 'linear-gradient(160deg, rgba(198, 241, 53, 0.18), rgba(20, 24, 32, 0.98))',
+                border: '1px solid rgba(198, 241, 53, 0.5)',
+                borderRadius: 18, padding: 28, textAlign: 'center',
+                boxShadow: '0 30px 90px rgba(0, 0, 0, 0.6), 0 0 40px rgba(198, 241, 53, 0.25)',
+                display: 'flex', flexDirection: 'column', gap: 14,
+            }}>
+                <div style={{
+                    fontFamily: 'var(--font-display)', fontSize: 14, letterSpacing: '0.16em',
+                    color: 'var(--accent)',
+                }}>TICKET CASHED</div>
+                <div style={{
+                    fontFamily: 'var(--font-display)', fontSize: 40, letterSpacing: '0.04em',
+                    color: 'var(--text-primary)', lineHeight: 1,
+                }}>YOU WON!</div>
+                <div style={{
+                    fontFamily: 'var(--font-mono)', fontSize: 36, fontWeight: 800,
+                    color: 'var(--accent)', letterSpacing: '0.04em',
+                }}>+{formattedPayout}</div>
+                {(matchup || market) && (
+                    <div style={{
+                        fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5,
+                    }}>
+                        {matchup || ''}{matchup && market ? ' · ' : ''}{market || ''}
+                    </div>
+                )}
+                <div style={{
+                    fontSize: 12, color: 'var(--text-secondary)', fontStyle: 'italic',
+                }}>Credits are in the bank. Don't let them get lonely — back it up on the next match.</div>
+                <button onClick={onClose} style={{
+                    background: 'var(--accent)', color: '#080A0F', fontWeight: 800, fontSize: 14,
+                    letterSpacing: '0.1em', padding: '12px 18px', borderRadius: 10, border: 'none',
+                    cursor: 'pointer', marginTop: 4,
+                }}>RIDE AGAIN</button>
+            </div>
+        </div>
+    );
+}
+
 // Betting feature: shared heading + grid wrapper for grouped picks sections.
 function PicksSection({ title, children }) {
     return (
@@ -1691,27 +1909,20 @@ function PicksSection({ title, children }) {
 }
 
 // Betting feature: combined picks tab (Player + Team + Game confirmed picks).
-function YourPicksTab({playerPicks, teamPicks, gamePicks}){
+function YourPicksTab({playerPicks, teamPicks, gamePicks, onClaimGamePick, claimingPickKey}){
     const playerPickList = Array.isArray(playerPicks) ? playerPicks : [];
     const teamPickList = Array.isArray(teamPicks) ? teamPicks : [];
     const gamePickList = Array.isArray(gamePicks) ? gamePicks : [];
     const hasAnyPicks = playerPickList.length > 0 || teamPickList.length > 0 || gamePickList.length > 0;
 
     return (
-        <div style={{
-            display: 'flex', flexDirection: 'column', gap: 24,
-        }}>
-            <div className="dashboard-layout">
-                <aside className="dashboard-ad-rail">
-                    <GifAdSlot src="/place-your-bets-sports-betting.gif" alt="Place your bets gif" label="PLACE BETS" />
-                    <GifAdSlot src="/dodep2.gif" alt="Promo gif" label="ODDS BOOST" />
-                </aside>
-                <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 24,
-                }}>
-                    <SimInstructions />
+        <AdRailLayout variant="picks">
+            <SimInstructionsCard forRole="user" />
+            <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 24,
+            }}>
                     {hasAnyPicks ? (
                         <>
                             {playerPickList.length > 0 && (
@@ -1741,7 +1952,7 @@ function YourPicksTab({playerPicks, teamPicks, gamePicks}){
                                         letterSpacing: '0.06em',
                                         color: 'var(--text-primary)',
                                     }}>GAME PICKS</h3>
-                                    <GamesTab games={gamePickList} confirmed />
+                                    <GamesTab games={gamePickList} confirmed onClaimGamePick={onClaimGamePick} claimingPickKey={claimingPickKey} />
                                 </div>
                             )}
                         </>
@@ -1835,51 +2046,38 @@ function YourPicksTab({playerPicks, teamPicks, gamePicks}){
                             </div>
                         </div>
                     </div>
-                </div>
-                <aside className="dashboard-ad-rail">
-                    <GifAdSlot src="/cat-gamble.gif" alt="Cat gambling gif" label="HOT SLOT" />
-                    <GifAdSlot src="/dyd-betting-the-betting-king.gif" alt="Betting king gif" label="BET KING" />
-                </aside>
             </div>
-        </div>
+        </AdRailLayout>
     );
 }
 
 // Betting feature: available Player bets listing.
 function PlayersTab({players, availableCredits, onPlaceBet, bettingOpen = true}){
     return(
-        <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 18,
-        }}>
+        <AdRailLayout variant="players">
             <BetGrid>
                 {players.map((p, i) => (
                     <PlayerBetCard key={p.id} playerId={p.id} title={p.name} subtitle={`#${p.number}`} meta={p.pos} stake={p.stake} stat={p.stat} range={p.range} statNum={p.stat_num} payoutMult={p.payout_mult} animDelay={`${i*0.05}s`} availableCredits={availableCredits} onPlaceBet={onPlaceBet} bettingOpen={bettingOpen} />
                 ))}
             </BetGrid>
-        </div>
+        </AdRailLayout>
     );
 }
 
 // Betting feature: available Team bets listing.
 function TeamsTab({teams, availableCredits, onPlaceBet, bettingOpen = true}){
     return(
-        <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 18,
-        }}>
+        <AdRailLayout variant="teams">
             <BetGrid>
                 {teams.map((t, i) =>(
                         <TeamBetCard key={t.id} teamId={t.id} title={t.name} subtitle={t.record} stake={t.stake} outcome={t.outcome} range={t.range} points={t.points} payoutMult={t.payout_mult} animDelay={`${i * 0.05}s`} availableCredits={availableCredits} onPlaceBet={onPlaceBet} bettingOpen={bettingOpen}/>
                 ))}
             </BetGrid>
-        </div>
+        </AdRailLayout>
     );
 }
 
-function GamesRow({g, i, availableCredits = 0, onPlaceBet, confirmed = false, bettingOpen = true}) {
+function GamesRow({g, i, availableCredits = 0, onPlaceBet, confirmed = false, bettingOpen = true, onClaimGamePick, claimingPickKey}) {
     const [hover, setHover] = useState(false);
     const [betPlaced, setBetPlaced] = useState(false);
     const [isSubmittingBet, setIsSubmittingBet] = useState(false);
@@ -1888,6 +2086,14 @@ function GamesRow({g, i, availableCredits = 0, onPlaceBet, confirmed = false, be
     const [betAmountError, setBetAmountError] = useState('');
     const [betBanner, setBetBanner] = useState(null);
     const [selectedTeamChoice, setSelectedTeamChoice] = useState(String(g?.selected_team || '').trim());
+
+    const isUnclaimedWin = g?.status === 'won_unclaimed';
+    const isLostPick = g?.status === 'lost';
+    const pickKey = `${g?.home || ''}|${g?.away || ''}|${g?.winner || ''}`;
+    const isClaimingThis = claimingPickKey && claimingPickKey === pickKey;
+    const payoutDisplay = Number.isFinite(Number(g?.payout))
+        ? new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(g.payout))
+        : '--';
 
     const lockedWinner = String(g?.winner || '').trim() || '--';
     const lockedOdds = String(g?.odds || g?.spread || '').trim() || '--';
@@ -1989,12 +2195,50 @@ function GamesRow({g, i, availableCredits = 0, onPlaceBet, confirmed = false, be
         setBetAmountError('');
     };
 
+    const cardBorder = isUnclaimedWin
+        ? '1px solid rgba(198, 241, 53, 0.55)'
+        : isLostPick
+            ? '1px solid rgba(239, 68, 68, 0.4)'
+            : `1px solid ${hover ? 'var(--border-bright)' : 'var(--border)'}`;
+    const cardBackground = isUnclaimedWin
+        ? 'linear-gradient(135deg, rgba(198, 241, 53, 0.12), var(--bg-card))'
+        : (hover ? 'var(--bg-card-hover)' : 'var(--bg-card)');
+
     return(
         <>
             <div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} style={{
-                background: hover ? 'var(--bg-card-hover)' : 'var(--bg-card)', border: `1px solid ${hover ? 'var(--border-bright)' : 'var(--border)'}`,
+                background: cardBackground, border: cardBorder,
                 borderRadius: 14, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 14, transition: 'all 0.2s', animation: 'fadeIn 0.4s ease both', animationDelay: `${i * 0.07}s`,
             }}>
+                {isUnclaimedWin && (
+                    <div style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                        background: 'rgba(198, 241, 53, 0.12)',
+                        border: '1px solid rgba(198, 241, 53, 0.35)',
+                        borderRadius: 10, padding: '8px 12px',
+                    }}>
+                        <div style={{
+                            fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.1em',
+                            color: 'var(--accent)',
+                        }}>WIN READY TO CLAIM</div>
+                        <div style={{
+                            fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 800, color: 'var(--accent)',
+                        }}>+{payoutDisplay}</div>
+                    </div>
+                )}
+                {isLostPick && (
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        background: 'rgba(239, 68, 68, 0.08)',
+                        border: '1px solid rgba(239, 68, 68, 0.28)',
+                        borderRadius: 10, padding: '8px 12px',
+                    }}>
+                        <div style={{
+                            fontFamily: 'var(--font-display)', fontSize: 12, letterSpacing: '0.1em',
+                            color: '#ef4444',
+                        }}>TICKET BUSTED — RUN IT BACK</div>
+                    </div>
+                )}
                 <div style={{
                     display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
                 }}>
@@ -2093,11 +2337,29 @@ function GamesRow({g, i, availableCredits = 0, onPlaceBet, confirmed = false, be
                         {conditionText}
                     </div>
                 </ConditionZone>
-                <button onClick={handleBet} disabled={confirmed || !hasCondition || betPlaced || !bettingOpen} title={confirmed ? 'This bet is already confirmed' : (!hasCondition ? 'Condition unavailable for this bet' : (!bettingOpen ? 'Bet placement is currently closed' : ''))} style={{
-                    background: confirmed ? 'var(--success)' : (betPlaced ? 'var(--success)' : 'var(--accent)'), color: '#080A0F', letterSpacing: '0.08em', padding: '11px 20px',
-                    borderRadius: 8, border: (!hasCondition && !confirmed) ? '1px solid var(--border)' : 'none', cursor: (confirmed || !hasCondition || !bettingOpen) ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.2s', fontWeight: 700, fontSize: 13, alignSelf: 'flex-end', opacity: (confirmed || !hasCondition || !bettingOpen) ? 0.75 : 1,
-                }}>{confirmed ? 'BET CONFIRMED' : (betPlaced ? '✓ BET PLACED' : (!hasCondition ? 'CONDITION UNAVAILABLE' : (!bettingOpen ? 'BETTING CLOSED' : 'PLACE BET')))}</button>
+                {isUnclaimedWin && typeof onClaimGamePick === 'function' ? (
+                    <button
+                        onClick={() => onClaimGamePick(g)}
+                        disabled={Boolean(isClaimingThis)}
+                        style={{
+                            background: 'var(--accent)', color: '#080A0F', letterSpacing: '0.1em', padding: '12px 20px',
+                            borderRadius: 8, border: 'none', cursor: isClaimingThis ? 'wait' : 'pointer',
+                            transition: 'all 0.2s', fontWeight: 800, fontSize: 13, alignSelf: 'flex-end',
+                            boxShadow: '0 0 0 1px rgba(198, 241, 53, 0.4), 0 8px 24px rgba(198, 241, 53, 0.25)',
+                            opacity: isClaimingThis ? 0.7 : 1,
+                        }}>{isClaimingThis ? 'CLAIMING...' : `CLAIM +${payoutDisplay}`}</button>
+                ) : isLostPick ? (
+                    <div style={{
+                        alignSelf: 'flex-end', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-muted)',
+                        letterSpacing: '0.08em',
+                    }}>SETTLED · LOST</div>
+                ) : (
+                    <button onClick={handleBet} disabled={confirmed || !hasCondition || betPlaced || !bettingOpen} title={confirmed ? 'This bet is already confirmed' : (!hasCondition ? 'Condition unavailable for this bet' : (!bettingOpen ? 'Bet placement is currently closed' : ''))} style={{
+                        background: confirmed ? 'var(--success)' : (betPlaced ? 'var(--success)' : 'var(--accent)'), color: '#080A0F', letterSpacing: '0.08em', padding: '11px 20px',
+                        borderRadius: 8, border: (!hasCondition && !confirmed) ? '1px solid var(--border)' : 'none', cursor: (confirmed || !hasCondition || !bettingOpen) ? 'not-allowed' : 'pointer',
+                        transition: 'all 0.2s', fontWeight: 700, fontSize: 13, alignSelf: 'flex-end', opacity: (confirmed || !hasCondition || !bettingOpen) ? 0.75 : 1,
+                    }}>{confirmed ? 'BET CONFIRMED' : (betPlaced ? '✓ BET PLACED' : (!hasCondition ? 'CONDITION UNAVAILABLE' : (!bettingOpen ? 'BETTING CLOSED' : 'PLACE BET')))}</button>
+                )}
             </div>
 
             <BetAmountModal
@@ -2115,15 +2377,25 @@ function GamesRow({g, i, availableCredits = 0, onPlaceBet, confirmed = false, be
     );
 }
 
-function GamesTab({games, availableCredits = 0, onPlaceBet, confirmed = false, bettingOpen = true}){
-    return(
+function GamesTab({games, availableCredits = 0, onPlaceBet, confirmed = false, bettingOpen = true, onClaimGamePick, claimingPickKey}){
+    const rows = (
         <div style={{
             display: 'flex', flexDirection: 'column', gap: 16,
         }}>
             {games.map((g, i) => (
-                <GamesRow key={g.id} g={g} i={i} availableCredits={availableCredits} onPlaceBet={onPlaceBet} confirmed={confirmed} bettingOpen={bettingOpen} />
+                <GamesRow key={g.id} g={g} i={i} availableCredits={availableCredits} onPlaceBet={onPlaceBet} confirmed={confirmed} bettingOpen={bettingOpen} onClaimGamePick={onClaimGamePick} claimingPickKey={claimingPickKey} />
         ))}
         </div>
+    );
+
+    if (confirmed) {
+        return rows;
+    }
+
+    return (
+        <AdRailLayout variant="games">
+            {rows}
+        </AdRailLayout>
     );
 }
 
@@ -2315,26 +2587,29 @@ function LiveTab({chatMessages, onNewMessage, username, bracketState, liveReplay
     const isReplayPending = Boolean(replaySnapshot?.pending);
     const isReplayActive = Boolean(replaySnapshot?.isActive);
     const replayEvents = replaySnapshot?.visibleEvents || [];
-    const finalEvents = lastMatch?.result?.match_events || [];
-    const events = isReplayActive ? replayEvents : (isReplayPending ? [] : finalEvents);
+    // After full time, the scoreboard resets — only the in-progress replay drives live card/score counts.
+    const events = isReplayActive ? replayEvents : [];
     const homeYellows = events.filter(e => e.event === 'yellow_card' && e.team === 'home').length;
     const homeReds = events.filter(e => e.event === 'red_card' && e.team === 'home').length;
     const awayYellows = events.filter(e => e.event === 'yellow_card' && e.team === 'away').length;
     const awayReds = events.filter(e => e.event === 'red_card' && e.team === 'away').length;
 
-    const scoreParts = (lastMatch?.result?.score || '0 - 0').split('-').map(s => s.trim());
-    const homeScore = (isReplayActive || isReplayPending) ? String(replaySnapshot.homeScore) : (scoreParts[0] || '0');
-    const awayScore = (isReplayActive || isReplayPending) ? String(replaySnapshot.awayScore) : (scoreParts[1] || '0');
-    const homeName = liveReplay?.homeTeam || lastMatch?.home?.name || nextMatch?.home?.name || 'HOME TEAM';
-    const awayName = liveReplay?.awayTeam || lastMatch?.away?.name || nextMatch?.away?.name || 'AWAY TEAM';
-    const matchClock = (isReplayActive || isReplayPending) ? replaySnapshot.clockLabel : (lastMatch ? "90'" : "0'");
+    const homeScore = (isReplayActive || isReplayPending) ? String(replaySnapshot.homeScore) : '0';
+    const awayScore = (isReplayActive || isReplayPending) ? String(replaySnapshot.awayScore) : '0';
+    const homeName = (isReplayActive || isReplayPending)
+        ? (liveReplay?.homeTeam || lastMatch?.home?.name || 'HOME TEAM')
+        : (nextMatch?.home?.name || 'HOME TEAM');
+    const awayName = (isReplayActive || isReplayPending)
+        ? (liveReplay?.awayTeam || lastMatch?.away?.name || 'AWAY TEAM')
+        : (nextMatch?.away?.name || 'AWAY TEAM');
+    const matchClock = (isReplayActive || isReplayPending) ? replaySnapshot.clockLabel : "0'";
     const liveBadgeLabel = isReplayPending
         ? `STARTS IN ${replaySnapshot.countdownSeconds}s`
-        : (isReplayActive ? 'LIVE REPLAY' : (lastMatch ? 'FULL TIME' : 'PRE-MATCH'));
-    const liveBadgeColor = isReplayPending ? 'var(--danger)' : (isReplayActive ? 'var(--danger)' : (lastMatch ? 'var(--accent)' : 'var(--danger)'));
+        : (isReplayActive ? 'LIVE REPLAY' : 'PRE-MATCH');
+    const liveBadgeColor = 'var(--danger)';
 
     return(
-        <div style={{
+            <div style={{
             display: 'flex', flexDirection: 'row', gap: 16, alignItems: 'flex-start', animation: 'fadeIn 0.4s ease',
         }}>
             <div style={{
@@ -2420,7 +2695,7 @@ function LiveTab({chatMessages, onNewMessage, username, bracketState, liveReplay
                     </div>
 
                     {/* Pre-match state */}
-                    {!lastMatch && !isReplayActive && (
+                    {!isReplayActive && (
                         <div style={{
                             position: 'absolute', inset: 0,
                             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -2908,11 +3183,14 @@ const TAB_CONFIG = [
     {key: TABS.LIVE, label: "Live", icon: <Radio size={15} />, live:true},
 ];
 
-function Dashboard({username, players, playerPicks, teams, teamPicks, games, gamePicks, chatMessages, onNewMessage, activeTab, setActiveTab, userCredits, onPlacePlayerBet, onPlaceTeamBet, onPlaceGameBet, showBetSuccessBanner = false, canPlaceBets = true}){
+function Dashboard({username, players, playerPicks, teams, teamPicks, games, gamePicks, chatMessages, onNewMessage, activeTab, setActiveTab, userCredits, onPlacePlayerBet, onPlaceTeamBet, onPlaceGameBet, onClaimGamePick, claimingPickKey, showBetSuccessBanner = false, canPlaceBets = true}){
     const [bracketState, setBracketState] = useState(null);
     const [liveReplay, setLiveReplay] = useState(null);
     const [isBracketLoading, setIsBracketLoading] = useState(true);
     const [replayNowMs, setReplayNowMs] = useState(() => Date.now());
+
+    const postMatchCountdownMs = getPostMatchCountdownMs(liveReplay, replayNowMs);
+    const isCountdownActive = postMatchCountdownMs > 0;
 
     useEffect(() => {
         let isMounted = true;
@@ -2973,7 +3251,7 @@ function Dashboard({username, players, playerPicks, teams, teamPicks, games, gam
 
     const renderTabContent = () => {
         switch (activeTab){
-            case TABS.PICKS: return <YourPicksTab playerPicks={playerPicks} teamPicks={teamPicks} gamePicks={gamePicks} />;
+            case TABS.PICKS: return <YourPicksTab playerPicks={playerPicks} teamPicks={teamPicks} gamePicks={gamePicks} onClaimGamePick={onClaimGamePick} claimingPickKey={claimingPickKey} />;
             case TABS.PLAYERS: return <PlayersTab players={availablePlayers} availableCredits={userCredits} onPlaceBet={onPlacePlayerBet} bettingOpen={canPlaceBets} />;
             case TABS.TEAMS: return <TeamsTab teams={availableTeams} availableCredits={userCredits} onPlaceBet={onPlaceTeamBet} bettingOpen={canPlaceBets}/>;
             case TABS.GAMES: return <GamesTab games={availableGames} availableCredits={userCredits} onPlaceBet={onPlaceGameBet} bettingOpen={canPlaceBets} />;
@@ -3027,6 +3305,19 @@ function Dashboard({username, players, playerPicks, teams, teamPicks, games, gam
                                             }}>
                                                 {liveTabCountdownSeconds}s
                                             </span>
+                                        )}
+                                        {isCountdownActive && (
+                                            <span title="Next match starts soon" style={{
+                                                background: 'rgba(239, 68, 68, 0.14)',
+                                                border: '1px solid rgba(239, 68, 68, 0.35)',
+                                                color: 'var(--danger)',
+                                                fontFamily: 'var(--font-mono)',
+                                                fontSize: 10,
+                                                fontWeight: 800,
+                                                letterSpacing: '0.08em',
+                                                padding: '2px 6px',
+                                                borderRadius: 6,
+                                            }}>{formatPostMatchCountdown(postMatchCountdownMs)}</span>
                                         )}
                                     </>
                                 )}
@@ -3929,6 +4220,8 @@ export default function App(){
     const previousActiveTabRef = useRef(activeTab);
     const isModerator = userRole === 'moderator';
     const [isLoadingProposals, setIsLoadingProposals] = useState(false);
+    const [claimingPickKey, setClaimingPickKey] = useState(null);
+    const [winPopupState, setWinPopupState] = useState(null);
 
     // helper for loadPendingProposals
     const loadPendingProposals = useCallback(async ({ silent = false } = {}) => {
@@ -4401,6 +4694,66 @@ export default function App(){
 
         triggerBetSuccessBanner();
     }, [triggerBetSuccessBanner, username]);
+
+    // Manual claim: convert a settled-won game pick into credits + celebratory popup.
+    const handleClaimGamePick = useCallback(async (pick) => {
+        if (!username || !pick || pick.status !== 'won_unclaimed') {
+            return;
+        }
+
+        const pickKey = `${pick.home || ''}|${pick.away || ''}|${pick.winner || ''}`;
+        setClaimingPickKey(pickKey);
+
+        try {
+            const response = await fetch('/api/claim-game-bet', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username,
+                    home_team: pick.home,
+                    away_team: pick.away,
+                    winner: pick.winner,
+                }),
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Unable to claim this win right now.');
+            }
+
+            if (Number.isFinite(Number(data.credits))) {
+                setUserCredits(Number(data.credits));
+            }
+            if (Number.isFinite(Number(data.wins))) {
+                setUserWins(Number(data.wins));
+            }
+            if (Number.isFinite(Number(data.profit))) {
+                setUserProfit(Number(data.profit));
+            }
+            if (Array.isArray(data.game_picks)) {
+                setGamePicks(data.game_picks.map(mapGameBetToGameRow));
+            } else {
+                setGamePicks(prev => prev.filter(entry => (
+                    !(entry.home === pick.home && entry.away === pick.away && entry.winner === pick.winner)
+                )));
+            }
+
+            setWinPopupState({
+                payout: Number.isFinite(Number(data.payout)) ? Number(data.payout) : Number(pick.payout) || 0,
+                matchup: `${pick.home || ''} vs ${pick.away || ''}`,
+                market: pick.winner || '',
+            });
+        } catch (error) {
+            console.error('Claim game pick failed:', error);
+        } finally {
+            setClaimingPickKey(null);
+        }
+    }, [username]);
+
+    const handleCloseWinPopup = useCallback(() => {
+        setWinPopupState(null);
+    }, []);
 
     const handleLogoClick = useCallback(() => {
         setScreen(SCREENS.DASHBOARD);
@@ -4925,9 +5278,11 @@ export default function App(){
                     onNewMessage={handleNewMessage} onDeleteMessage={handleDeleteMessage} onBanUser={handleBanUser} players={players} teams={teams} games={games} onCancelStake={handleCancelStake} bannedUsernames={bannedUsernames} isLoadingProposals={isLoadingProposals}/>
         ) : (
             <>
-            <Dashboard username={username} players={players} playerPicks={playerPicks} teams={teams} teamPicks={teamPicks} games={games} gamePicks={gamePicks} chatMessages={chatMessages} 
-                    onNewMessage={handleNewMessage} activeTab={activeTab} setActiveTab={setActiveTab} userCredits={userCredits} onPlacePlayerBet={handlePlacePlayerBet} onPlaceTeamBet={handlePlaceTeamBet} onPlaceGameBet={handlePlaceGameBet} showBetSuccessBanner={showBetSuccessBanner} canPlaceBets={bettingPhase === BETTING_PHASES.SIMULATION_RUNNING} />
-                <ProposalForm onSubmit={handleAddProposal} username={username} isProposalsOpen={bettingPhase === BETTING_PHASES.PROPOSALS_OPEN}/>
+            <Dashboard username={username} players={players} playerPicks={playerPicks} teams={teams} teamPicks={teamPicks} games={games} gamePicks={gamePicks} chatMessages={chatMessages}
+                    onNewMessage={handleNewMessage} activeTab={activeTab} setActiveTab={setActiveTab} userCredits={userCredits} onPlacePlayerBet={handlePlacePlayerBet} onPlaceTeamBet={handlePlaceTeamBet} onPlaceGameBet={handlePlaceGameBet} onClaimGamePick={handleClaimGamePick} claimingPickKey={claimingPickKey} showBetSuccessBanner={showBetSuccessBanner} canPlaceBets={bettingPhase === BETTING_PHASES.SIMULATION_RUNNING} />
+            <ProposalForm onSubmit={handleAddProposal} username={username} isProposalsOpen={bettingPhase === BETTING_PHASES.PROPOSALS_OPEN}/>
+            <WinPopup isOpen={Boolean(winPopupState)} payout={winPopupState?.payout} market={winPopupState?.market} matchup={winPopupState?.matchup} onClose={handleCloseWinPopup} />
+
             </>
         )
             
