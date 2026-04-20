@@ -1032,8 +1032,8 @@ function ModLiveTab({chatMessages, onDeleteMessage, onBanUser, onNewMessage, use
                         }}>MOD ONLY</div>
                     </div>
                     <div style={{
-                        fontSize: 12, color: 'var(--text-secondary)', fontStyle: 'italic', lineHeight: 1.5,
-                    }}>Keep the wheels greased. The degens are watching.</div>
+                        fontSize: 12, color: 'var(--danger)', fontStyle: 'italic', lineHeight: 1.5,
+                    }}>IF SIMULATION IS INITIATED, DO NOT LEAVE PAGE UNTIL SIMULATION IS COMPLETE.</div>
                     <ol style={{
                         margin: 0, padding: '4px 0 0 18px',
                         display: 'flex', flexDirection: 'column', gap: 6,
