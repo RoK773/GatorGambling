@@ -2068,7 +2068,6 @@ function PlayersTab({players, availableCredits, onPlaceBet, bettingOpen = true})
 function TeamsTab({teams, availableCredits, onPlaceBet, bettingOpen = true}){
     return(
         <AdRailLayout variant="teams">
-            <Top25Rail title="TOP 25 TEAMS" />
             <BetGrid>
                 {teams.map((t, i) =>(
                         <TeamBetCard key={t.id} teamId={t.id} title={t.name} subtitle={t.record} stake={t.stake} outcome={t.outcome} range={t.range} points={t.points} payoutMult={t.payout_mult} animDelay={`${i * 0.05}s`} availableCredits={availableCredits} onPlaceBet={onPlaceBet} bettingOpen={bettingOpen}/>
