@@ -3,7 +3,7 @@ import { MongoClient, ServerApiVersion } from 'mongodb';
 
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
-const uri = process.env.MONGODB_URI || 'mongodb+srv://admin:admin1Password@cluster0.9uypigw.mongodb.net/?appName=Cluster0';
+const uri = process.env.MONGODB_URI;
 const dbName = process.env.MONGODB_DB || 'User_Data';
 const collectionName = process.env.MONGODB_COLLECTION || 'Users';
 
